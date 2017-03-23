@@ -1,0 +1,476 @@
+<!DOCTYPE HTML>
+<html>
+   <head>
+      <meta charset="utf-8">
+      <title>gotoв!</title>
+   </head>
+   <body>
+      <noscript>Javascript is deactivated in your browser. Please activate it in order to use this page.</noscript>
+      <script src="gotoB.min.js"></script>
+      <script>
+         (function () {
+
+            // *** SETUP ***
+
+            var dale = window.dale, teishi = window.teishi, lith = window.lith, c = window.c, B = window.B;
+
+            var type = teishi.t, log = teishi.l;
+
+            var Views = window.Views = B.store.Views = {};
+            var Data  = window.Data  = B.store.Data  = {};
+            var State = window.State = B.store.State = {};
+
+            var Test = function (tag, fun) {
+               if (State.prod) return;
+               try {
+                  var error = fun ();
+                  if (error) throw new Error (tag + ': ' + error);
+               }
+               catch (error) {
+                  throw new Error (tag + ': ' + error);
+               }
+               log ('Test OK', tag);
+            }
+
+            Test ('initial setup', function () {
+               if (teishi.s (dale.keys (B.routes).sort ()) !== teishi.s (['add', 'change', 'debug', 'get', 'rem', 'set'])) return 'Initial routes mismatch.';
+               if (B.debug.length > 0) return 'Extraneous elements in debug history.';
+            });
+
+            // *** B.VIEW & B.DEBUG ***
+
+            var id = B.view ({path: 'a path'}, function () {
+               return ['h1'];
+            }) [1].id;
+
+            B.do ('set', 'a path', 'booyah');
+
+            Test ('B.debug.log', function () {
+               if (B.debug.log (0, undefined, true).length !== 1) return 'B.debug.log did not return single event.';
+               if (B.debug.log (1, undefined, true).length !== 1) return 'B.debug.log did not return single event.';
+               if (B.debug.log (2, undefined, true).length !== 0) return 'B.debug.log did not return null event.';
+               if (B.debug.log (0, 2, true).length !== 2) return 'B.debug.log did not return two events.';
+               if (B.debug.log (0, 5, true).length !== 2) return 'B.debug.log did not return two events with excess range.';
+               if (B.debug.log (0, undefined, true) [0] [0].verb !== 'set') return 'B.debug.log returned incorrect event.';
+               if (B.debug.log (1, undefined, true) [0] [0].verb !== 'change') return 'B.debug.log returned incorrect event.';
+               if (B.debug.log () !== false) return 'B.debug.log accepted invalid from.';
+               if (B.debug.log (/notanint/) !== false) return 'B.debug.log accepted invalid from.';
+               if (B.debug.log (2, /notanint/) !== false) return 'B.debug.log accepted invalid to.';
+            });
+
+            Test ('dangling view', function () {
+               if (B.debug.length !== 2)                          return 'Debug history not working properly.';
+               if (B.debug [1] [0].verb !== 'change')             return 'Change event not fired properly.';
+               if (B.debug [0] [0].path !== B.debug [1] [0].path) return 'Event path mismatch.';
+            });
+
+            Test ('B.view validation', function () {
+               var routes = dale.keys (B.routes).length;
+
+               if (B.view ({path: /notapath/}, function () {}) !== false) return 'B.view accepted invalid path.';
+
+               if (B.view ({path: []}, /notafun/) !== false) return 'B.view accepted invalid rfun.';
+
+               if (B.view ({path: [], tag: 'paprika'}, function () {}) !== false) return 'B.view accepted invalid tag.';
+
+               if (B.view ({path: [], attrs: /paprika/}, function () {}) !== false) return 'B.view accepted invalid attrs.';
+
+               if (B.view ({path: []}, function () {
+                  return /notaview/;
+               }) !== false) return 'B.view accepted invalid view.';
+
+               var counter = 0;
+
+               var view = B.view ({path: ['ping', 'pong']}, function () {
+                  return counter++ === 0 ? ['h1', 'boo'] : /boom/;
+               });
+
+               var id = view [1].id;
+
+               B.do ('change', ['ping', 'pong']);
+
+               if (counter !== 2) return 'rfun wasn\'t triggered on change.';
+
+               B.forget (id);
+
+               if (B.view ({path: [], listen: {verb: 'hola', path: 'paprika'}}) !== false) return 'Invalid rfun passed to listen item.';
+
+               if (B.view ({path: [], listen: {path: 'paprika', rfun: function () {}}}) !== false) return 'Invalid verb passed to listen item.';
+
+               if (dale.keys (B.routes).length !== routes) return 'B.view invalid invocations left routes behind.';
+
+            });
+
+            B.forget (id);
+
+            Test ('dangling view cleanup', function () {
+               if (dale.keys (B.routes).sort ().length !== 6) return 'Cleanup failed.';
+            });
+
+            // *** BASE VIEW ***
+
+            Views.baseCSS = [
+               ['body', {
+                  'background-color': '#c9c9c9',
+                  'font-family': '"Arial Narrow", Arial, sans-serif'
+               }],
+               ['#canvas', {
+                  width: .9,
+                  'min-height': 200,
+                  'border-top, border-bottom': 'solid 1px gray',
+                  'border-left, border-right': 'solid 2px gray',
+                  'margin, overflow': 'auto',
+                  'background-color': 'white'
+               }],
+               ['a, u', {cursor: 'pointer', 'text-decoration': 'underline', color: 'blue'}]
+            ];
+
+            Views.base = function () {
+               return ['div', {id: 'canvas'}, [
+                  ['style', lith.css.g (Views.baseCSS)],
+
+                  B.view ({path: ['State', 'view']}, function (x, view) {
+                     return Views [view] ? Views [view] () : ['h1', [['To be'], ' determined']];
+                  })
+               ]];
+            }
+
+            // *** INIT ***
+
+            var initId = B.listen ({verb: 'init', path: '*', burn: true}, function () {
+
+               c.place ('body', 'afterBegin', lith.g (Views.base ()));
+
+               Test ('canvas initialization', function () {
+                  if (c ('body #canvas').length        !== 1) return 'Canvas not placed.';
+                  if (c ('body #canvas style').length  !== 1) return 'Inner style not placed.';
+                  if (c ('body #canvas div').length    !== 1) return 'Inner div not placed.';
+                  if (c ('body #canvas div h1').length !== 1) return 'Content of inner div not placed.';
+
+                  if (c ('body #canvas div h1') [0].innerHTML !== 'To be determined') return 'Content of inner div not placed properly.';
+               });
+
+               Test ('viewroutes', function () {
+                  var viewRoutes = dale.fil (dale.keys (B.routes), undefined, function (v) {
+                     if (v.match (B.B)) return v;
+                  });
+                  if (viewRoutes.length > 1) return 'Unexpected viewroutes.';
+                  var viewRoute = B.routes [viewRoutes [0]];
+                  if (viewRoute.verb !== 'change') return 'Invalid viewroute verb.';
+                  if (teishi.s (viewRoute.path) !== teishi.s (['State', 'view'])) return 'Invalid viewroute path.';
+                  if (type (viewRoute.view) !== 'array') return 'Invalid viewroute view.';
+                  if (viewRoute.priority !== -2) return 'Invalid viewroute priority.';
+               });
+
+               B.do ('test', 'args');
+            });
+
+            // When document is ready, perform initialization.
+            c.ready (function () {
+               B.do ('init', '*');
+            });
+
+            // *** ARGS TEST ***
+
+            Views.args = function () {
+               return [
+                  B.view ({path: ['Data', 'title'], tag: 'h1', attrs: {class: 'opa'}}, function (x, title) {return title}),
+                  ['div', {class: 'nav'}, B.view ({path: ['Data', 'items']}, function (x, items) {
+                     return ['ul', {class: 'items'}, dale.do (items, function (v, k) {
+                        return ['li', {class: k}, v];
+                     })];
+                  })],
+               ];
+            }
+
+            B.listen ({verb: 'test', path: 'args', burn: true}, function () {
+
+               Test ('burnt event', function () {
+                  if (B.routes [initId]) return 'burnt event was not deleted.';
+               });
+
+               B.do ('set', ['State', 'view'], 'args');
+
+               Data.items = [];
+
+               Test ('args validations', function () {
+                  if (B.add (/invalidpath/) !== false) return 'B.add accepted invalid path.';
+                  if (B.add (['lalala'], 'whatever') !== false) return 'B.add accepted target that is not an array.';
+                  if (B.add (['Data', 'items'], -1) !== true) return 'B.add didn\'t return true on success.';
+                  if (B.rem (/invalidpath/) !== false) return 'B.rem accepted invalid path.';
+                  if (B.rem (['lalala'], 'whatever') !== false) return 'B.rem accepted target that is not an array.';
+                  if (B.rem (['Data', 'items'], 0) !== true) return 'B.rem didn\'t return true on success.';
+                  if (B.get (/invalidpath/) !== false) return 'B.get accepted invalid path.';
+                  if (B.set (['Data', 'items'], {}) !== true) return 'B.set didn\'t return true on success.';
+                  if (B.set (['Data', 'items'], []) !== true) return 'B.set didn\'t return true on success.';
+               });
+
+               Test ('change view to args', function () {
+                  if (State.view !== 'args') return 'Data item not set!';
+               });
+
+               Test ('args view placed', function () {
+                  if (! c ('#canvas div div.nav')) return 'nav div not placed.';
+                  if (c ('#canvas div div.nav div ul.items') [0].innerHTML !== '') return 'ul not placed.';
+               });
+
+               B.do ('set', ['Data', 'title'], 'One big title.');
+
+               Test ('view changed after set operation', function () {
+                  if (c ('#canvas h1') [0].innerHTML !== Data.title) return 'title not placed correctly.';
+               });
+
+               dale.do (['a', 'b', 'c', 'd'], function (v) {
+                  B.do ('add', ['Data', 'items'], v);
+               });
+
+               Test ('views updated after add operation', function () {
+                  if (JSON.stringify (Data.items) !== JSON.stringify (['a', 'b', 'c', 'd'])) return 'add not working properly.';
+                  if (c ('ul.items li').length !== 4) return 'ul contents not updated.';
+               });
+
+               B.do ('rem', ['Data', 'items'], [0, 2]);
+
+               Test ('views updated after rem operation', function () {
+                  if (JSON.stringify (Data.items) !== JSON.stringify (['b', 'd'])) return 'rem not working properly.';
+                  if (c ('ul.items li').length !== 2) return 'ul contents not updated.';
+                  if (c ('ul.items li') [0].innerHTML !== 'b') return 'rem not working properly.';
+               });
+
+               B.do ('set', ['Data', 'items', 1], 'e');
+
+               Test ('views updated after set in array', function () {
+                  if (JSON.stringify (Data.items) !== JSON.stringify (['b', 'e'])) return 'rem not working properly.';
+                  if (c ('ul.items li').length !== 2) return 'ul contents not updated.';
+                  if (c ('ul.items li') [1].innerHTML !== 'e') return 'rem not working properly.';
+               });
+
+               B.do ('set', ['Data', 'items'], {a: 'b', c: 'd'});
+
+               Test ('views updated after setting object', function () {
+                  if (JSON.stringify (Data.items) !== JSON.stringify ({a: 'b', c: 'd'})) return 'rem not working properly.';
+                  if (c ('ul.items li').length !== 2) return 'ul contents not updated.';
+                  if (c ('ul.items li.a').length !== 1) return 'ul contents not updated.';
+                  if (c ('ul.items li') [1].innerHTML !== 'd') return 'rem not working properly.';
+               });
+
+               B.do ('rem', ['Data', 'items'], 'a');
+
+               Test ('views updated after removal', function () {
+                  if (JSON.stringify (Data.items) !== JSON.stringify ({c: 'd'})) return 'rem not working properly.';
+                  if (c ('ul.items li').length !== 1) return 'ul contents not updated.';
+                  if (c ('ul.items li.c').length !== 1) return 'ul contents not updated.';
+               });
+
+               B.do ('rem', ['Data', 'items'], '*');
+
+               Test ('views updated after complete removal', function () {
+                  if (JSON.stringify (Data.items) !== JSON.stringify ({})) return 'rem not working properly.';
+                  if (c ('ul.items li').length !== 0) return 'ul contents not updated.';
+                  if (c ('ul.items li.c').length !== 0) return 'ul contents not updated.';
+               });
+
+               B.do ('test', 'additional');
+
+            });
+
+            // *** B.VIEW ADDITIONAL TESTS ***
+
+            var counter = 0;
+
+            Views.additional = function () {
+               return B.view ({path: ['same', 'path']}, function () {
+                  counter++;
+                  return [
+                     ['table', ['tr', ['td', '"I have \'quotes\'!"']]],
+                     B.view ({path: ['same', 'path']}, function () {
+                        counter++;
+                        return ['table', ['tbody', ['tr', ['td', '<`Me & you too!`>']]]];
+                     })
+                  ];
+               });
+            }
+
+            B.listen ({verb: 'test', path: 'additional', burn: true}, function () {
+
+               B.do ('set', ['State', 'view'], 'additional');
+
+               Test ('B.view additional tests', function () {
+                  if (counter !== 2) return 'Nested B.view wasn\'t properly initialized.';
+
+                  var viewCounter = B.count;
+                  B.do ('change', ['same', 'path']);
+                  if (c ('table').length !== 2) return 'tables weren\'t created.';
+                  if (c ('tbody').length !== 2) return 'tbodys weren\'t created.';
+
+                  if (counter !== 4) return 'Nested B.view wasn\'t redrawn properly.';
+                  if (B.routes [B.B + (viewCounter - 1)]) return 'Nested B.view wasn\'t deleted properly.';
+
+                  if (c ('td') [0].innerHTML !== '"I have \'quotes\'!"') return 'Quotes weren\'t unquoted.';
+                  if (c ('td') [1].innerHTML !== '&lt;`Me &amp; you too!`&gt;') return 'Quotes weren\'t unquoted.';
+
+               });
+
+               B.do ('test', 'events');
+            });
+
+            // *** EVENTS TEST ***
+
+            Views.events = function () {
+               return B.view ({path: ['Data'], listen: [
+                  {id: 'upload', verb: 'upload', path: 'i2', rfun: function (x, arg2, arg3) {
+                     Test ('form upload', function () {
+                        if (JSON.stringify ({user: 'Talk about', pass: 'thepassion'}) !== JSON.stringify (Data.i2)) return 'form values weren\'t updated.';
+                        if (arg2 !== '"a"' || arg3 !== ',"b"') return 'extra args weren\'t passed properly.';
+                     });
+                  }}
+               ]}, function (x, Data) {
+                  return [
+                     ['input', B.ev ({id: 'i1', value: B.get (['Data', 'i1'])}, {ev: 'onchange', verb: 'set', path: ['Data', 'i1']})],
+                     ['form', {id: 'i2'}, [
+                        ['input', B.ev ({name: 'user', type: 'text',     value: B.get (['Data', 'i2', 'user'])}, {ev: 'onchange', verb: 'set', path: ['Data', 'i2', 'user']})],
+                        Data.i8 ? [] : ['input'],
+                        Data.i7 ? [] : ['input', {id: 'i7'}],
+                        ['input', B.ev ({name: 'pass', type: 'password', value: B.get (['Data', 'i2', 'pass'])}, {ev: 'onchange', verb: 'set', path: ['Data', 'i2', 'pass']})],
+                        ['input', B.ev ({type: 'button', value: 'Submit'}, {ev: 'onclick', verb: 'upload', path: 'i2', args: ['"a"', ',"b"']})]
+                     ]],
+                     ['textarea', B.ev ({id: 'i3'}, {ev: 'onchange', verb: 'set', path: ['Data', 'i3']}), B.get (['Data', 'i3'])],
+                     ['form', {id: 'i4'}, [
+                        ['label', 'Fries'],
+                        ['input', B.ev ({
+                           type: 'checkbox',
+                           checked: B.get (['Data', 'i4', 'fries']),
+                        }, {
+                           ev: 'onchange', verb: 'set', path: ['Data', 'i4', 'fries'],
+                           args: [! B.get (['Data', 'i4', 'fries'])]
+                        })]
+                     ]],
+                     ['form', {id: 'i5'}, dale.do (['red', 'green', 'blue'], function (v) {
+                        return [
+                           ['label', v],
+                           ['input', B.ev ({name: 'colors', type: 'radio', checked: B.get (['Data', 'i5']) === v}, {ev: 'onchange', verb: 'set', path: ['Data', 'i5'], args: [v]})]
+                        ];
+                     })],
+                     ['br'],
+                     ['select', B.ev ({}, {ev: 'onchange', verb: 'set', path: ['Data', 'i6']}), dale.do (['select one', 'leisure', 'ok computer', 'second coming'], function (v) {
+                        return ['option', {selected: B.get (['Data', 'i6']) === v ? true : undefined, value: v}, v];
+                     })]
+                  ];
+               });
+            }
+
+            B.listen ({verb: 'test', path: 'events', burn: true}, function () {
+
+               B.do ('set', ['State', 'view'], 'events');
+
+               Test ('B.ev invalid arguments', function () {
+                  if (B.ev (/invalidattrs/) !== false)  return 'B.ev accepted invalid attrs.';
+                  if (B.ev ({}, /invalid/) !== false)   return 'B.ev accepted invalid evs.';
+                  if (B.ev ({}, [/invalid/]) !== false) return 'B.ev accepted invalid evs.';
+               });
+
+               Test ('events', function () {
+                  c.set ('#i1', {value: 'i1'});
+                  if (Data.i1 !== 'i1') return 'input onchange didn\'t update properly.';
+                  B.do ('set', ['Data', 'i1'], 'i1plus');
+                  if (c.get ('#i1', 'value').value !== 'i1plus') return 'input wasn\'t refreshed properly.';
+
+                  c.set ('#i2 [name="user"]', {value: 'Talk about'});
+                  c.set ('#i2 [name="pass"]', {value: 'thepassion'});
+
+                  // http://stackoverflow.com/a/20548330
+                  c ('#i2 [type="button"]') [0].dispatchEvent (new MouseEvent ('click'));
+
+                  B.do ('set', ['Data', 'i3'], 'some text');
+                  if (c ('#i3').value !== 'some text') return 'textarea wasn\'t set properly';
+
+                  B.do ('set', ['Data', 'i4', 'fries'], true);
+                  if (c ('#i4 input') [0].checked !== true) return 'checkbox wasn\'t checked.';
+
+                  c ('#i4 input') [0].dispatchEvent (new Event ('change'));
+                  if (B.get (['Data', 'i4', 'fries']) !== false) return 'checkbox didn\'t change data after being changed.';
+                  if (c ('#i4 input') [0].checked !== false) return 'checkbox wasn\'t unchecked.';
+
+                  B.do ('set', ['Data', 'i5'], 'green');
+                  if (c ('#i5 input') [1].checked !== true) return 'radio wasn\'t selected.';
+
+                  B.do ('set', ['Data', 'i6'], 'ok computer');
+
+                  if (c ('option') [2].selected !== true)       return 'select wasn\'t updated after data change 1.';
+                  if (c ('select') [0].value !== 'ok computer') return 'select wasn\'t updated after data change 2.';
+
+                  c ('#i7').focus ();
+
+                  B.do ('set', ['Data', 'i8'], true);
+
+                  if (document.activeElement !== c ('#i7')) return 'focus wasn\'t preserved when it should.';
+
+                  B.do ('set', ['Data', 'i7'], true);
+
+                  if (document.activeElement !== c ('body') [0]) return 'focus was preserved when it shouldn\'t.';
+
+               });
+
+               // XXX Add 'Fire two events in a row to test B.resolvequeue'
+
+               B.do ('test', 'listen');
+            });
+
+            Views.listen = function () {
+               return B.view ({path: ['Data']}, function (x, Data) {
+                  return [
+                     Data.extra ? [
+                        ['input', {value: 'throw focus off'}],
+                        ['input', {value: 'throw focus off'}],
+                        ['input', {value: 'throw focus off'}],
+                     ] : [],
+                     ['input', B.ev ({id: 'user', value: B.get (['Data', 'user'])},                   {ev: 'onchange', verb: 'set', path: ['Data', 'user']})],
+                     ['input', B.ev ({id: 'pass', value: B.get (['Data', 'pass']), type: 'password'}, {ev: 'onchange', verb: 'set', path: ['Data', 'pass']})]
+                  ];
+               });
+            }
+
+            B.listen ({verb: 'test', path: 'listen', burn: true}, function () {
+
+               Test ('Bounded event still alive', function () {
+                  if (! B.routes.upload) return 'Bounded event is not where it should be.';
+               });
+
+               B.do ('set', ['State', 'view'], 'listen');
+
+               Test ('Bounded event removed', function () {
+                  if (B.routes.upload) return 'Bounded event wasn\'t removed after its parent view was.';
+               });
+
+               c ('#user').focus ();
+
+               B.do ('set', ['Data', 'user'], 'hello!');
+               B.do ('set', ['Data', 'pass'], 'secreto');
+
+               B.do ('set', ['Data', 'extra'], true);
+
+               Test ('Focus & value tests', function () {
+                  if (document.activeElement !== c ('#user')) return 'focus wasn\'t preserved when it should.';
+
+                  if (c ('#user').value !== 'hello!') return 'value wasn\'t preserved when it should.';
+               });
+
+               B.do ('test', 'success');
+
+            });
+
+            Views.done = function () {
+               return ['h1', 'All tests were successful!'];
+            }
+
+            B.listen ({verb: 'test', path: 'success', burn: true}, function () {
+
+               B.do ('set', ['State', 'view'], 'done');
+
+               log ('Success', 'All tests were successful!');
+            });
+
+         }) ();
+      </script>
+   </body>
+</html>

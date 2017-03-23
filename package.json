@@ -1,0 +1,29 @@
+{
+   "name": "gotoB",
+   "version": "0.1.0",
+   "description": "One .min.js to rule 'em all.",
+   "dependencies": {
+      "cocholate": "1.3.0",
+      "dale": "4.2.0",
+      "lith": "4.1.0",
+      "recalc": "3.0.0",
+      "teishi": "3.10.0",
+      "uglify-js": "2.7.5"
+   },
+   "main": "gotoB.min.js",
+   "author": "Federico Pereiro <fpereiro@gmail.com>",
+   "contributors": ["Federico Pereiro <fpereiro@gmail.com>"],
+   "license": [{
+      "type": "Public Domain",
+      "url": "http://github.com/fpereiro/gotoB#license"
+   }],
+   "keywords": ["framework", "antiframework", "client side", "SPA"],
+   "repository" : {
+      "type": "git",
+      "url": "http://github.com/fpereiro/gotoB.git"
+   },
+   "bugs": {
+      "url": "http://github.com/fpereiro/gotoB/issues",
+      "email": "fpereiro@gmail.com"
+   }
+}

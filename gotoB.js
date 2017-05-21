@@ -370,8 +370,8 @@ Please refer to readme.md to read the annotated source (but not yet!).
                      });
                   }
                   var newAttrs = JSON.parse (v [1].match (/{.+/) || '{}');
-                  dale.do (dale.fil (oldAttrs, undefined, function (v, k) {
-                     if (newAttrs [v.name || k] === undefined) return v.name || k;
+                  dale.do (dale.fil (oldAttrs, undefined, function (v) {
+                     if (newAttrs [v.name] === undefined) return v.name;
                   }), function (name) {
                      if (name === 'value')    el.value    = undefined;
                      if (name === 'checked')  el.checked  = false;

@@ -6,7 +6,13 @@
    </head>
    <body>
       <noscript>Javascript is deactivated in your browser. Please activate it in order to use this page.</noscript>
+      <script>
+         var Time = {zero: new Date ().getTime ()};
+      </script>
       <script src="gotoB.min.js"></script>
+      <script>
+         Time ['0: load-gotoB'] = Date.now () - Time.zero;
+      </script>
       <script>
          (function () {
 
@@ -22,13 +28,8 @@
 
             var Test = function (tag, fun) {
                if (State.prod) return;
-               try {
-                  var error = fun ();
-                  if (error) throw new Error (tag + ': ' + error);
-               }
-               catch (error) {
-                  throw new Error (tag + ': ' + error);
-               }
+               var error = fun ();
+               if (error) throw new Error (tag + ': ' + error);
                log ('Test OK', tag);
             }
 
@@ -379,7 +380,13 @@
                   c.set ('#i2 [name="pass"]', {value: 'thepassion'});
 
                   // http://stackoverflow.com/a/20548330
-                  c ('#i2 [type="button"]') [0].dispatchEvent (new MouseEvent ('click'));
+                  try {
+                     var ev = new Event ('click');
+                     c ('#i2 [type="button"]') [0].dispatchEvent (ev);
+                  }
+                  catch (error) {
+                     c ('#i2 [type="button"]') [0].click ();
+                  }
 
                   B.do ('set', ['Data', 'i3'], 'some text');
                   if (c ('#i3').value !== 'some text') return 'textarea wasn\'t set properly';
@@ -387,7 +394,18 @@
                   B.do ('set', ['Data', 'i4', 'fries'], true);
                   if (c ('#i4 input') [0].checked !== true) return 'checkbox wasn\'t checked.';
 
-                  c ('#i4 input') [0].dispatchEvent (new Event ('change'));
+                  try {
+                     c ('#i4 input') [0].dispatchEvent (new Event ('change'));
+                  }
+                  catch (error) {
+                     //http://stackoverflow.com/a/13439901
+                     if (document.createEvent) {
+                        var ev = document.createEvent ('Event');
+                        ev.initEvent ('change', true, true);
+                        c ('#i4 input') [0].dispatchEvent (ev);
+                     }
+                  }
+
                   if (B.get (['Data', 'i4', 'fries']) !== false) return 'checkbox didn\'t change data after being changed.';
                   if (c ('#i4 input') [0].checked !== false) return 'checkbox wasn\'t unchecked.';
 
@@ -407,7 +425,9 @@
 
                   B.do ('set', ['Data', 'i7'], true);
 
-                  if (document.activeElement !== c ('body') [0]) return 'focus was preserved when it shouldn\'t.';
+                  if (document.activeElement !== null && document.activeElement !== c ('body') [0]) {
+                     return 'focus was preserved when it shouldn\'t.';
+                  }
 
                });
 
@@ -455,12 +475,79 @@
                   if (c ('#user').value !== 'hello!') return 'value wasn\'t preserved when it should.';
                });
 
+               B.do ('test', 'perf');
+
+            });
+
+            // *** PERFORMANCE ***
+
+            Views.perf = function () {
+               return B.view ({path: ['Data', 'perf']}, function (x, perf) {
+                  if (! perf) return [];
+                  return ['table', {style: 'display: block'}, dale.do (perf.data, function (v, k) {
+                     return ['tr', dale.do (v, function (v2) {
+                        return ['td', {class: perf.class}, k + '-' + v2];
+                     })];
+                  })];
+               });
+            }
+
+            B.listen ({verb: 'test', path: 'perf'}, function () {
+
+               var data = dale.do (dale.times (40), function (v) {
+                  return dale.do (dale.times (5), function (v2) {
+                     return v2;
+                  });
+               });
+
+               Time ['1: beforeperf'] = Date.now () - dale.acc (Time, function (a, b) {return a + b});
+
+               log ('Starting perf');
+
+               B.do ('set', ['State', 'view'], 'perf');
+
+               Time ['2: perfsetview'] = Date.now () - dale.acc (Time, function (a, b) {return a + b});
+
+               log ('Done setting view');
+
+               B.do ('set', ['Data', 'perf'], {});
+               B.do ('set', ['Data', 'perf', 'data'], data);
+               Time ['3: perfsetdata'] = Date.now () - dale.acc (Time, function (a, b) {return a + b});
+               log ('Done updating view with all data');
+
+               B.do ('set', ['Data', 'perf', 'data', 10, 2], 'something');
+               Time ['4: perfupdateone'] = Date.now () - dale.acc (Time, function (a, b) {return a + b});
+               log ('Done updating one item');
+
+               B.do ('set', ['Data', 'perf', 'class'], 'aclass');
+               Time ['5: perfupdateall'] = Date.now () - dale.acc (Time, function (a, b) {return a + b});
+               log ('Done updating all items');
+
+               B.do ('rem', ['Data', 'perf', 'data', 10], 2);
+               Time ['6: perfrem'] = Date.now () - dale.acc (Time, function (a, b) {return a + b});
+
+               log ('Done removing one item');
+
+               B.do ('add', ['Data', 'perf', 'data', 10], 999);
+
+               Time ['7: perfadd'] = Date.now () - dale.acc (Time, function (a, b) {return a + b});
+
+               Time ['8: totalpostload'] = Date.now () - dale.acc (dale.fil (Time, undefined, function (v, k) {
+                  if (k [0] === '0') return v;
+               }), function (a, b) {return a + b}) - Time.zero;
+
+               delete Time.zero;
+
+               log ('Done adding one item');
+
                B.do ('test', 'success');
 
             });
 
             Views.done = function () {
-               return ['h1', 'All tests were successful!'];
+               return [
+                  ['h1', 'All tests were successful!']
+               ];
             }
 
             B.listen ({verb: 'test', path: 'success', burn: true}, function () {

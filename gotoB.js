@@ -1,5 +1,5 @@
 /*
-gotoB - v0.1.0
+gotoB - v0.2.0
 
 Written by Federico Pereiro (fpereiro@gmail.com) and released into the public domain.
 
@@ -239,6 +239,7 @@ Please refer to readme.md to read the annotated source (but not yet!).
          var index = dale.stopNot (B.resolvequeue, undefined, function (v, k) {
             if (B.routes [v [0]]) return k;
          });
+
          if (index !== undefined) {
             next = B.resolvequeue [index];
             B.resolvequeue.splice (0, index + 1);
@@ -254,7 +255,9 @@ Please refer to readme.md to read the annotated source (but not yet!).
 
       var backup   = c ('#' + id).innerHTML;
       var route    = B.routes [id];
-      var diff     = B.diff (B.prediff (route.view), B.prediff (newView));
+      var prediff1 = B.prediff (route.view);
+      var prediff2 = B.prediff (newView);
+      var diff = B.diff (prediff1, prediff2);
 
       dale.do (r.routes, function (v) {
          if (v.parent === id && v.view) B.forget (v.id);
@@ -267,7 +270,7 @@ Please refer to readme.md to read the annotated source (but not yet!).
       }
 
       var find = function (where, debug, debugpos) {
-         var cur = c ('#' + id);
+         var cur = document.getElementById (id);
          dale.do (where, function (v, k) {
             if (! cur) {
                log ('BOOM! YOU FOUND A BUG IN gotoB! Please open a pull request at http://github.com/fpereiro/gotoB/issues and paste the text below:\n', JSON.stringify ({
@@ -361,9 +364,14 @@ Please refer to readme.md to read the annotated source (but not yet!).
                   if (! detached [old [2].old]) detached [old [2].old] = old [2].el;
                   el = old [2].el;
                   var oldAttrs = el.attributes;
+                  if (type (oldAttrs, true) === 'moznamedattrmap') {
+                     oldAttrs = dale.obj (oldAttrs, function (v) {
+                        if (v) return [v.name, v.value];
+                     });
+                  }
                   var newAttrs = JSON.parse (v [1].match (/{.+/) || '{}');
-                  dale.do (dale.fil (oldAttrs, undefined, function (v) {
-                     if (newAttrs [v.name] === undefined) return v.name;
+                  dale.do (dale.fil (oldAttrs, undefined, function (v, k) {
+                     if (newAttrs [v.name || k] === undefined) return v.name || k;
                   }), function (name) {
                      if (name === 'value')    el.value    = undefined;
                      if (name === 'checked')  el.checked  = false;
@@ -401,11 +409,11 @@ Please refer to readme.md to read the annotated source (but not yet!).
                   .replace (/&#96;/g,  '`');
                insert (document.createTextNode (v [1]), v [2].New, k);
             }
-            else v [2].el.remove ()
+            else v [2].el.parentNode.removeChild (v [2].el);
          }
       });
 
-      B.routes [id].view  = newView;
+      route.view  = newView;
 
       dale.do (B.getChildren (c ('#' + id).innerHTML), function (v) {
          B.routes [v].priority = B.routes [v].priority + B.routes [id].priority + 1;
@@ -453,18 +461,19 @@ Please refer to readme.md to read the annotated source (but not yet!).
 
    B.diff = function (s1, s2) {
 
-      var V = [], sol;
+      var V = [], sol, d = 0, vl, vc, k, out, y, point, diff, v, last;
 
-      return dale.stopNot (dale.times (s1.length + s2.length + 1, 0), undefined, function (d) {
+      while (d < s1.length + s2.length + 1) {
 
          V.push ({});
 
-         var vl = V [V.length - 2] || {1: {x: 0}};
-         var vc = V [V.length - 1];
+         vl = V [V.length - 2] || {1: {x: 0}};
+         vc = V [V.length - 1];
+         k = -d;
 
-         return dale.stopNot (dale.times (d + 1, -d, 2), undefined, function (k) {
+         while (k < -d + 2 * d + 1) {
 
-            var out = {diags: 0};
+            out = {diags: 0};
 
             if (k === -d || (k !== d && vl [k - 1].x < vl [k + 1].x)) {
                out.x = vl [k + 1].x;
@@ -475,7 +484,7 @@ Please refer to readme.md to read the annotated source (but not yet!).
                out.dir = 'r';
             }
 
-            var y = out.x - k;
+            y = out.x - k;
 
             while (out.x < s1.length && y < s2.length && s1 [out.x] === s2 [y]) {
                out.x++; y++; out.diags++;
@@ -485,12 +494,13 @@ Please refer to readme.md to read the annotated source (but not yet!).
 
             if (out.x >= s1.length && y >= s2.length) {
 
-               var point = {x: out.x, y: y};
-               var diff  = [];
+               point = {x: out.x, y: y};
+               diff  = [];
 
-               dale.do (dale.times (d + 1, d, -1), function (v) {
-                  var last = V [v] [point.x - point.y];
-                  var y = last.x - (point.x - point.y);
+               v = d;
+               while (v > -1) {
+                  last = V [v] [point.x - point.y];
+                  y = last.x - (point.x - point.y);
                   if (last.diags) dale.do (dale.times (last.diags), function (v2) {
                      diff.unshift (['keep', s1 [last.x - v2]]);
                   });
@@ -498,13 +508,16 @@ Please refer to readme.md to read the annotated source (but not yet!).
                   else                  diff.unshift (['add', s2 [y      - last.diags - 1]]);
                   point.x = last.x - last.diags - (last.dir === 'r' ? 1 : 0);
                   point.y = y      - last.diags - (last.dir === 'd' ? 1 : 0);
-               });
+                  v--;
+               }
 
                diff.shift ();
                return diff;
             }
-         });
-      });
+            k += 2;
+         }
+         d++;
+      }
    }
 
 }) ();

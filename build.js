@@ -1,5 +1,5 @@
 /*
-gotoB - v0.1.0
+gotoB - v0.2.0
 
 Written by Federico Pereiro (fpereiro@gmail.com) and released into the public domain.
 
@@ -17,12 +17,13 @@ To build gotoB, run `node build`. If everything works well, a file named `gotoB.
 
    var build = function (files, dev) {
 
+      var concat = '';
+      dale.do (files, function (v) {
+         concat += fs.readFileSync (v, 'utf8');
+      });
+
       if (dev) {
-         var output = '';
-         dale.do (files, function (v) {
-            output += fs.readFileSync (v, 'utf8');
-         })
-         return fs.writeFile ('gotoB.min.js', output, 'utf8', function (error) {
+         return fs.writeFile ('gotoB.min.js', concat, 'utf8', function (error) {
             if (error) return log ('Error', 'writeFile error.');
             log ('Success', 'gotoB.min.js built successfully!');
          });
@@ -39,12 +40,9 @@ To build gotoB, run `node build`. If everything works well, a file named `gotoB.
          throw new Error (error);
       }
 
-      try {
-         var code = UglifyJS.minify (files).code;
-      }
-      catch (error) {
+      var code = UglifyJS.minify (concat).code;
+      if (! code) {
          log ('Error', 'js build error.');
-         throw new Error (error);
       }
 
       zlib.gzip (code, function (error, zipcode) {

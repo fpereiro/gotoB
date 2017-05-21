@@ -6,11 +6,11 @@ gotoв is a set of tools for building the frontend of a web application (hencefo
 
 ## Current status of the project
 
-The current version of gotoв, v0.1.0, is considered to be *unstable* and *somewhat complete*. [Suggestions](https://github.com/fpereiro/gotoB/issues) and [patches](https://github.com/fpereiro/gotoB/pulls) are welcome. Besides bug fixes, these are the future changes planned:
+The current version of gotoв, v0.2.0, is considered to be *unstable* and *somewhat complete*. [Suggestions](https://github.com/fpereiro/gotoB/issues) and [patches](https://github.com/fpereiro/gotoB/pulls) are welcome. Besides bug fixes, these are the future changes planned:
 
 - Add remaining parts of readme.
 - Add `prod mode` & performance improvements.
-- Cross-browser compatibility.
+- Extend cross-browser compatibility.
 - Add tests for TodoMVC example.
 - Annotated source code.
 
@@ -25,10 +25,22 @@ gotoв is written in Javascript. You can use it in the browser by sourcing the p
 Or you can use these links to use the latest version - courtesy of [RawGit](https://rawgit.com) and [MaxCDN](https://maxcdn.com).
 
 ```html
-<script src="https://cdn.rawgit.com/fpereiro/gotoB/99f7bfcb4207408b5e4e90325a3b3c80b694a7ef/gotoB.min.js"></script>
+<script src=""></script>
 ```
 
 gotoв is exclusively a client-side library. Still, you can find it in npm: `npm install gotob`
+
+gotoв is pure ES5 javascript. Browser compatibility is as follows:
+
+- Chrome 15 and above.
+- Firefox 22 and above.
+- Safari 5.1 and above.
+- IE9 and above.
+- Opera 11.6 and above.
+
+The author wishes to thank [Browserstack](https://browserstack.com) for providing tools to test cross-browser compatibility.
+
+<a href="https://www.browserstack.com"><img src="https://bstacksupport.zendesk.com/attachments/token/kkjj6piHDCXiWrYlNXjKbFveo/?name=Logo-01.svg" width="150px" height="33px"></a>
 
 ## Design
 
@@ -53,7 +65,7 @@ The way gotoв approachs events is based on [recalc](https://github.com/fpereiro
 
 But what about redrawing the page? And what about firing events out of user interactions? For these purposes, gotoв provides you two functions: one for creating a view that is automatically and efficiently redrawn when its input data changes (`B.view`), and another one for creating stringified event calls when an user does something with the browser (`B.ev`). In the background, gotoв uses [Myers' diff algorithm](http://www.xmailserver.org/diff2.pdf) to compute the view changes and apply them selectively to the DOM. Because we generate views with object literals, we already have a tree-like representation of the view (which we feed to the diff algorithm).
 
-Regarding **portability**, the solution is to use a subset of javascript ES5 and have a small, tailored polyfill within [cocholate](https://github.com/fpereiro/cocholate), a sort of miniature jQuery replacement. **NOTE: for the time being, gotoв has no cross-browser compatibility. I'm working on it as my top priority.**
+Regarding **portability**, the solution is to use a subset of javascript ES5 and have a small, tailored polyfill within [cocholate](https://github.com/fpereiro/cocholate), a sort of miniature jQuery replacement.
 
 ### Practices and features that gotoв happily ignores
 
@@ -75,7 +87,7 @@ Regarding **portability**, the solution is to use a subset of javascript ES5 and
 - **Trivial to set up**: add `<script src="https://cdn.rawgit.com/fpereiro/gotoB/99f7bfcb4207408b5e4e90325a3b3c80b694a7ef/gotoB.min.js"></script>` at the bottom of the `<body>`.
 - **Everything in plain sight**: all properties and state are directly accessible from the javascript console of the browser. DOM elements have stringified event handlers that can be inspected with any modern browser.
 - **Performance**: gotoв itself is small (~10kb when minified and gzipped, including all dependencies). Most of its code is concerned with efficiently redrawing the DOM. Though there's a lot of work still to be done, gotoв intends to successfully compete, performance-wise, with state of the art tools.
-- **Cross-browser compatibility**: a work in progress. Eventually, I'd like gotoв to support IE6 and above out of the box.
+- **Cross-browser compatibility**: a work in progress (see browser current compatibility above in the *Installation* section). I'm working on making gotoв work on IE6 and above.
 
 ## The rest of the readme
 
@@ -85,7 +97,7 @@ Meanwhile, you might want to take a look at gotoв's implementation of TodoMVC, 
 
 ## Source code
 
-The complete source code is contained in `gotoB.js`. It is about 510 lines long.
+The complete source code is contained in `gotoB.js`. It is about 520 lines long.
 
 Annotated source code will be forthcoming when the library stabilizes.
 

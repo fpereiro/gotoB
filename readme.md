@@ -25,7 +25,7 @@ gotoв is written in Javascript. You can use it in the browser by sourcing the p
 Or you can use these links to use the latest version - courtesy of [RawGit](https://rawgit.com) and [MaxCDN](https://maxcdn.com).
 
 ```html
-<script src=""></script>
+<script src="https://cdn.rawgit.com/fpereiro/gotoB/e7460b16a1cf634619cc593415677a3c0530e8ef/gotoB.min.js"></script>
 ```
 
 gotoв is exclusively a client-side library. Still, you can find it in npm: `npm install gotob`

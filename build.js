@@ -1,5 +1,5 @@
 /*
-gotoB - v0.2.0
+gotoB - v0.2.1
 
 Written by Federico Pereiro (fpereiro@gmail.com) and released into the public domain.
 

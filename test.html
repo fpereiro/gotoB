@@ -312,8 +312,20 @@
 
                });
 
+               B.do ('test', 'prediff');
+
+            });
+
+            // *** PREDIFF TEST ***
+
+            B.listen ({verb: 'test', path: 'prediff', burn: true}, function () {
+
+               B.do ('set', ['State', 'view'], 'prediff');
+
                B.do ('test', 'events');
             });
+
+            Views.prediff = function () {return ['just', 'some', 'strings']}
 
             // *** EVENTS TEST ***
 

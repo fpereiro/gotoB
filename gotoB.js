@@ -1,5 +1,5 @@
 /*
-gotoB - v0.2.0
+gotoB - v0.2.1
 
 Written by Federico Pereiro (fpereiro@gmail.com) and released into the public domain.
 
@@ -21,7 +21,7 @@ Please refer to readme.md to read the annotated source (but not yet!).
 
    var r = window.R ();
 
-   var B = window.B = {v: '0.1.0', B: 'в', r: r, routes: r.routes, store: r.store, do: r.do, listen: r.listen, forget: r.forget};
+   var B = window.B = {v: '0.2.1', B: 'в', r: r, routes: r.routes, store: r.store, do: r.do, listen: r.listen, forget: r.forget};
 
    // *** DEVELOPER TOOLS ***
 
@@ -426,7 +426,7 @@ Please refer to readme.md to read the annotated source (but not yet!).
    B.prediff = function (input, output, table) {
       if (teishi.simple (input)) {
          if (input === undefined || input === '') return output ? undefined : [];
-         if (! output) return [lith.g (input)];
+         if (! output || output [output.length - 1] === undefined) return [lith.g (input)];
          if (output [output.length - 1].match (/^(<|>)/)) output.push ('');
          return output [output.length - 1] += lith.g (input);
       }

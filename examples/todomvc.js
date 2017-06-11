@@ -229,18 +229,18 @@
             'font-weight': '400'
          }, ['&:hover', {'text-decoration': 'underline'}]]
       ]],
-      ['LITERAL', '@media screen and (-webkit-min-device-pixel-ratio:0) {'],
-      ['.toggle-all, .todo-list li .toggle', {background: 'none'}],
-      ['.todo-list li .toggle', {height: 40}],
-      ['.toggle-all', {
-         '-webkit-transform, transform': 'rotate(90deg)',
-         '-webkit-appearance, appearance': 'none'
-      }],
-      ['LITERAL', '}'],
-      ['LITERAL', '@media (max-width: 430px) {'],
-      ['.footer',  {height: 50}],
-      ['.filters', {bottom: 10}],
-      ['LITERAL', '}']
+      lith.css.media ('screen and (-webkit-min-device-pixel-ratio:0)', [
+         ['.toggle-all, .todo-list li .toggle', {background: 'none'}],
+         ['.todo-list li .toggle', {height: 40}],
+         ['.toggle-all', {
+            '-webkit-transform, transform': 'rotate(90deg)',
+            '-webkit-appearance, appearance': 'none'
+         }],
+      ]),
+      lith.css.media ('(max-width: 430px)', [
+         ['.footer',  {height: 50}],
+         ['.filters', {bottom: 10}],
+      ])
    ];
 
    // *** INITIALIZATION ***

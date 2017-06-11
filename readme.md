@@ -6,7 +6,7 @@ gotoв is a set of tools for building the frontend of a web application (hencefo
 
 ## Current status of the project
 
-The current version of gotoв, v0.2.1, is considered to be *unstable* and *somewhat complete*. [Suggestions](https://github.com/fpereiro/gotoB/issues) and [patches](https://github.com/fpereiro/gotoB/pulls) are welcome. Besides bug fixes, these are the future changes planned:
+The current version of gotoв, v0.3.0, is considered to be *unstable* and *somewhat complete*. [Suggestions](https://github.com/fpereiro/gotoB/issues) and [patches](https://github.com/fpereiro/gotoB/pulls) are welcome. Besides bug fixes, these are the future changes planned:
 
 - Add remaining parts of readme.
 - Add `prod mode` & performance improvements.
@@ -25,7 +25,7 @@ gotoв is written in Javascript. You can use it in the browser by sourcing the p
 Or you can use these links to use the latest version - courtesy of [RawGit](https://rawgit.com) and [MaxCDN](https://maxcdn.com).
 
 ```html
-<script src="https://cdn.rawgit.com/fpereiro/gotoB/e31939eacfb1fb5a8392a4142ca74ed66d7b8f63/gotoB.min.js"></script>
+<script src=""></script>
 ```
 
 gotoв is exclusively a client-side library. Still, you can find it in npm: `npm install gotob`
@@ -84,7 +84,7 @@ Regarding **portability**, the solution is to use a subset of javascript ES5 and
 - **Fast reload**: the edit-reload cycle should take under two seconds. I don't want to wait until no bundle is completed.
 - **Smallness**: gotoв and its dependencies are < 2000 lines of consistent, annotated javascript. In other words, it is less than 2000 lines on top of [vanilla.js](http://vanilla-js.com/).
 - **Batteries included**: the core functionality is all provided. Whatever libraries you add on top will probably be for specific things (nice CSS, a calendar widget, etc.)
-- **Trivial to set up**: add `<script src="https://cdn.rawgit.com/fpereiro/gotoB/e31939eacfb1fb5a8392a4142ca74ed66d7b8f63/gotoB.min.js"></script>` at the bottom of the `<body>`.
+- **Trivial to set up**: add `<script src=""></script>` at the bottom of the `<body>`.
 - **Everything in plain sight**: all properties and state are directly accessible from the javascript console of the browser. DOM elements have stringified event handlers that can be inspected with any modern browser.
 - **Performance**: gotoв itself is small (~10kb when minified and gzipped, including all dependencies). Most of its code is concerned with efficiently redrawing the DOM. Though there's a lot of work still to be done, gotoв intends to successfully compete, performance-wise, with state of the art tools.
 - **Cross-browser compatibility**: a work in progress (see browser current compatibility above in the *Installation* section). I'm working on making gotoв work on IE6 and above.
@@ -97,7 +97,7 @@ Meanwhile, you might want to take a look at gotoв's implementation of TodoMVC, 
 
 ## Source code
 
-The complete source code is contained in `gotoB.js`. It is about 520 lines long.
+The complete source code is contained in `gotoB.js`. It is about 550 lines long.
 
 Annotated source code will be forthcoming when the library stabilizes.
 

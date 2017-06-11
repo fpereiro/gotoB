@@ -27,16 +27,20 @@
             var State = window.State = B.store.State = {};
 
             var Test = function (tag, fun) {
-               if (State.prod) return;
+               if (B.prod) return;
                var error = fun ();
                if (error) throw new Error (tag + ': ' + error);
                log ('Test OK', tag);
             }
 
             Test ('initial setup', function () {
-               if (teishi.s (dale.keys (B.routes).sort ()) !== teishi.s (['add', 'change', 'debug', 'get', 'rem', 'set'])) return 'Initial routes mismatch.';
+               if (teishi.s (dale.keys (B.routes).sort ()) !== teishi.s (['add', 'debug', 'get', 'rem', 'set'])) return 'Initial routes mismatch.';
                if (B.debug.length > 0) return 'Extraneous elements in debug history.';
             });
+
+            // *** PROD MODE ***
+
+            B.prod = false;
 
             // *** B.VIEW & B.DEBUG ***
 
@@ -76,6 +80,9 @@
 
                if (B.view ({path: [], attrs: /paprika/}, function () {}) !== false) return 'B.view accepted invalid attrs.';
 
+               if (B.view ({path: [], ondraw: /notafun/}, function () {}) !== false) return 'B.view accepted invalid ondraw.';
+               if (B.view ({path: [], onforget: /notafun/}, function () {}) !== false) return 'B.view accepted invalid onforget.';
+
                if (B.view ({path: []}, function () {
                   return /notaview/;
                }) !== false) return 'B.view accepted invalid view.';
@@ -92,6 +99,19 @@
 
                if (counter !== 2) return 'rfun wasn\'t triggered on change.';
 
+               B.do ('set', ['ping', 'pong'], 1);
+
+               if (counter !== 3) return 'rfun wasn\'t triggered on set 1.';
+
+               B.do ('set', ['ping', 'pong'], 1);
+
+               if (counter !== 3) return 'rfun was triggered on set with same value 1.';
+
+               B.do ('set', ['ping', 'pong'], ['hello']);
+               B.do ('set', ['ping', 'pong'], ['hello']);
+
+               if (counter !== 4) return 'rfun was triggered on set with same value 2.';
+
                B.forget (id);
 
                if (B.view ({path: [], listen: {verb: 'hola', path: 'paprika'}}) !== false) return 'Invalid rfun passed to listen item.';
@@ -105,7 +125,7 @@
             B.forget (id);
 
             Test ('dangling view cleanup', function () {
-               if (dale.keys (B.routes).sort ().length !== 6) return 'Cleanup failed.';
+               if (dale.keys (B.routes).sort ().length !== 5) return 'Cleanup failed.';
             });
 
             // *** BASE VIEW ***
@@ -131,7 +151,9 @@
                   ['style', lith.css.g (Views.baseCSS)],
 
                   B.view ({path: ['State', 'view']}, function (x, view) {
-                     return Views [view] ? Views [view] () : ['h1', [['To be'], ' determined']];
+                     return B.view ({path: ['State']}, function (x, state) {
+                        return Views [view] ? Views [view] () : state.default;
+                     });
                   })
                ]];
             }
@@ -141,21 +163,28 @@
             var initId = B.listen ({verb: 'init', path: '*', burn: true}, function () {
 
                c.place ('body', 'afterBegin', lith.g (Views.base ()));
+               B.do ('set', ['State', 'default'], [['To be'], ' determined']);
 
                Test ('canvas initialization', function () {
                   if (c ('body #canvas').length        !== 1) return 'Canvas not placed.';
                   if (c ('body #canvas style').length  !== 1) return 'Inner style not placed.';
-                  if (c ('body #canvas div').length    !== 1) return 'Inner div not placed.';
-                  if (c ('body #canvas div h1').length !== 1) return 'Content of inner div not placed.';
+                  if (c ('body #canvas div div').length !== 1) return 'Inner div not placed.';
 
-                  if (c ('body #canvas div h1') [0].innerHTML !== 'To be determined') return 'Content of inner div not placed properly.';
+                  B.do ('set', ['State', 'default'], ['h1', [['To be'], ' determined']]);
+                  if (c ('body #canvas div div h1') [0].innerHTML !== 'To be determined') return 'Content of inner div not placed properly.';
+
+                  var evs = B.debug.length;
+                  B.do ('set', ['State', 'default'], ['h1', [['To be'], ' determined']]);
+                  if (B.debug.length - evs !== 1) return 'B.change didn\'t prevent redrawing on equal set.';
+                  if (c ('body #canvas div div h1') [0].innerHTML !== 'To be determined') return 'Content of inner div not placed properly.';
+
                });
 
                Test ('viewroutes', function () {
                   var viewRoutes = dale.fil (dale.keys (B.routes), undefined, function (v) {
                      if (v.match (B.B)) return v;
                   });
-                  if (viewRoutes.length > 1) return 'Unexpected viewroutes.';
+                  if (viewRoutes.length > 2) return 'Unexpected viewroutes.';
                   var viewRoute = B.routes [viewRoutes [0]];
                   if (viewRoute.verb !== 'change') return 'Invalid viewroute verb.';
                   if (teishi.s (viewRoute.path) !== teishi.s (['State', 'view'])) return 'Invalid viewroute path.';
@@ -322,10 +351,12 @@
 
                B.do ('set', ['State', 'view'], 'prediff');
 
+               if (c ('div#canvas div div') [0].innerHTML !== 'justsomestrings') return 'prediff test wasn\'t passed.';
+
                B.do ('test', 'events');
             });
 
-            Views.prediff = function () {return ['just', 'some', 'strings']}
+            Views.prediff = function () {return [['just'], 'some', 'strings']}
 
             // *** EVENTS TEST ***
 
@@ -487,8 +518,112 @@
                   if (c ('#user').value !== 'hello!') return 'value wasn\'t preserved when it should.';
                });
 
-               B.do ('test', 'perf');
+               B.do ('test', 'opaque');
+            });
 
+            // *** OPAQUE ***
+
+            Views.opaque = function () {
+
+               return B.view ({path: ['State', 'ltable']}, function (x, ltable) {
+                  return B.view ({path: ['State']}, function (x, state) {
+                     return ['table', dale.do (dale.times (ltable), function (v) {
+                        return ['tr', dale.do (dale.times (ltable), function (v2, k2) {
+                           if (k2 === 0) return ['td', {class: 'something ' + state.opaqueclass, opaque: true}, ['input']];
+                           else return ['td', k2];
+                        })];
+                     })];
+                  });
+               });
+            }
+
+            B.listen ({verb: 'test', path: 'opaque', burn: true}, function () {
+
+               B.do ('set', ['State', 'ltable'], 2);
+               B.do ('set', ['State', 'view'], 'opaque');
+
+               Test ('Testing opaque elements', function () {
+                  var opaques = c ('.something');
+                  if (opaques.length !== 2) return 'Opaques were not created.';
+                  opaques = c ('.something input');
+                  if (opaques.length !== 2) return 'Opaque contents were not created.';
+
+                  c.fill ('.something', '<input><input>');
+                  B.do ('set', ['State', 'ltable'], 4);
+                  opaques = c ('.something');
+                  if (opaques.length !== 4) return 'Opaques were not updated 1.';
+                  opaques = c ('.something input');
+                  if (opaques.length !== 4) return 'Opaque contents were not updated 1.';
+
+                  c.fill ('.something', 'boo');
+                  if (c ('.something') [0].innerHTML !== 'boo') return 'Opaque contents were not updated.';
+
+                  B.do ('set', ['State', 'ltable'], 5);
+                  opaques = c ('.something');
+                  if (opaques.length !== 5) return 'Opaques were not updated 2.';
+                  opaques = c ('.something input');
+                  if (opaques.length !== 5) return 'Opaque contents were not updated 2.';
+
+                  c.fill ('.something', '<div><input><span></span></div>');
+
+                  B.do ('set', ['State', 'ltable'], 4);
+                  B.do ('set', ['State', 'opaqueclass'], 'style');
+
+                  opaques = c ('.style');
+                  if (opaques.length !== 4) return 'Opaques were not updated 3.';
+                  opaques = c ('.style input');
+                  if (opaques.length !== 4) return 'Opaque contents were not updated 3.';
+               });
+
+               B.do ('test', 'viewevents');
+
+            });
+
+            // *** B.VIEW EVENTS ***
+
+            Views.viewevents = function () {
+               return B.view ({
+                  path: ['Data', 'viewevent1'],
+                  ondraw:   function () {Data.ondraw1++},
+                  onforget: function () {Data.onforget1++}
+               }, function (x, viewevent1) {
+                  return B.view ({
+                     path: ['Data', 'viewevent2'],
+                     ondraw:   function () {Data.ondraw2++},
+                     onforget: function () {Data.onforget2++}
+                  }, function (x, viewevent2) {
+                     return ['td', viewevent1 + viewevent2];
+                  });
+               });
+            }
+
+            B.listen ({verb: 'test', path: 'viewevents', burn: true}, function () {
+
+               Data.ondraw1 = 0;
+               Data.ondraw2 = 0;
+               Data.onforget1 = 0;
+               Data.onforget2 = 0;
+
+               var compare = function (comparison) {
+                  return ('' + Data.ondraw1 + Data.ondraw2 + Data.onforget1 + Data.onforget2) !== comparison;
+               }
+
+               B.do ('set', ['Data', 'viewevent1'], 7);
+               B.do ('set', ['Data', 'viewevent2'], 9);
+
+               B.do ('set', ['State', 'view'], 'viewevents');
+
+               Test ('Testing view events', function () {
+                  if (compare ('1100')) return 'ondraw/onforget didn\'t work 1.';
+                  B.do ('set', ['Data', 'viewevent2'], 11);
+                  if (compare ('1200')) return 'ondraw/onforget didn\'t work 2.';
+                  B.do ('set', ['Data', 'viewevent1'], 4);
+                  if (compare ('2301')) return 'ondraw/onforget didn\'t work 3.';
+                  B.do ('set', ['State', 'view'], 'opaque');
+                  if (compare ('2312')) return 'ondraw/onforget didn\'t work 4.';
+               });
+
+               B.do ('test', 'perf');
             });
 
             // *** PERFORMANCE ***
@@ -504,7 +639,7 @@
                });
             }
 
-            B.listen ({verb: 'test', path: 'perf'}, function () {
+            B.listen ({verb: 'test', path: 'perf', burn: true}, function () {
 
                var data = dale.do (dale.times (40), function (v) {
                   return dale.do (dale.times (5), function (v2) {
@@ -563,6 +698,10 @@
             }
 
             B.listen ({verb: 'test', path: 'success', burn: true}, function () {
+
+               Test ('Route cleanup', function () {
+                  if (dale.keys (B.routes).length !== 8) return 'Some routes were not cleaned up!';
+               });
 
                B.do ('set', ['State', 'view'], 'done');
 

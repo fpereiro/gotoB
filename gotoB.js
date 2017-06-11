@@ -1,5 +1,5 @@
 /*
-gotoB - v0.2.1
+gotoB - v0.3.0
 
 Written by Federico Pereiro (fpereiro@gmail.com) and released into the public domain.
 
@@ -21,7 +21,7 @@ Please refer to readme.md to read the annotated source (but not yet!).
 
    var r = window.R ();
 
-   var B = window.B = {v: '0.2.1', B: 'в', r: r, routes: r.routes, store: r.store, do: r.do, listen: r.listen, forget: r.forget};
+   var B = window.B = {v: '0.3.0', B: 'в', r: r, routes: r.routes, store: r.store, do: r.do, listen: r.listen, forget: r.forget};
 
    // *** DEVELOPER TOOLS ***
 
@@ -29,7 +29,7 @@ Please refer to readme.md to read the annotated source (but not yet!).
 
    B.debug.log = function (from, to, mute) {
 
-      if (teishi.stop ([
+      if (! B.prod && teishi.stop ([
          ['from', from, 'integer'],
          ['to',   to,   ['integer', 'undefined'], 'oneOf']
       ])) return false;
@@ -129,20 +129,28 @@ Please refer to readme.md to read the annotated source (but not yet!).
       return true;
    }
 
-   dale.do (['add', 'rem', 'get', 'set'], function (v) {
-      B.listen ({id: v, verb: v, path: '*'}, function (x) {
-         B [x.verb].apply (null, [x.path].concat ([].slice.call (arguments, 1)));
+   B.equal = function (a, b) {
+      if (teishi.simple (a) && teishi.simple (b)) return a === b;
+      if (teishi.t (a, true) !== teishi.t (b, true)) return false;
+      if (teishi.s (dale.keys (a).sort ()) !== teishi.s (dale.keys (b).sort ())) return false;
+      return dale.stop (a, false, function (v, k) {
+         return B.equal (v, b [k]);
       });
-   });
+   }
 
-   B.listen ({id: 'change', verb: '*', path: '*', priority: -1}, function (x) {
-      if (['add', 'rem', 'set'].indexOf (x.verb) !== -1) B.do ('change', x.path, B.get (x.path));
+   dale.do (['add', 'rem', 'get', 'set'], function (v) {
+      B.listen ({id: v, verb: v, path: '*'}, function (x, val) {
+         if (x.verb === 'set') var prev = B.get (x.path);
+         B [x.verb].apply (null, [x.path].concat ([].slice.call (arguments, 1)));
+         if (x.verb === 'add' || x.verb === 'rem')      B.do ('change', x.path, B.get (x.path));
+         if (x.verb === 'set' && ! B.equal (prev, val)) B.do ('change', x.path, val);
+      });
    });
 
    // *** DOM METHODS ***
 
    B.ev = function (attrs, evs) {
-      if (teishi.stop ([
+      if (! B.prod && teishi.stop ([
          ['attrs', attrs, 'object'],
          ['evs', evs, ['object', 'array'], 'oneOf'],
          [type (evs) === 'array', ['evs', evs, 'object', 'each']]
@@ -168,12 +176,14 @@ Please refer to readme.md to read the annotated source (but not yet!).
 
    B.view = function (params, rfun) {
 
-      if (teishi.stop ([
+      if (! B.prod && teishi.stop ([
          ['params', params, 'object'],
          ['rfun', rfun, 'function'],
          function () {return [
             [params.tag !== undefined, ['params.tag', params.tag, lith.k.tags, 'oneOf', teishi.test.equal]],
             ['params.attrs', params.attrs, ['object', 'undefined'], 'oneOf'],
+            ['params.ondraw', params.ondraw, ['function', 'undefined'], 'oneOf'],
+            ['params.onforget', params.onforget, ['function', 'undefined'], 'oneOf']
          ]}
       ])) return false;
 
@@ -193,24 +203,28 @@ Please refer to readme.md to read the annotated source (but not yet!).
       }) === false) return false;
 
       if (B.listen ({verb: 'change', path: params.path, id: id}, function (x) {
-         var result = rfun (x, B.get (params.path));
-         if (! lith.v (result)) return;
-         B.resolve (id, result);
+         var view = rfun (x, B.get (params.path));
+         if (! B.prod && ! lith.v (view)) return log ('B.view received invalid view', view, x);
+         B.resolve (id, view);
+         if (params.ondraw) params.ondraw (params);
       }) === false) return log ('Invalid parameters passed to B.view:', params, rfun);
 
       var view = rfun ({verb: 'change', path: params.path}, B.get (params.path));
 
-      if (! lith.v (view)) return false;
+      if (! B.prod && ! lith.v (view)) return log ('B.view received invalid view', view, x);
 
       B.routes [id].view     = view;
       B.routes [id].priority = -2;
+      B.routes [id].onforget = params.onforget;
 
-      view = lith.g (view);
+      view = lith.g (view, B.prod);
 
       dale.do (B.getChildren (view), function (v) {
          B.routes [v].priority--;
          if (! B.routes [v].parent) B.routes [v].parent = id;
       });
+
+      if (params.ondraw) params.ondraw (params);
 
       return [tag, attrs, ['LITERAL', view]];
    }
@@ -249,7 +263,7 @@ Please refer to readme.md to read the annotated source (but not yet!).
       }
 
       if (! c ('#' + id)) {
-         log ('Attempted to redraw dangling view', id);
+         log ('B.resolve', 'Attempted to redraw dangling view', id);
          return outro ();
       }
 
@@ -260,7 +274,9 @@ Please refer to readme.md to read the annotated source (but not yet!).
       var diff = B.diff (prediff1, prediff2);
 
       dale.do (r.routes, function (v) {
-         if (v.parent === id && v.view) B.forget (v.id);
+         if (v.parent === id && v.view) B.forget (v.id, function (route) {
+            if (route.onforget) route.onforget ();
+         });
       });
 
       var insert = function (el, where, debugpos) {
@@ -270,20 +286,21 @@ Please refer to readme.md to read the annotated source (but not yet!).
       }
 
       var find = function (where, debug, debugpos) {
+         var t = Date.now ();
          var cur = document.getElementById (id);
          dale.do (where, function (v, k) {
             if (! cur) {
                log ('BOOM! YOU FOUND A BUG IN gotoB! Please open a pull request at http://github.com/fpereiro/gotoB/issues and paste the text below:\n', JSON.stringify ({
                   debug: debug,
                   debugpos: debugpos,
-                  item: diff [debugpos].slice (0, 2).join (' '),
+                  diffitem: diff [debugpos].slice (0, 2).join (' '),
                   id: id,
-                  k: k,
                   where: where,
+                  k: k,
                   backup: backup,
                   oldView: route.view,
                   newView: newView,
-                  diff: dale.do (diff, function (v, k) {var obj = {}; obj [k] = v; return obj;})
+                  diff: dale.obj (teishi.c (diff), function (v2, k2) {return [k2, v2]})
                }));
                throw new Error ('gotoB redraw error!');
             }
@@ -301,11 +318,13 @@ Please refer to readme.md to read the annotated source (but not yet!).
       }
 
       dale.do (diff, function (v, k) {
+         if (v [1].match (/^<</)) return;
          if (! v [1].match (/^>/)) diff [k] [2] = {el: find (dold, 'sequence', k), old: teishi.c (dold), New: teishi.c (dnew)};
          if (v [1].match (/^</)) {
             diff [k] [2].active = diff [k] [2].el === document.activeElement;
-            var tag  = v [1].match (/[^<\s]+/g) [0];
-            if (v [0] === 'add') {
+            var tag  = v [1].match (/[^\s]+/g) [0];
+            var opaque = v [1].match (/<.+ {.*"opaque":true.*}/);
+            if (v [0] === 'add' && ! opaque) {
                if (match.rem.tag === tag) {
                   diff [k] [2].match = match.rem.index;
                   diff [match.rem.index] [2].match = k;
@@ -316,7 +335,7 @@ Please refer to readme.md to read the annotated source (but not yet!).
                   match.add.index = k;
                }
             }
-            if (v [0] === 'rem') {
+            if (v [0] === 'rem' && ! opaque) {
                if (match.add.tag === tag) {
                   diff [k] [2].match = match.add.index;
                   diff [match.add.index] [2].match = k;
@@ -351,12 +370,20 @@ Please refer to readme.md to read the annotated source (but not yet!).
 
       dale.do (diff, function (v, k) {
          if (v [1].match (/^>/)) return;
+         if (v [1].match (/^<</)) {
+            if (v [0] !== 'rem') diff [k - 1] [2].el.innerHTML = v [1].slice (1);
+            return;
+         }
          if (v [0] === 'keep') {
+            if (v [1].match (/<.+ {.*"opaque":true.*}/)) v [2].el.innerHTML = '';
             insert (v [2].el.parentNode.removeChild (v [2].el), v [2].New, k);
             if (v [2].active && v [1].match (/[^<\s]+/g) [0] !== 'a') v [2].el.focus ? v [2].el.focus () : v [2].el.setActive ();
             return;
          }
          if (v [1].match (/^</)) {
+            if (v [0] === 'rem') {
+               if (v [2].match === undefined || v [2].match > k) detached [v [2].old] = v [2].el.parentNode.removeChild (v [2].el);
+            }
             if (v [0] === 'add') {
                var el;
                if (v [2].match !== undefined) {
@@ -392,10 +419,8 @@ Please refer to readme.md to read the annotated source (but not yet!).
                   });
                }
                insert (el, v [2].New, k);
+               v [2].el = el;
                if (old && old [2].active && v [1].match (/[^<\s]+/g) [0] !== 'a') el.focus ? el.focus () : el.setActive ();
-            }
-            if (v [0] === 'rem') {
-               if (v [2].match === undefined || v [2].match > k) detached [v [2].old] = v [2].el.parentNode.removeChild (v [2].el);
             }
          }
          else {
@@ -418,33 +443,37 @@ Please refer to readme.md to read the annotated source (but not yet!).
       dale.do (B.getChildren (c ('#' + id).innerHTML), function (v) {
          B.routes [v].priority = B.routes [v].priority + B.routes [id].priority + 1;
          if (! B.routes [v].parent) B.routes [v].parent = id;
+         if (B.routes [v].ondraw) B.routes [v].ondraw ();
       });
 
       outro ();
    }
 
-   B.prediff = function (input, output, table) {
+   B.prediff = function (input, output) {
+
       if (teishi.simple (input)) {
          if (input === undefined || input === '') return output ? undefined : [];
-         if (! output || output [output.length - 1] === undefined) return [lith.g (input)];
+         if (! output) return [lith.g (input, B.prod)];
+         if (output.length === 0) output.push ('');
          if (output [output.length - 1].match (/^(<|>)/)) output.push ('');
-         return output [output.length - 1] += lith.g (input);
+         return output [output.length - 1] += lith.g (input, B.prod);
       }
 
       output = output || [];
 
-      if (type (input) === 'array' && lith.k.tags.indexOf (input [0]) !== -1) {
+      if (lith.k.tags.indexOf (input [0]) !== -1) {
          output.push ('<' + input [0]);
          var attrs = type (input [1]) === 'object' ? input [1] : undefined;
          var conts = input [attrs ? 2 : 1];
          if (attrs) {
             output [output.length - 1] += ' ' + JSON.stringify (attrs);
-            if (attrs.id && attrs.id.match (/^в[0-9a-f]+$/g)) {
+            if (attrs.opaque) output.push ('<' + lith.g (conts, B.prod));
+            else if (attrs.id && attrs.id.match (/^в[0-9a-f]+$/g)) {
                conts = B.routes [attrs.id].view;
             }
          }
          var mark = output.length;
-         B.prediff (conts, output);
+         if (! attrs || ! attrs.opaque) B.prediff (conts, output);
          if (input [0] === 'table' && output [mark] && output [mark].match (/<tbody/) === null) {
             output.splice (mark, 0, '<tbody');
             output.push ('>');

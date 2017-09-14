@@ -243,36 +243,17 @@
       ])
    ];
 
-   // *** INITIALIZATION ***
-
-   B.listen ({verb: 'init', path: '*', burn: true}, function () {
-      // Throw error if browser does not support LocalStorage.
-      if (! Storage) {
-         alert           ('This application only works in a modern browser!');
-         throw new Error ('This application only works in a modern browser!');
-      }
-
-      c.place ('body', 'afterBegin', lith.g (['body', Views.main ()]));
-
-      B.do ('load', ['data', 'calc']);
-   });
-
-   // When document is ready, perform initialization.
-   c.ready (function () {
-      B.do ('init', '*');
-   });
-
    // *** STORAGE ***
 
-   B.listen ({verb: 'load', path: '*', burn: true}, function () {
+   B.listen ('load', '*', function () {
       if (! localStorage ['todos-gotoB']) {
          localStorage.setItem ('todos-gotoB', '{"todos": []}');
       }
       B.do ('set', ['Data', 'todos'], JSON.parse (localStorage ['todos-gotoB']).todos);
    });
 
-   B.listen ({verb: 'change', path: ['Data', 'todos']}, function (x) {
-      localStorage.setItem ('todos-gotoB', JSON.stringify ({todos: dale.do (B.get (['Data', 'todos']), function (v) {
+   B.listen ('change', ['Data', 'todos'], function (x) {
+      localStorage.setItem ('todos-gotoB', JSON.stringify ({todos: dale.do (B.get ('Data', 'todos'), function (v) {
          return dale.obj (v, function (v2, k2) {
             if (k2 !== 'editing') return [k2, v2];
          });
@@ -283,7 +264,7 @@
 
    window.addEventListener ('hashchange', function () {B.do ('change', 'hash')});
 
-   B.listen ({verb: 'change', path: 'hash'}, function () {
+   B.listen ('change', 'hash', function () {
       var hash = window.location.hash.replace ('#/', '');
       if (hash !== 'all' && hash !== 'active' && hash !== 'completed') return window.location.hash = '#/all';
       B.do ('set', ['Data', 'display'], hash);
@@ -291,33 +272,33 @@
 
    // *** INITIALIZATION OF CERTAIN FIELDS AND SHORTHANDS ***
 
-   var Todos    = function () {return B.get (['Data', 'todos'])}
-   var Display  = function () {return B.get (['Data', 'display'])}
+   var Todos    = function () {return B.get ('Data', 'todos')}
+   var Display  = function () {return B.get ('Data', 'display')}
 
    B.do ('change', 'hash');
 
    // *** MAIN VIEW ***
 
-   Views.main = function () {return B.view ({path: ['Data'], listen: [
+   Views.main = B.view (['Data'], {listen: [
 
       // *** MAIN VIEW EVENTS ***
 
-      {verb: 'editNew', path: 'todo', rfun: function (x, value, ev) {
-         if (ev.keyCode !== 13) return;
-         var title = (B.get (['Data', 'new-todo']) || '').trim ();
+      ['editNew', 'todo', function (x, keycode) {
+         if (keycode !== 13) return;
+         var title = (B.get ('Data', 'new-todo') || '').trim ();
          if (title === '') return;
          B.do ('add', ['Data', 'todos'], {title: title, completed: false});
          B.do ('set', ['Data', 'new-todo'], '');
-      }},
+      }],
 
-     {verb: 'toggle', path: 'todos', rfun: function (x, value) {
+      ['toggle', 'todos', function (x, value) {
          dale.do (Todos (), function (v, k) {
             Todos () [k].completed = value;
          });
          B.do ('change', ['Data', 'todos']);
-      }},
+      }],
 
-      {verb: 'startEdit', path: '*', rfun: function (x) {
+      ['startEdit', '*', function (x) {
          var index = x.path [0];
          B.do ('set', ['Data', 'edit-todo'], Todos () [x.path [0]].title);
 
@@ -328,32 +309,32 @@
          B.do ('set', ['Data', 'todos', index, 'editing'], true);
          var target = c ('.editing input.edit') [0];
          target.focus ? target.focus () : target.setActive ();
-      }},
+      }],
 
-      {verb: 'finishEdit', path: '*', rfun: function (x) {
+      ['finishEdit', '*', function (x) {
          var index = x.path [0];
          if (! Todos () [index] || ! Todos () [index].editing) return;
-         var newTitle = B.get (['Data', 'edit-todo']);
+         var newTitle = B.get ('Data', 'edit-todo');
          if (newTitle === '') B.do ('rem', ['Data', 'todos'], index);
          else {
             B.do ('set', ['Data', 'todos', index, 'title'], newTitle);
             B.do ('set', ['Data', 'todos', index, 'editing'], false);
          }
-      }},
+      }],
 
-      {verb: 'edit', path: '*', rfun: function (x, value, ev) {
-         if (ev.keyCode === 13) {
+      ['edit', '*', function (x, value, keycode) {
+         if (keycode === 13) {
             B.do ('set', ['Data', 'edit-todo'], value);
             return B.do ('finishEdit', x.path);
          }
-         if (ev.keyCode === 27) B.do ('set', ['Data', 'todos', x.path [0], 'editing'], false);
-      }},
+         if (keycode === 27) B.do ('set', ['Data', 'todos', x.path [0], 'editing'], false);
+      }],
 
-      {verb: 'clear', path: 'completed', rfun: function () {
+      ['clear', 'completed', function () {
          B.do ('set', ['Data', 'todos'], dale.fil (Todos (), undefined, function (v) {
             if (! v.completed) return v;
          }));
-      }}
+      }],
 
    ]}, function (v, Data) {
 
@@ -376,15 +357,17 @@
                   placeholder: 'What needs to be done?',
                   autofocus: true,
                   autocomplete: 'off',
-                  value: B.get (['Data', 'new-todo'])
+                  value: B.get ('Data', 'new-todo')
                }, [
-                  {ev: 'onkeyup', verb: 'set',     path: ['Data', 'new-todo']},
-                  {ev: 'onkeyup', verb: 'editNew', path: 'todo'}
+                  ['onkeyup', 'set',     ['Data', 'new-todo']],
+                  ['onkeyup', 'editNew', 'todo', {rawArgs: 'event.keyCode'}]
                ])]
             ]],
             ! Todos () || Todos ().length === 0 ? [] : [
                ['section', {class: 'main'}, [
-                  ['input', B.ev ({class: 'toggle-all', type: 'checkbox', 'checked': allCompleted ? true : undefined}, {ev: 'onclick', verb: 'toggle', path: 'todos', args: [! allCompleted]})],
+                  ['input', B.ev ({class: 'toggle-all', type: 'checkbox', 'checked': allCompleted ? true : undefined},
+                     ['onclick', 'toggle', 'todos', {args: ! allCompleted}]
+                  )],
                   ['ul', {class: 'todo-list'}, dale.fil (Todos (), undefined, function (v, k) {
 
                      if (  v.completed && Display () === 'active')    return;
@@ -393,15 +376,15 @@
                      return ['li', {class: ['todo', v.completed ? 'completed' : '', v.editing ? 'editing' : ''].join (' ')}, [
                         ['div', {class: 'view'}, [
                            ['input', B.ev ({class: 'toggle', type: 'checkbox', checked: v.completed ? 'true' : undefined},
-                              {ev: 'onclick', verb: 'set', path: ['Data', 'todos', k, 'completed'], args: [! v.completed]}
+                              ['onclick', 'set', ['Data', 'todos', k, 'completed'], {args: ! v.completed}]
                            )],
-                           ['label', B.ev ({}, {ev: 'ondblclick', verb: 'startEdit', path: k}), v.title],
-                           ['button', B.ev ({class: 'destroy'}, {ev: 'onclick', verb: 'rem', path: ['Data', 'todos'], args: k})],
+                           ['label', B.ev ({}, ['ondblclick', 'startEdit', k]), v.title],
+                           ['button', B.ev ({class: 'destroy'}, ['onclick', 'rem', ['Data', 'todos'], {args: k}])],
                         ]],
-                        ['input', B.ev ({class: 'edit', type: 'text', value: B.get (['Data', 'edit-todo'])}, [
-                           {ev: 'onchange', verb: 'set',        path: ['Data', 'edit-todo']},
-                           {ev: 'onkeyup',  verb: 'edit',       path: k},
-                           {ev: 'onblur',   verb: 'finishEdit', path: k}
+                        ['input', B.ev ({class: 'edit', type: 'text', value: B.get ('Data', 'edit-todo')}, [
+                           ['onchange', 'set',        ['Data', 'edit-todo']],
+                           ['onkeyup',  'edit',       k, {rawArgs: ['value', 'event.keyCode']}],
+                           ['onblur',   'finishEdit', k]
                         ])],
                      ]]
                   })]
@@ -417,7 +400,7 @@
                      var v = V.toLowerCase ();
                      return ['li', ['a', {href: '#/' + v, class: v === Data.display ? 'selected' : ''}, V]]
                   })],
-                  ! someCompleted ? [] : ['button', B.ev ({class: 'clear-completed'}, {ev: 'onclick', verb: 'clear', path: 'completed'}), 'Clear completed']
+                  ! someCompleted ? [] : ['button', B.ev ({class: 'clear-completed'}, ['onclick', 'clear', 'completed']), 'Clear completed']
                ]]
             ]
          ]],
@@ -427,10 +410,29 @@
             ['p', ['Part of ',    ['a', {href: 'http://todomvc.com'        }, 'TodoMVC']]]
          ]]
       ];
-   })}
+   });
+
+   // *** INITIALIZATION ***
+
+   B.listen ('init', '*', {burn: true}, function () {
+      // Throw error if browser does not support LocalStorage.
+      if (! Storage) {
+         alert           ('This application only works in a modern browser!');
+         throw new Error ('This application only works in a modern browser!');
+      }
+
+      c.place ('body', 'afterBegin', lith.g (['body', Views.main]));
+
+      B.do ('load', ['data', 'calc']);
+   });
+
+   // When document is ready, perform initialization.
+   c.ready (function () {
+      B.do ('init', '*');
+   });
 
    /*
-   XXX ADD TESTS
+   XXX ADD AUTOMATIC TESTS
 
    - Focus kept while writing new todo.
    - Add new todo: check counter bottom left too.
@@ -444,10 +446,12 @@
    - Edit one of the todos with double click. Enter to save.
    - Edit one of the todos with double click. Blur to save.
    - Edit one of the todos and cancel with escape, check that changes were not saved.
+   - Check that if you delete entire text of an existing todo, it is deleted.
    - Check that clear completed is working.
    - Check that new todos are trimmed and empty todos are not inserted.
    - Clear completed button should only appear if there are completed todos.
    - Put four todos, mark first and third as done. Select all and then unselect all.
+   - Check that invalid URL is redirected to #/all
    */
 
 }) ();

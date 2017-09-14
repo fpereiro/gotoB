@@ -1,5 +1,5 @@
 /*
-gotoB - v0.4.0
+gotoB - v1.0.0
 
 Written by Federico Pereiro (fpereiro@gmail.com) and released into the public domain.
 
@@ -12,221 +12,296 @@ Please refer to readme.md to read the annotated source (but not yet!).
 
    if (typeof exports === 'object') return console.log ('gotoB only works in a browser!');
 
-   var dale   = window.dale;
-   var teishi = window.teishi;
-   var lith   = window.lith;
-   var c      = window.c;
+   var dale = window.dale, teishi = window.teishi, lith = window.lith, R = window.R, c = window.c, B = window.B;
 
-   var type   = teishi.t, log = teishi.l;
+   var type = teishi.t, log = teishi.l;
 
    var r = window.R ();
+   var B = window.B = {v: '1.0.0', B: 'в', r: r, routes: r.routes, store: r.store, do: r.do, listen: r.listen, forget: r.forget};
 
-   var B = window.B = {v: '0.4.0', B: 'в', r: r, routes: r.routes, store: r.store, do: r.do, listen: r.listen, forget: r.forget};
-
-   // *** DEVELOPER TOOLS ***
+   // *** B.DEBUG ***
 
    B.debug = [];
 
-   B.debug.log = function (from, to, mute) {
-
-      if (! B.prod && teishi.stop ([
-         ['from', from, 'integer'],
-         ['to',   to,   ['integer', 'undefined'], 'oneOf']
-      ])) return false;
-
-      if (from < 0) {
-         from = B.debug.length + from;
-         to   = B.debug.length;
-      }
-      to = to || from;
-      return dale.fil (dale.times (to - from + 1, from), undefined, function (v, k) {
-         var item = B.debug [from + k];
-         if (item) {
-            if (! mute) console.log (from + k, item [0].verb, item [0].path, [].slice.call (item, 1));
-            return item;
-         }
-      });
-   }
-
-   B.listen ({id: 'debug', verb: '*', path: '*'}, function () {
-      B.debug.push ([].slice.call (arguments, 0));
+   B.listen ({id: 'debug', verb: '*', path: []}, function (x) {
+      var target = ({verb: x.verb, path: x.path});
+      if (arguments.length > 1) target.args = [].slice.call (arguments, 1);
+      B.debug.unshift (target);
    });
 
    // *** ARGS ***
 
-   var isPath = function (path) {
-      return teishi.v ([
-         ['path', path, 'array'],
-         function () {
-            return ['path length', path.length, {min: 1}, teishi.test.range];
-         },
-         ['path', path, ['integer', 'string'], 'eachOf']
-      ]);
-   }
+   B.add = function (path) {
 
-   B.add = function (path, value) {
-
-      if (teishi.simple (path)) path = [path];
-      if (! isPath (path)) return false;
+      if (! B.prod && ! r.isPath (path, 'B.add')) return false;
 
       var target = B.get (path);
-
-      if (target === false) return false;
       if (type (target) !== 'array') return log ('B.add', 'Cannot add to something that is not an array');
-      target.push (value);
+      dale.do (arguments, function (arg, k) {
+         if (k !== 0) target.push (arg);
+      });
       return true;
    }
 
-   B.rem = function (path, keys) {
+   B.rem = function (path) {
 
-      if (teishi.simple (path)) path = [path];
-      if (! isPath (path)) return false;
+      if (! B.prod && ! r.isPath (path, 'B.rem')) return false;
 
-      var target = B.get (path);
-      if (teishi.simple (target)) return log ('B.rem', 'Cannot remove elements from simple target.');
+      var target     = B.get (path);
+      var targetType = type (target);
+      var keys       = type (arguments [1]) === 'array' ? arguments [1] : dale.do (arguments, function (v) {return v}).slice (1);
 
-      if (type (target) === 'array') {
-         if (keys === '*') target.splice (0, target.length);
-         else {
-            if (type (keys) === 'array') keys.sort (function (a, b) {return b - a});
-            dale.do (keys, function (v) {target.splice (v, 1)})
-         }
+      if (! B.prod && teishi.stop ([
+         ['target', target, ['array', 'object'], 'oneOf'],
+         targetType === 'array' ?
+            ['keys of array target',  keys, 'integer', 'each'] :
+            ['keys of object target', keys, 'string',  'each']
+      ])) return false;
+
+      if (targetType === 'array') {
+         keys.sort (function (a, b) {return b - a});
+         dale.do (keys, function (v) {target.splice (v, 1)})
       }
-      else {
-         if (keys === '*') dale.do (target, function (v, k) {delete target [k]});
-         else              dale.do (keys,   function (v)    {delete target [v]});
-      }
+      else dale.do (keys, function (v) {delete target [v]});
 
       return true;
    }
 
    B.get = function (path) {
 
-      if (teishi.simple (path)) path = [path];
-      if (! isPath (path)) return false;
+      path = type (path) === 'array' ? path : dale.do (arguments, function (v) {return v});
+      if (! B.prod && ! r.isPath (path, 'B.get')) return;
 
       var target = B.store;
+
       return dale.stop (path, false, function (v, k) {
          if (k + 1 < path.length && teishi.simple (target [v])) return false;
          target = target [v];
       }) === false ? undefined : target;
    }
 
-   B.set = function (path, value) {
-      if (teishi.simple (path)) path = [path];
-      if (! isPath (path)) return false;
+   B.set = function (path, value, overwriteParent) {
 
-      var item = B.store;
+      if (! B.prod && ! r.isPath (path, 'B.set')) return false;
 
-      dale.do (path, function (v, k) {
-         if (k + 1 === path.length) item [v] = value;
-         else {
-            if (item [v] === undefined) item [v] = (type (path [k + 1]) === 'string' ? {} : []);
-            item = item [v];
+      var target = B.store;
+
+      if (type (path) !== 'array') path = [path];
+
+      var error = dale.stop (path, true, function (v, k) {
+         if (k + 1 === path.length) {
+            target [v] = value;
+            return;
          }
+         var targetType = type (path [k + 1]) === 'string' ? 'object' : 'array';
+         if (type (target [v]) !== targetType) {
+            if (target [v] !== undefined && ! overwriteParent) return true;
+            target [v] = targetType === 'object' ? {} : [];
+         }
+         target = target [v];
       });
 
-      return true;
+      return error ? false : true;
    }
 
-   B.equal = function (a, b) {
+   B.eq = function (a, b) {
       if (teishi.simple (a) && teishi.simple (b)) return a === b;
       if (teishi.t (a, true) !== teishi.t (b, true)) return false;
       if (teishi.s (dale.keys (a).sort ()) !== teishi.s (dale.keys (b).sort ())) return false;
       return dale.stop (a, false, function (v, k) {
-         return B.equal (v, b [k]);
-      });
+         return B.eq (v, b [k]);
+      }) === false ? false : true;
    }
 
-   dale.do (['add', 'rem', 'get', 'set'], function (v) {
-      B.listen ({id: v, verb: v, path: '*'}, function (x, val) {
+   dale.do (['add', 'rem', 'set'], function (v) {
+      B.listen ({id: v, verb: v, path: []}, function (x, value) {
          if (x.verb === 'set') var prev = B.get (x.path);
          B [x.verb].apply (null, [x.path].concat ([].slice.call (arguments, 1)));
-         if (x.verb === 'add' || x.verb === 'rem')      B.do ('change', x.path, B.get (x.path));
-         if (x.verb === 'set' && ! B.equal (prev, val)) B.do ('change', x.path, val);
+         if (x.verb === 'add' || x.verb === 'rem')     B.do ('change', x.path);
+         if (x.verb === 'set' && ! B.eq (prev, value)) B.do ('change', x.path);
       });
    });
 
    // *** DOM METHODS ***
 
+   B.str = function (input) {
+      var inputType = type (input);
+      if (teishi.simple (input)) return inputType === 'string' ? JSON.stringify (input) : (input + '');
+
+      var output = inputType === 'array' ? '[' : '{';
+
+      if (inputType === 'array') output += dale.do (input, B.str).join (', ');
+      else                       output += dale.do (input, function (v, k) {
+         return JSON.stringify (k) + ': ' + B.str (v);
+      }).join (', ');
+
+      output += inputType === 'array' ? ']' : '}';
+
+      return output;
+   }
+
    B.ev = function (attrs, evs) {
-      if (! B.prod && teishi.stop ([
+
+      if (type (evs) === 'array' && type (evs [0]) === 'string') evs = [evs];
+
+      if (! B.prod && teishi.stop ('B.ev', [
          ['attrs', attrs, 'object'],
-         ['evs', evs, ['object', 'array'], 'oneOf'],
-         [type (evs) === 'array', ['evs', evs, 'object', 'each']]
+         ['evs',   evs,   'array'],
+         ['evs',   evs,   'array', 'each'],
+         function () {return dale.do (evs, function (ev) {
+            return [
+               ['ev options', ev [3], ['undefined', 'object'], 'oneOf'],
+               [ev [3] !== undefined, ['ev options', dale.keys (ev [3]), ['args', 'rawArgs'], 'eachOf', teishi.test.equal]],
+               ['ev.ev',   ev [0], 'string'],
+               ['ev.verb', ev [1], 'string'],
+               r.isPath (ev [2], 'B.ev')
+            ];
+         })}
       ])) return false;
 
-      if (type (evs) === 'object') evs = [evs];
       var Evs = {};
-      dale.do (evs, function (v) {
-         if (Evs [v.ev]) Evs [v.ev].push (v);
-         else            Evs [v.ev] = [v];
+      dale.do (evs, function (ev) {
+         dale.do (ev [0].split (/,\s/), function (evname) {
+            if (! Evs [evname]) Evs [evname] = [ev];
+            else                Evs [evname].push (ev);
+         });
       });
-      return dale.obj (Evs, attrs, function (v, k) {
+
+      return dale.obj (Evs, attrs, function (ev, evname) {
          var output = '';
-         dale.do (v, function (v2) {
-            var args = [JSON.stringify (v2.verb), JSON.stringify (v2.path)];
-            if (v2.args) args = args.concat (dale.do (v2.args, JSON.stringify));
-            else         args = args.concat (['this.value', 'event']);
+         dale.do (ev, function (entry) {
+            entry [3] = entry [3] || {};
+            var args = [JSON.stringify (entry [1]), JSON.stringify (entry [2])];
+            var keys = dale.keys (entry [3]);
+            if (keys.indexOf ('args') === -1 && keys.indexOf ('rawArgs') === -1) {
+               entry [3].rawArgs = ['this.value'];
+               keys.push ('rawArgs');
+            }
+            if (keys.indexOf ('args') !== -1) {
+               if (type (entry [3].args) === 'object' || entry [3].args === undefined) entry [3].args = [entry [3].args];
+               args = args.concat (dale.do (entry [3].args, B.str));
+            }
+            if (keys.indexOf ('rawArgs') !== -1) args = args.concat (entry [3].rawArgs);
             output += 'B.do (' + args.join (', ') + ');';
          });
-         return [k, output];
+         return [evname, output];
       });
    }
 
-   B.view = function (params, rfun) {
+   B.view = function (path) {
 
-      if (! B.prod && teishi.stop ([
-         ['params', params, 'object'],
-         ['rfun', rfun, 'function'],
+      var params = arguments.length === 2 ? {} : arguments [1];
+      var rfun   = arguments [arguments.length === 2 ? 1 : 2];
+
+      if (! B.prod && teishi.stop ('B.view', [
+         r.isPath (path, 'B.view'),
+         ['params', params, ['object', 'undefined'], 'oneOf'],
+         ['rfun',   rfun,   'function'],
          function () {return [
-            [params.tag !== undefined, ['params.tag', params.tag, lith.k.tags, 'oneOf', teishi.test.equal]],
-            ['params.attrs', params.attrs, ['object', 'undefined'], 'oneOf'],
-            ['params.ondraw', params.ondraw, ['function', 'undefined'], 'oneOf'],
-            ['params.onforget', params.onforget, ['function', 'undefined'], 'oneOf']
+            ['params.tag',      params.tag, [undefined].concat (lith.k.tags), 'oneOf', teishi.test.equal],
+            ['params.attrs',    params.attrs,    ['object',   'undefined'], 'oneOf'],
+            ['params.listen',   params.listen,   ['array',    'undefined'], 'oneOf'],
+            ['params.ondraw',   params.ondraw,   ['function', 'undefined'], 'oneOf'],
+            ['params.onforget', params.onforget, ['function', 'undefined'], 'oneOf'],
+            function () {
+               return [params.attrs !== undefined, ['params.attrs.id', (params.attrs || {}).id, 'undefined']]
+            }
          ]}
       ])) return false;
 
-      var tag   = params.tag   || 'div';
-      var attrs = params.attrs || {};
-      params.path  = type (params.path) === 'array' ? params.path : [params.path];
-      if (! isPath (params.path)) return false;
+      params.attrs = params.attrs || {};
+      var id = params.attrs.id = 'в' + B.count++;
+      params.attrs ['path-в'] = path.join ? path.join (':') : path;
 
-      var id = attrs.id = 'в' + B.count++;
-      attrs ['data-в'] = params.path.join (':');
+      if (params.listen && params.listen.length !== 0 && type (params.listen [0]) !== 'array') params.listen = [params.listen];
 
-      if (dale.stop (type (params.listen) === 'object' ? [params.listen] : params.listen, false, function (v) {
-         if (! v) return false;
-         var Id = B.listen (v, v.rfun);
-         if (Id === false) return false;
-         B.routes [Id].parent = id;
+      var listeners = [];
+
+      if (dale.stop (params.listen, false, function (args) {
+         var routeId = dale.stopNot (args, undefined, function (arg) {
+            if (type (arg) === 'object' && arg.id) return arg.id;
+         });
+         if (routeId) return log ('B.view', 'Cannot pass `id` property in args to listener.');
+         var route = B.listen.apply (null, args);
+         if (! B.prod && route === false) {
+            dale.do (listeners, function (route) {B.forget (route)});
+            return false;
+         }
+         listeners.push (route);
+         if (! B.routes [route].parent) B.routes [route].parent = id;
       }) === false) return false;
 
-      if (B.listen ({verb: 'change', path: params.path, id: id}, function (x) {
-         var view = rfun (x, B.get (params.path));
-         if (! B.prod && ! lith.v (view)) return log ('B.view received invalid view', view, x);
+      var drawView = function (x, value) {
+
+         var view = rfun (x, value);
+         var html = lith.g (view, B.prod);
+
+         if (! B.prod && html === false) {
+            view = ['pre', ['Invalid lith: ', teishi.simple (view) ? view.toString () : JSON.stringify (view, null, '   ')]];
+            html = lith.g (view, B.prod);
+         }
+
+         return [view, html];
+      }
+
+      B.listen ('change', path, {id: id, priority: -1}, function (x) {
+         var view = drawView (x, B.get (path));
          B.resolve (id, view);
-         if (params.ondraw) params.ondraw (params);
-      }) === false) return log ('Invalid parameters passed to B.view:', params, rfun);
+      });
 
-      var view = rfun ({verb: 'change', path: params.path}, B.get (params.path));
+      var view = drawView ({verb: 'change', path: path}, B.get (path));
 
-      if (! B.prod && ! lith.v (view)) return log ('B.view received invalid view', view, x);
+      if (params.ondraw)   B.routes [id].ondraw   = params.ondraw;
+      if (params.onforget) B.routes [id].onforget = params.onforget;
+                           B.routes [id].view     = view [0];
 
-      B.routes [id].view     = view;
-      B.routes [id].priority = -2;
-      B.routes [id].onforget = params.onforget;
-
-      view = lith.g (view, B.prod);
-
-      dale.do (B.getChildren (view), function (v) {
+      dale.do (B.getChildren (view [1]), function (v) {
          B.routes [v].priority--;
          if (! B.routes [v].parent) B.routes [v].parent = id;
       });
 
-      if (params.ondraw) params.ondraw (params);
+      return [params.tag || 'div', params.attrs, ['LITERAL', view [1]]];
+   }
 
-      return [tag, attrs, ['LITERAL', view]];
+   B.mount = function (target, view) {
+
+      if (! B.prod && type (target) !== 'string' || ! target.match (/^(body|#[^\s]+)$/)) return log ('B.mount', 'target must be either \'body\' or an id selector, but instead is ' + target);
+
+      if (! B.prod && c (target) === undefined) return log ('B.mount', 'target not found.');
+
+      view = lith.g (view, B.prod);
+
+      if (! B.prod && view === false) return log ('B.mount', 'received invalid view.');
+
+      c.place (target, 'afterBegin', view);
+
+      dale.do (B.getChildren (view), function (id) {
+         if (B.routes [id] && B.routes [id].ondraw) B.routes [id].ondraw (id);
+      });
+   }
+
+   B.unmount = function (target) {
+
+      if (! B.prod && type (target) !== 'string' || ! target.match (/^(body|#[^\s]+)$/)) return log ('B.unmount', 'target must be either \'body\' or an id selector, but instead is ' + target);
+
+      target = target === 'body' ? c (target) [0] : c (target);
+
+      if (! B.prod && ! target) return log ('B.unmount', 'target not found.');
+
+      var onforget = function (route) {
+         if (route.onforget) route.onforget (route.id);
+      }
+
+      var ids = B.getChildren (target.innerHTML);
+
+      dale.do (ids, function (id) {
+         if (B.routes [id]) B.forget (id, onforget);
+      });
+
+      dale.do (ids, function (id) {
+         var e = document.getElementById (id);
+         if (e) e.remove ();
+      });
    }
 
    // *** B.VIEW INTERNALS ***
@@ -238,7 +313,8 @@ Please refer to readme.md to read the annotated source (but not yet!).
       });
    }
 
-   B.count        = 0;
+   B.count        = 1;
+   B.trample      = 200;
    B.resolvequeue = [];
    B.resolving    = false;
 
@@ -262,188 +338,198 @@ Please refer to readme.md to read the annotated source (but not yet!).
          else B.resolving = false;
       }
 
-      if (! c ('#' + id)) {
-         log ('B.resolve', 'Attempted to redraw dangling view', id);
+      var route = B.routes [id];
+
+      var rootElement = document.getElementById (id);
+
+      if (! rootElement) {
+         log ('B.resolve', 'Attempted to redraw dangling view, omitting redraw & deleting route.', {route: {id: id, path: B.routes [id].path}, view: newView [0]});
+         B.forget (id, B.routes [id].onforget);
          return outro ();
       }
 
-      var backup   = c ('#' + id).innerHTML;
-      var route    = B.routes [id];
-      var prediff1 = B.prediff (route.view);
-      var prediff2 = B.prediff (newView);
-      var diff = B.diff (prediff1, prediff2);
+      var diff = B.diff (B.prediff (route.view), B.prediff (newView [0]));
 
-      dale.do (r.routes, function (v) {
-         if (v.parent === id && v.view) B.forget (v.id, function (route) {
-            if (route.onforget) route.onforget ();
-         });
+      var onforget = function (route) {
+         if (route.onforget) route.onforget (route.id);
+      }
+
+      dale.do (B.routes, function (route) {
+         if (route.parent === id && route.id.match (/^в[0-9a-f]+$/)) B.forget (route.id, onforget);
       });
 
-      var insert = function (el, where, debugpos) {
-         var p = find (where, 'insert1', debugpos);
-         if (p) p.parentNode.insertBefore (el, p);
-         else   find (where.slice (0, where.length - 1), 'insert2', debugpos).appendChild (el);
+      if (diff === false) {
+         if (! B.prod) log ('diff took too long, trampling instead!', route.id);
+         c ('#' + id).innerHTML = newView [1];
       }
+      else {
+         var insert = function (el, where, debugpos) {
+            var p = find (where, 'insert1', debugpos);
+            if (p) p.parentNode.insertBefore (el, p);
+            else   find (where.slice (0, where.length - 1), 'insert2', debugpos).appendChild (el);
+         }
 
-      var find = function (where, debug, debugpos) {
-         var cur = document.getElementById (id);
-         dale.do (where, function (v, k) {
-            if (! cur) {
-               log ('BOOM! YOU FOUND A BUG IN gotoB! Please open a pull request at http://github.com/fpereiro/gotoB/issues and paste the text below:\n', JSON.stringify ({
-                  debug: debug,
-                  debugpos: debugpos,
-                  diffitem: diff [debugpos].slice (0, 2).join (' '),
-                  id: id,
-                  where: where,
-                  k: k,
-                  backup: backup,
-                  oldView: route.view,
-                  newView: newView,
-                  diff: dale.obj (teishi.c (diff), function (v2, k2) {return [k2, v2]})
-               }));
-               throw new Error ('gotoB redraw error!');
+         var find = function (where, debug, debugpos) {
+            var cur = rootElement;
+            dale.do (where, function (v, k) {
+               if (! cur) {
+                  log ('BOOM! YOU FOUND A BUG IN gotoB! Please open a pull request at http://github.com/fpereiro/gotoB/issues and paste the text below:\n', JSON.stringify ({
+                     debug: debug,
+                     debugpos: debugpos,
+                     diffitem: diff [debugpos].slice (0, 2).join (' '),
+                     id: id,
+                     where: where,
+                     k: k,
+                     innerHTML: rootElement.innerHTML,
+                     expectedHTML: newView [1],
+                     oldView: route.view,
+                     newView: newView [0],
+                     diff: dale.obj (teishi.c (diff), function (v2, k2) {return [k2, v2]})
+                  }));
+                  throw new Error ('gotoB redraw error!');
+               }
+               cur = cur.childNodes [v];
+            });
+            return cur;
+         }
+
+         var dold = [0], dnew = [0], match = {
+            add: {tag: null, index: null},
+            rem: {tag: null, index: null}
+         };
+
+         dale.do (diff, function (v, k) {
+            if (v [1].match (/^<</)) return;
+            if (! v [1].match (/^>/)) diff [k] [2] = {el: find (dold, 'sequence', k), old: teishi.c (dold), New: teishi.c (dnew)};
+            if (v [1].match (/^</)) {
+               diff [k] [2].active = diff [k] [2].el === document.activeElement;
+               var tag  = v [1].match (/[^\s]+/g) [0];
+               var opaque = v [1].match (/<.+ {.*"opaque":true.*}/);
+               if (v [0] === 'add' && ! opaque) {
+                  if (match.rem.tag === tag) {
+                     diff [k] [2].match = match.rem.index;
+                     diff [match.rem.index] [2].match = k;
+                     match.rem.tag = match.rem.index = null;
+                  }
+                  else {
+                     match.add.tag   = tag;
+                     match.add.index = k;
+                  }
+               }
+               if (v [0] === 'rem' && ! opaque) {
+                  if (match.add.tag === tag) {
+                     diff [k] [2].match = match.add.index;
+                     diff [match.add.index] [2].match = k;
+                     match.add.tag = match.add.index = null;
+                  }
+                  else {
+                     match.rem.tag   = tag;
+                     match.rem.index = k;
+                  }
+               }
+
+               if (v [0] !== 'add') dold.push (0);
+               if (v [0] !== 'rem') dnew.push (0);
             }
-            cur = cur.childNodes [v];
+            else if (v [1].match (/^>/)) {
+               if (v [0] !== 'add') {
+                  dold.pop ();
+                  dold [dold.length - 1]++;
+               }
+               if (v [0] !== 'rem') {
+                  dnew.pop ();
+                  dnew [dnew.length - 1]++;
+               }
+            }
+            else {
+               if (v [0] !== 'add') dold [dold.length - 1]++;
+               if (v [0] !== 'rem') dnew [dnew.length - 1]++;
+            }
          });
-         return cur;
-      }
 
-      var dold = [0];
-      var dnew = [0];
+         var detached = {};
 
-      var match = {
-         add: {tag: null, index: null},
-         rem: {tag: null, index: null}
-      }
-
-      dale.do (diff, function (v, k) {
-         if (v [1].match (/^<</)) return;
-         if (! v [1].match (/^>/)) diff [k] [2] = {el: find (dold, 'sequence', k), old: teishi.c (dold), New: teishi.c (dnew)};
-         if (v [1].match (/^</)) {
-            diff [k] [2].active = diff [k] [2].el === document.activeElement;
-            var tag  = v [1].match (/[^\s]+/g) [0];
-            var opaque = v [1].match (/<.+ {.*"opaque":true.*}/);
-            if (v [0] === 'add' && ! opaque) {
-               if (match.rem.tag === tag) {
-                  diff [k] [2].match = match.rem.index;
-                  diff [match.rem.index] [2].match = k;
-                  match.rem.tag = match.rem.index = null;
+         dale.do (diff, function (v, k) {
+            if (v [1].match (/^>/)) return;
+            if (v [1].match (/^<</)) {
+               if (v [0] !== 'rem') diff [k - 1] [2].el.innerHTML = v [1].slice (1);
+               return;
+            }
+            if (v [0] === 'keep') {
+               if (v [1].match (/<.+ {.*"opaque":true.*}/)) v [2].el.innerHTML = '';
+               insert (v [2].el.parentNode.removeChild (v [2].el), v [2].New, k);
+               if (v [2].active && v [1].match (/[^<\s]+/g) [0] !== 'a') v [2].el.focus ? v [2].el.focus () : v [2].el.setActive ();
+               return;
+            }
+            if (v [1].match (/^</)) {
+               if (v [0] === 'rem') {
+                  if (v [2].match === undefined || v [2].match > k) detached [v [2].old] = v [2].el.parentNode.removeChild (v [2].el);
                }
-               else {
-                  match.add.tag   = tag;
-                  match.add.index = k;
-               }
-            }
-            if (v [0] === 'rem' && ! opaque) {
-               if (match.add.tag === tag) {
-                  diff [k] [2].match = match.add.index;
-                  diff [match.add.index] [2].match = k;
-                  match.add.tag = match.add.index = null;
-               }
-               else {
-                  match.rem.tag   = tag;
-                  match.rem.index = k;
-               }
-            }
-
-            if (v [0] !== 'add') dold.push (0);
-            if (v [0] !== 'rem') dnew.push (0);
-         }
-         else if (v [1].match (/^>/)) {
-            if (v [0] !== 'add') {
-               dold.pop ();
-               dold [dold.length - 1]++;
-            }
-            if (v [0] !== 'rem') {
-               dnew.pop ();
-               dnew [dnew.length - 1]++;
-            }
-         }
-         else {
-            if (v [0] !== 'add') dold [dold.length - 1]++;
-            if (v [0] !== 'rem') dnew [dnew.length - 1]++;
-         }
-      });
-
-      var detached = {};
-
-      dale.do (diff, function (v, k) {
-         if (v [1].match (/^>/)) return;
-         if (v [1].match (/^<</)) {
-            if (v [0] !== 'rem') diff [k - 1] [2].el.innerHTML = v [1].slice (1);
-            return;
-         }
-         if (v [0] === 'keep') {
-            if (v [1].match (/<.+ {.*"opaque":true.*}/)) v [2].el.innerHTML = '';
-            insert (v [2].el.parentNode.removeChild (v [2].el), v [2].New, k);
-            if (v [2].active && v [1].match (/[^<\s]+/g) [0] !== 'a') v [2].el.focus ? v [2].el.focus () : v [2].el.setActive ();
-            return;
-         }
-         if (v [1].match (/^</)) {
-            if (v [0] === 'rem') {
-               if (v [2].match === undefined || v [2].match > k) detached [v [2].old] = v [2].el.parentNode.removeChild (v [2].el);
-            }
-            if (v [0] === 'add') {
-               var el;
-               if (v [2].match !== undefined) {
-                  var old = diff [v [2].match];
-                  if (! detached [old [2].old]) detached [old [2].old] = old [2].el;
-                  el = old [2].el;
-                  var oldAttrs = el.attributes;
-                  if (type (oldAttrs, true) === 'moznamedattrmap') {
-                     oldAttrs = dale.obj (oldAttrs, function (v) {
-                        if (v) return [v.name, v.value];
+               if (v [0] === 'add') {
+                  var el;
+                  if (v [2].match !== undefined) {
+                     var old = diff [v [2].match];
+                     if (! detached [old [2].old]) detached [old [2].old] = old [2].el;
+                     el = old [2].el;
+                     var oldAttrs = el.attributes;
+                     if (type (oldAttrs, true) === 'moznamedattrmap') {
+                        oldAttrs = dale.obj (oldAttrs, function (v) {
+                           if (v) return [v.name, v.value];
+                        });
+                     }
+                     var newAttrs = JSON.parse (v [1].match (/{.+/) || '{}');
+                     dale.do (dale.fil (oldAttrs, undefined, function (v) {
+                        if (newAttrs [v.name] === undefined) return v.name;
+                     }), function (name) {
+                        if (name === 'value')    el.value    = undefined;
+                        if (name === 'checked')  el.checked  = false;
+                        if (name === 'selected') el.selected = false;
+                        el.removeAttribute (name);
+                     });
+                     dale.do (newAttrs, function (v, k) {
+                        if (k === 'value')    el.value    = v;
+                        if (k === 'checked')  el.checked  = v;
+                        if (k === 'selected') el.selected = v;
+                        el.setAttribute (k, v);
                      });
                   }
-                  var newAttrs = JSON.parse (v [1].match (/{.+/) || '{}');
-                  dale.do (dale.fil (oldAttrs, undefined, function (v) {
-                     if (newAttrs [v.name] === undefined) return v.name;
-                  }), function (name) {
-                     if (name === 'value')    el.value    = undefined;
-                     if (name === 'checked')  el.checked  = false;
-                     if (name === 'selected') el.selected = false;
-                     el.removeAttribute (name);
-                  });
-                  dale.do (newAttrs, function (v, k) {
-                     if (k === 'value')    el.value    = v;
-                     if (k === 'checked')  el.checked  = v;
-                     if (k === 'selected') el.selected = v;
-                     el.setAttribute (k, v);
-                  });
+                  else {
+                     el = document.createElement (v [1].match (/[^<\s]+/g) [0]);
+                     dale.do (JSON.parse (v [1].match (/{.+/) || '{}'), function (v, k) {
+                        if (v || v === '' || v === 0) el.setAttribute (k, v);
+                     });
+                  }
+                  insert (el, v [2].New, k);
+                  v [2].el = el;
+                  if (old && old [2].active && v [1].match (/[^<\s]+/g) [0] !== 'a') el.focus ? el.focus () : el.setActive ();
                }
-               else {
-                  el = document.createElement (v [1].match (/[^<\s]+/g) [0]);
-                  dale.do (JSON.parse (v [1].match (/{.+/) || '{}'), function (v, k) {
-                     el.setAttribute (k, v);
-                  });
+            }
+            else {
+               if (v [0] === 'add') {
+                  v [1] = v [1]
+                     .replace (/&amp;/g,  '\&')
+                     .replace (/&lt;/g,   '<')
+                     .replace (/&gt;/g,   '>')
+                     .replace (/&quot;/g, '"')
+                     .replace (/&#39;/g,  "'")
+                     .replace (/&#96;/g,  '`');
+                  insert (document.createTextNode (v [1]), v [2].New, k);
                }
-               insert (el, v [2].New, k);
-               v [2].el = el;
-               if (old && old [2].active && v [1].match (/[^<\s]+/g) [0] !== 'a') el.focus ? el.focus () : el.setActive ();
+               else v [2].el.parentNode.removeChild (v [2].el);
             }
-         }
-         else {
-            if (v [0] === 'add') {
-               v [1] = v [1]
-                  .replace (/&amp;/g,  '\&')
-                  .replace (/&lt;/g,   '<')
-                  .replace (/&gt;/g,   '>')
-                  .replace (/&quot;/g, '"')
-                  .replace (/&#39;/g,  "'")
-                  .replace (/&#96;/g,  '`');
-               insert (document.createTextNode (v [1]), v [2].New, k);
-            }
-            else v [2].el.parentNode.removeChild (v [2].el);
-         }
+         });
+      }
+
+      route.view = newView [0];
+
+      dale.do (B.getChildren (c ('#' + id).innerHTML), function (id) {
+         var croute = B.routes [id];
+         croute.priority += route.priority;
+         if (! croute.parent) croute.parent = route.id;
+         if (croute.ondraw) croute.ondraw (croute.id);
       });
 
-      route.view  = newView;
-
-      dale.do (B.getChildren (c ('#' + id).innerHTML), function (v) {
-         B.routes [v].priority = B.routes [v].priority + B.routes [id].priority + 1;
-         if (! B.routes [v].parent) B.routes [v].parent = id;
-         if (B.routes [v].ondraw) B.routes [v].ondraw ();
-      });
+      if (route.ondraw) route.ondraw (id);
 
       outro ();
    }
@@ -473,9 +559,19 @@ Please refer to readme.md to read the annotated source (but not yet!).
          }
          var mark = output.length;
          if (! attrs || ! attrs.opaque) B.prediff (conts, output);
-         if (input [0] === 'table' && output [mark] && output [mark].match (/<tbody/) === null) {
-            output.splice (mark, 0, '<tbody');
-            output.push ('>');
+         if (input [0] === 'table' && output [mark]) {
+            if (output [mark].match (/<thead/)) {
+               var deep = 0;
+               var index = dale.stopNot (dale.times (output.length - mark, mark), undefined, function (k) {
+                  if (output [k].match (/</)) deep++;
+                  if (output [k].match (/>/)) deep--;
+                  if (deep === 0) return mark = k + 1;
+               });
+            }
+            if (output [mark] && output [mark].match (/<tbody/) === null) {
+               output.splice (mark, 0, '<tbody');
+               output.push ('>');
+            }
          }
          output.push ('>');
       }
@@ -489,9 +585,11 @@ Please refer to readme.md to read the annotated source (but not yet!).
 
    B.diff = function (s1, s2) {
 
-      var V = [], sol, d = 0, vl, vc, k, out, y, point, diff, v, last;
+      var V = [], sol, d = 0, vl, vc, k, out, y, point, diff, v, last, t = Date.now ();
 
       while (d < s1.length + s2.length + 1) {
+
+         if (B.trample && (Date.now () - t > B.trample)) return false;
 
          vl = V [V.length - 1] || {1: [0, 0]};
          vc = {};

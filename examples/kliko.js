@@ -95,7 +95,7 @@
                      return ['tr', dale.do (colsright, function (key) {
                         if (key === 'subtotal') return ['td', item.amount * item.price];
                         if (key === 'actions') return ['td', [
-                           ['span', B.ev ({class: 'action'}, ['onclick', 'rem', ['Data', 'cart'], {args: k}]), 'Remove from cart'],
+                           ['span', B.ev ({class: 'action'}, ['onclick', 'rem', ['Data', 'cart'], k]), 'Remove from cart'],
                         ]];
                         return ['td', item [key]];
                      })];

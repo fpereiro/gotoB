@@ -6,17 +6,12 @@
 
    var type = teishi.t, log = teishi.l;
 
-   var Views = window.Views = B.store.Views = {};
-   var Data  = window.Data  = B.store.Data  = {};
-   var State = window.State = B.store.State = {};
-
-   var Test = function (fun) {
-      if (State.prod) return;
-      var error = fun ();
-      if (error) throw new Error (error);
-   }
+   window.Data  = B.store.Data  = {};
+   window.State = B.store.State = {};
 
    // *** STYLE ***
+
+   var Views = {};
 
    Views.style = [
       ['html, body, button, .todo-list', {'margin, padding': 0}],
@@ -267,42 +262,37 @@
    B.listen ('change', 'hash', function () {
       var hash = window.location.hash.replace ('#/', '');
       if (hash !== 'all' && hash !== 'active' && hash !== 'completed') return window.location.hash = '#/all';
-      B.do ('set', ['Data', 'display'], hash);
+      B.do ('set', ['State', 'display'], hash);
    });
-
-   // *** INITIALIZATION OF CERTAIN FIELDS AND SHORTHANDS ***
-
-   var Todos    = function () {return B.get ('Data', 'todos')}
-   var Display  = function () {return B.get ('Data', 'display')}
 
    B.do ('change', 'hash');
 
    // *** MAIN VIEW ***
 
-   Views.main = B.view (['Data'], {listen: [
+   Views.main = function () {return B.view (['Data', 'todos'], {listen: [
 
       // *** MAIN VIEW EVENTS ***
 
       ['editNew', 'todo', function (x, keycode) {
          if (keycode !== 13) return;
-         var title = (B.get ('Data', 'new-todo') || '').trim ();
+         var title = (B.get ('State', 'new-todo') || '').trim ();
          if (title === '') return;
          B.do ('add', ['Data', 'todos'], {title: title, completed: false});
-         B.do ('set', ['Data', 'new-todo'], '');
+         B.do ('set', ['State', 'new-todo'], '');
       }],
 
       ['toggle', 'todos', function (x, value) {
-         dale.do (Todos (), function (v, k) {
-            Todos () [k].completed = value;
+         dale.do (B.get ('Data', 'todos'), function (todo) {
+            todo.completed = value;
          });
          B.do ('change', ['Data', 'todos']);
       }],
 
       ['startEdit', '*', function (x) {
          var index = x.path [0];
-         B.do ('set', ['Data', 'edit-todo'], Todos () [x.path [0]].title);
+         B.do ('set', ['State', 'edit-todo'], B.get ('Data', 'todos') [x.path [0]].title);
 
-         var editing = dale.stopNot (Todos (), undefined, function (v2, k2) {
+         var editing = dale.stopNot (B.get ('Data', 'todos'), undefined, function (v2, k2) {
             if (v2.editing) return k2;
          });
          if (editing !== undefined && editing !== x.path [0]) B.do ('set', ['Data', 'todos', editing, 'editing'], false);
@@ -313,35 +303,42 @@
 
       ['finishEdit', '*', function (x) {
          var index = x.path [0];
-         if (! Todos () [index] || ! Todos () [index].editing) return;
-         var newTitle = B.get ('Data', 'edit-todo');
+         if (! B.get ('Data', 'todos') [index] || ! B.get ('Data', 'todos') [index].editing) return;
+         var newTitle = B.get ('State', 'edit-todo');
          if (newTitle === '') B.do ('rem', ['Data', 'todos'], index);
          else {
             B.do ('set', ['Data', 'todos', index, 'title'], newTitle);
             B.do ('set', ['Data', 'todos', index, 'editing'], false);
          }
+         B.do ('set', ['State', 'edit-todo'], '');
       }],
 
       ['edit', '*', function (x, value, keycode) {
          if (keycode === 13) {
-            B.do ('set', ['Data', 'edit-todo'], value);
+            B.do ('set', ['State', 'edit-todo'], value);
             return B.do ('finishEdit', x.path);
          }
-         if (keycode === 27) B.do ('set', ['Data', 'todos', x.path [0], 'editing'], false);
+         if (keycode === 27) {
+            B.do ('set', ['Data', 'todos', x.path [0], 'editing'], false);
+            B.do ('set', ['State', 'edit-todo'], '');
+         }
       }],
 
       ['clear', 'completed', function () {
-         B.do ('set', ['Data', 'todos'], dale.fil (Todos (), undefined, function (v) {
+         B.do ('set', ['Data', 'todos'], dale.fil (B.get ('Data', 'todos'), undefined, function (v) {
             if (! v.completed) return v;
          }));
       }],
 
-   ]}, function (v, Data) {
+   ], ondraw: function () {
+      var target = c ('.new-todo') [0];
+      target.focus ? target.focus () : target.setActive ();
+   }}, function (v, todos) {
 
-      var allCompleted = dale.stopNot (Todos (), true, function (v) {
+      var allCompleted = dale.stopNot (todos, true, function (v) {
          return v.completed;
       });
-      var someCompleted = dale.stop   (Todos (), true, function (v, k) {
+      var someCompleted = dale.stop   (todos, true, function (v, k) {
          return v.completed;
       });
 
@@ -350,49 +347,54 @@
       return [
          ['style', lith.css.g (Views.style)],
          ['section', {class: 'todoapp'}, [
-            ['header', {class: 'header'}, [
-               ['h1', 'todos'],
-               ['input', B.ev ({
-                  class: 'new-todo',
-                  placeholder: 'What needs to be done?',
-                  autofocus: true,
-                  autocomplete: 'off',
-                  value: B.get ('Data', 'new-todo')
-               }, [
-                  ['onkeyup', 'set',     ['Data', 'new-todo']],
-                  ['onkeyup', 'editNew', 'todo', {rawArgs: 'event.keyCode'}]
-               ])]
-            ]],
-            ! Todos () || Todos ().length === 0 ? [] : [
+            B.view (['State', 'new-todo'], {tag: 'header', attrs: {class: 'header'}}, function (x, newTodo) {
+               return [
+                  ['h1', 'todos'],
+                  ['input', B.ev ({
+                     class: 'new-todo',
+                     placeholder: 'What needs to be done?',
+                     autofocus: true,
+                     autocomplete: 'off',
+                     value: newTodo
+                  }, [
+                     ['onkeyup', 'editNew', 'todo', {rawArgs: 'event.keyCode'}],
+                     ['oninput', 'set',     ['State', 'new-todo']]
+                  ])]
+               ];
+            }),
+            ! todos || todos.length === 0 ? [] : [
                ['section', {class: 'main'}, [
                   ['input', B.ev ({class: 'toggle-all', type: 'checkbox', 'checked': allCompleted ? true : undefined},
-                     ['onclick', 'toggle', 'todos', {args: ! allCompleted}]
+                     ['onclick', 'toggle', 'todos', ! allCompleted]
                   )],
-                  ['ul', {class: 'todo-list'}, dale.fil (Todos (), undefined, function (v, k) {
+                  B.view (['State'], {tag: 'ul', attrs: {class: 'todo-list'}}, function (x, State) {
 
-                     if (  v.completed && Display () === 'active')    return;
-                     if (! v.completed && Display () === 'completed') return;
+                     return dale.do (todos, function (v, k) {
 
-                     return ['li', {class: ['todo', v.completed ? 'completed' : '', v.editing ? 'editing' : ''].join (' ')}, [
-                        ['div', {class: 'view'}, [
-                           ['input', B.ev ({class: 'toggle', type: 'checkbox', checked: v.completed ? 'true' : undefined},
-                              ['onclick', 'set', ['Data', 'todos', k, 'completed'], {args: ! v.completed}]
-                           )],
-                           ['label', B.ev ({}, ['ondblclick', 'startEdit', k]), v.title],
-                           ['button', B.ev ({class: 'destroy'}, ['onclick', 'rem', ['Data', 'todos'], {args: k}])],
-                        ]],
-                        ['input', B.ev ({class: 'edit', type: 'text', value: B.get ('Data', 'edit-todo')}, [
-                           ['onchange', 'set',        ['Data', 'edit-todo']],
-                           ['onkeyup',  'edit',       k, {rawArgs: ['value', 'event.keyCode']}],
-                           ['onblur',   'finishEdit', k]
-                        ])],
-                     ]]
-                  })]
+                        if (  v.completed && State.display === 'active')    return;
+                        if (! v.completed && State.display === 'completed') return;
+
+                        return ['li', {class: ['todo', v.completed ? 'completed' : '', v.editing ? 'editing' : ''].join (' ')}, [
+                           ['div', {class: 'view'}, [
+                              ['input', B.ev ({class: 'toggle', type: 'checkbox', checked: v.completed ? 'true' : undefined},
+                                 ['onclick', 'set', ['Data', 'todos', k, 'completed'], ! v.completed]
+                              )],
+                              ['label', B.ev ({}, ['ondblclick', 'startEdit', k]), v.title],
+                              ['button', B.ev ({class: 'destroy'}, ['onclick', 'rem', ['Data', 'todos'], k])],
+                           ]],
+                           ['input', B.ev ({class: 'edit', type: 'text', value: State ['edit-todo']}, [
+                              ['onchange', 'set', ['State', 'edit-todo']],
+                              ['onkeydown',  'edit', k, {rawArgs: ['value', 'event.keyCode']}],
+                              ['onblur',   'finishEdit', k]
+                           ])]
+                        ]];
+                     });
+                  }),
                ]],
                ['footer', {class: 'footer'}, [
                   ['span', {class: 'todo-count'}, [
                      (function () {
-                        var left = dale.fil (Todos (), false, function (v) {return ! v.completed}).length;
+                        var left = dale.fil (todos, false, function (v) {return ! v.completed}).length;
                         return [['strong', left], ' item' + (left === 1 ? '' : 's') + ' left'];
                      }) (),
                   ]],
@@ -410,26 +412,19 @@
             ['p', ['Part of ',    ['a', {href: 'http://todomvc.com'        }, 'TodoMVC']]]
          ]]
       ];
-   });
+   })}
 
    // *** INITIALIZATION ***
 
-   B.listen ('init', '*', {burn: true}, function () {
-      // Throw error if browser does not support LocalStorage.
-      if (! Storage) {
-         alert           ('This application only works in a modern browser!');
-         throw new Error ('This application only works in a modern browser!');
-      }
+   // Throw error if browser does not support LocalStorage.
+   if (! Storage) {
+      alert           ('This application only works in a modern browser!');
+      throw new Error ('This application only works in a modern browser!');
+   }
 
-      c.place ('body', 'afterBegin', lith.g (['body', Views.main]));
+   B.mount ('body', Views.main ());
 
-      B.do ('load', ['data', 'calc']);
-   });
-
-   // When document is ready, perform initialization.
-   c.ready (function () {
-      B.do ('init', '*');
-   });
+   B.do ('load', ['data', 'calc']);
 
    /*
    XXX ADD AUTOMATIC TESTS
@@ -439,15 +434,16 @@
    - Delete single todo, go back to original view
    - Add two new todos in a row, verify order is correct and also counter.
    - Mark one of them as done.
-   - Check that active view shows only one, and same with completed. Check that all shows all again.
+   - Check that active view shows only one, and same with completed. Check that all shows all again. Check that the URLS change.
    - Touch on check all, that should check all.
    - Touch on check all again, that should uncheck all.
    - Check and delete a todo.
    - Edit one of the todos with double click. Enter to save.
    - Edit one of the todos with double click. Blur to save.
    - Edit one of the todos and cancel with escape, check that changes were not saved.
+   - Reedit it and check that the input value didn't change.
    - Check that if you delete entire text of an existing todo, it is deleted.
-   - Check that clear completed is working.
+   - Add one todo, check it and run clear completed.
    - Check that new todos are trimmed and empty todos are not inserted.
    - Clear completed button should only appear if there are completed todos.
    - Put four todos, mark first and third as done. Select all and then unselect all.

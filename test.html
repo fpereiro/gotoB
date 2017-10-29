@@ -21,7 +21,7 @@
 
             var dale = window.dale, teishi = window.teishi, lith = window.lith, c = window.c, B = window.B;
 
-            var type = teishi.t, log = teishi.l;
+            var type = teishi.t, log = window.teishi.l;
 
             var Data  = window.Data  = B.store.Data  = {};
             var State = window.State = B.store.State = {};
@@ -78,12 +78,12 @@
                   if (B.add (/invalidpath/)           !== false) return 'B.add accepted invalid path.';
                   if (B.add ({})                      !== false) return 'B.add accepted invalid path.';
                   if (B.add (['Data', /invalidpath/]) !== false) return 'B.add accepted invalid path.';
-                  if (B.add (['lalala'], 'whatever')  !== false) return 'B.add accepted target that is not an array.';
+                  if (B.add (['Data'], 'whatever')  !== false) return 'B.add accepted target that is not an array.';
 
                   if (B.rem ()                             !== false) return 'B.rem accepted undefined path.';
                   if (B.rem (/invalidpath/)                !== false) return 'B.rem accepted invalid path.';
                   if (B.rem ({})                           !== false) return 'B.rem accepted invalid path.';
-                  if (B.rem (['lalala'], 'whatever')       !== false) return 'B.rem accepted target that is not an array.';
+                  if (B.rem (['lalala'], 'whatever')       !== false) return 'B.rem accepted target that is not an array or object.';
                   if (B.rem (['Data', 'items'], undefined) !== false) return 'B.rem accepted keys that are neither integers or strings';
                   if (B.rem (['Data', 'items'], {a: 0})    !== false) return 'B.rem accepted keys that are neither integers or strings';
                   if (B.rem (['Data', 'items'], [0, 'b'])  !== false) return 'B.rem accepted keys that are neither integers or strings';
@@ -103,6 +103,13 @@
 
                Test ('args circuit', function () {
 
+                  var C = 0;
+                  B.do ('add', ['Data'], 'whatever');
+                  B.do ('rem', ['Data', 'items'], {a: 0});
+                  B.listen ('change', '*', {id: 'neverincr'}, function () {C++});
+                  if (C !== 0) return 'Invalid operations triggered change event.';
+                  B.forget ('neverincr');
+
                   if (B.get ('Data')            !== Data)       return 'B.get single path comparison #1 didn\'t work.';
                   if (B.get (['Data'])          !== Data)       return 'B.get single path comparison #2 didn\'t work.';
                   if (B.get (['Data', 'items']) !== Data.items) return 'B.get double path comparison #1 didn\'t work.';
@@ -111,6 +118,8 @@
                   if (B.add (['Data', 'items'], 'one') !== true) return 'B.add didn\'t return true.';
                   if (B.get ('Data', 'items', 0) !== 'one') return 'B.add didn\'t add element.';
                   if (B.add (['Data', 'items'], ['two', 'three']) !== true) return 'B.add didn\'t return true.';
+                  if (B.add (['Data', 'array'], 2) !== true) return 'B.add didn\'t create array on undefined target.';
+                  if (B.get ('Data', 'array', 0) !== 2) return 'B.add didn\'t add element to array created on undefined target properly.';
                   if (Data.items.length !== 2) return 'B.add didn\'t add array properly.';
                   if (B.get ('Data', 'items', 1, 0) !== 'two') return 'B.add didn\'t add array properly.';
                   if (B.get ('Data', 'items', 1, 1) !== 'three') return 'B.add didn\'t add array properly.';
@@ -193,12 +202,16 @@
 
                Test ('args circuit with events', function () {
 
-                  Data.items = [];
+                  Data.items = [], C = 0;
 
                   if (B.get ('Data')            !== Data)       return 'B.get single path comparison #1 didn\'t work.';
                   if (B.get (['Data'])          !== Data)       return 'B.get single path comparison #2 didn\'t work.';
                   if (B.get (['Data', 'items']) !== Data.items) return 'B.get double path comparison #1 didn\'t work.';
                   if (B.get ('Data', 'items')   !== Data.items) return 'B.get double path comparison #2 didn\'t work.';
+
+                  dale.do ([0, 1], function (i) {
+                     B.listen ('change', ['Data', 'items', i], {burn: true}, function () {C++});
+                  });
 
                   if (B.do ('add', ['Data', 'items'], 'one') !== true) return 'B.add didn\'t return true.';
                   if (B.get ('Data', 'items', 0) !== 'one') return 'B.add didn\'t add element.';
@@ -206,6 +219,7 @@
                   if (Data.items.length !== 2) return 'B.add didn\'t add array properly.';
                   if (B.get ('Data', 'items', 1, 0) !== 'two') return 'B.add didn\'t add array properly.';
                   if (B.get ('Data', 'items', 1, 1) !== 'three') return 'B.add didn\'t add array properly.';
+                  if (C !== 2) return 'change event is not being fired on subkeys when adding them.';
                   if (B.do ('add', ['Data', 'items'], undefined, 'four', {five: 5}) !== true) return 'B.add didn\'t return true.';
                   if (Data.items.length !== 5) return 'B.add didn\'t add multiple arguments properly.';
                   if (B.get ('Data', 'items', 2) !== undefined) return 'B.add didn\'t add undefined properly.';
@@ -255,7 +269,12 @@
                   if (B.do ('rem', [], []) !== true) return 'B.rem didn\'t return true when removing no keys.';
                   if (B.do ('rem', []) !== true) return 'B.rem didn\'t return true when removing no keys.';
                   if (B.get ('Other') !== undefined) return 'B.rem didn\'t remove toplevel property.';
+                  C = 0;
+                  dale.do ([0, 2], function (i) {
+                     B.listen ('change', ['Data', 'items', i], {burn: true}, function () {C++});
+                  });
                   if (B.do ('rem', ['Data', 'items'], 0, 2) !== true) return 'B.rem didn\'t return true.';
+                  if (C !== 2) return 'change event is not being fired on subkeys when removing them.';
                   if (Data.items.length !== 4) return 'B.rem didn\'t remove array items properly.';
                   if (type (Data.items [0]) !== 'array') return 'B.rem didn\'t remove array items properly.';
                   if (Data.items [1] !== 'four') return 'B.rem didn\'t remove array items properly.';
@@ -302,7 +321,6 @@
                   if (B.ev ({}) !== false) return 'B.ev accepted no evs.';
                   if (B.ev ({}, '') !== false) return 'B.ev accepted invalid evs.';
                   if (B.ev ({}, [['boo', 'a', 'b'], 'a']) !== false) return 'B.ev accepted invalid evs.';
-                  if (B.ev ({}, ['boo', 'a', 'b', {foo: 'bar'}]) !== false) return 'B.ev accepted invalid options.';
                   if (B.ev ({}, ['a', 'b']) !== false) return 'B.ev accepted ev with no path.';
                   if (B.ev ({}, ['a', /notaverb/, []]) !== false) return 'B.ev accepted ev with invalid verb.';
                   if (B.ev ({}, ['a', 'b', /notapath/]) !== false) return 'B.ev accepted ev with invalid path.';
@@ -310,7 +328,7 @@
                });
 
                Test ('B.str', function () {
-                  if (B.str ([undefined, null, function () {return true}, false, /a/, 'a', 3, {a: '\'b', c: ['d"', NaN, Infinity], 'e-f': null}]) !== '[undefined, null, function () {return true}, false, /a/, "a", 3, {"a": "\'b", "c": ["d\\"", NaN, Infinity], "e-f": null}]') return 'boom';
+                  if (B.str ([undefined, null, function () {return true}, false, /a/, 'a', 3, {a: '\'b', c: ['d"', NaN, Infinity], 'e-f': null}]) !== '[undefined, null, function () {return true}, false, /a/, "a", 3, {"a": "\'b", "c": ["d\\"", NaN, Infinity], "e-f": null}]') log ('Warning: B.str setting list of values in a different way.', B.str ([undefined, null, function () {return true}, false, /a/, 'a', 3, {a: '\'b', c: ['d"', NaN, Infinity], 'e-f': null}]));
                   var test = eval (B.str ([undefined, null, function () {return true}, false, /a/, 'a', 3, {a: '\'b', c: ['d"', NaN, Infinity], 'e-f': null}]));
 
                   if (test [0] !== undefined) return 'B.str didn\'t set undefined.';
@@ -357,13 +375,47 @@
                   if (! r || r.on !== 'B.do ("a", "b", this.value);' || r.off !== r.on || dale.keys (r).length !== 2) return 'B.ev didn\'t create comma-separated events #1.';
 
                   r = B.ev ({}, ['on, off', 'a', 'b', {args: true}]);
-                  if (! r || r.on !== 'B.do ("a", "b", true);' || r.off !== r.on || dale.keys (r).length !== 2) return 'B.ev didn\'t create comma-separated events #1.';
+                  if (! r || r.on !== 'B.do ("a", "b", true);' || r.off !== r.on || dale.keys (r).length !== 2) return 'B.ev didn\'t create comma-separated events #2.';
 
                   r = B.ev ({}, ['on', 'a', 'b', {args: 2, rawArgs: 'event'}]);
                   if (! r || r.on !== 'B.do ("a", "b", 2, event);') return 'B.ev didn\'t accept valid input #12';
 
                   r = B.ev ({}, [['on', 'a', 'b', {args: 2, rawArgs: 'event'}], ['off', 'a', 'b', {args: 2, rawArgs: 'event'}]]);
                   if (! r || r.on !== 'B.do ("a", "b", 2, event);' || r.off !== 'B.do ("a", "b", 2, event);') return 'B.ev didn\'t accept valid input #13';
+
+                  r = B.ev ({}, ['on', 'a', 'b', 2]);
+                  if (! r || r.on !== 'B.do ("a", "b", 2);') return 'B.ev didn\'t accept valid input #14';
+
+                  var r = B.ev ({}, ['on', 'a', 'b', null]);
+                  if (! r || r.on !== 'B.do ("a", "b", null);') return 'B.ev didn\'t accept valid input #15.';
+                  r = B.ev ({}, ['on', 'a', 'b', [null]]);
+                  if (! r || r.on !== 'B.do ("a", "b", [null]);') return 'B.ev didn\'t accept valid input #16.';
+                  r = B.ev ({}, ['on', 'a', 'b', undefined]);
+                  if (! r || r.on !== 'B.do ("a", "b", undefined);') return 'B.ev didn\'t accept valid input #17.';
+                  r = B.ev ({}, ['on', 'a', 'b', [undefined]]);
+                  if (! r || r.on !== 'B.do ("a", "b", [undefined]);') return 'B.ev didn\'t accept valid input #18.';
+                  r = B.ev ({}, ['on', 'a', 'b', /a/]);
+                  if (! r || r.on !== 'B.do ("a", "b", /a/);') return 'B.ev didn\'t accept valid input #19.';
+                  r = B.ev ({}, ['on', 'a', 'b', 'c', /a/, undefined, null, Infinity, NaN]);
+                  if (! r || r.on !== 'B.do ("a", "b", "c", /a/, undefined, null, Infinity, NaN);') return 'B.ev didn\'t accept valid input #20.';
+                  r = B.ev ({}, ['on', 'a', 'b', []]);
+                  if (! r || r.on !== 'B.do ("a", "b", []);') return 'B.ev didn\'t accept valid input #21.';
+                  r = B.ev ({}, ['on', 'a', 'b', ['c', /a/, undefined, null, Infinity, NaN]]);
+                  if (! r || r.on !== 'B.do ("a", "b", ["c", /a/, undefined, null, Infinity, NaN]);') return 'B.ev didn\'t accept valid input #22.';
+                  r = B.ev ({}, ['on', 'a', 'b', true]);
+                  if (! r || r.on !== 'B.do ("a", "b", true);') return 'B.ev didn\'t accept valid input #23.';
+
+                  r = B.ev ({}, ['on', 'a', 'b', [1], '"two', {rawArgs: ['event', 'this']}]);
+                  if (! r || r.on !== 'B.do ("a", "b", [1], "\\"two", event, this);') return 'B.ev didn\'t accept valid input #24.';
+
+                  r = B.ev ({}, ['on, off', 'a', 'b', true]);
+                  if (! r || r.on !== 'B.do ("a", "b", true);' || r.off !== r.on || dale.keys (r).length !== 2) return 'B.ev didn\'t create comma-separated events #3.';
+
+                  r = B.ev ({}, ['on', 'a', 'b', 2, {rawArgs: 'event'}]);
+                  if (! r || r.on !== 'B.do ("a", "b", 2, event);') return 'B.ev didn\'t accept valid input #25';
+
+                  r = B.ev ({}, [['on', 'a', 'b', 2, {rawArgs: 'event'}], ['off', 'a', 'b', 2, {rawArgs: 'event'}]]);
+                  if (! r || r.on !== 'B.do ("a", "b", 2, event);' || r.off !== 'B.do ("a", "b", 2, event);') return 'B.ev didn\'t accept valid input #26.';
 
                });
 
@@ -1217,10 +1269,11 @@
 
                Test ('B.resolve trample', function () {
                   if (c ('table') [0].innerHTML !== '<thead><tr><td>items</td></tr></thead><tbody></tbody>') return 'booyah';
-                  B.do ('set', ['State', 'items'], dale.times (1000));
+                  B.do ('set', ['State', 'items'], dale.times (200));
                   var t = Date.now ();
                   B.do ('set', ['State', 'items'], dale.times (1));
-                  if (Date.now () - t > 100) return 'B.trample is not working!';
+                  console.log (Date.now () - t);
+                  if (Date.now () - t > 1000) return 'B.trample is not working!';
                });
 
                B.do ('test', 'attrs');

@@ -17,16 +17,17 @@ Please refer to readme.md to read the annotated source (but not yet!).
    var type = teishi.t, log = teishi.l;
 
    var r = window.R ();
-   var B = window.B = {v: '1.0.0', B: 'в', r: r, routes: r.routes, store: r.store, do: r.do, listen: r.listen, forget: r.forget};
+   var B = window.B = {v: '1.1.0', B: 'в', r: r, routes: r.routes, store: r.store, do: r.do, listen: r.listen, forget: r.forget};
 
    // *** B.DEBUG ***
 
    B.debug = [];
 
    B.listen ({id: 'debug', verb: '*', path: []}, function (x) {
-      var target = ({verb: x.verb, path: x.path});
-      if (arguments.length > 1) target.args = [].slice.call (arguments, 1);
-      B.debug.unshift (target);
+      var params = ({verb: x.verb, path: x.path});
+      if (arguments.length > 1) params.args = [].slice.call (arguments, 1);
+      B.debug.unshift (params);
+      if (B.verbose) log ('B.debug event #' + B.debug.length, params);
    });
 
    // *** ARGS ***
@@ -35,8 +36,9 @@ Please refer to readme.md to read the annotated source (but not yet!).
 
       if (! B.prod && ! r.isPath (path, 'B.add')) return false;
 
+      if (B.get (path) === undefined) B.set (path, []);
       var target = B.get (path);
-      if (type (target) !== 'array') return log ('B.add', 'Cannot add to something that is not an array');
+      if (type (target) !== 'array') return log ('B.add', 'Cannot add to something that is not an array.');
       dale.do (arguments, function (arg, k) {
          if (k !== 0) target.push (arg);
       });
@@ -95,7 +97,10 @@ Please refer to readme.md to read the annotated source (but not yet!).
          }
          var targetType = type (path [k + 1]) === 'string' ? 'object' : 'array';
          if (type (target [v]) !== targetType) {
-            if (target [v] !== undefined && ! overwriteParent) return true;
+            if (target [v] !== undefined && ! overwriteParent) {
+               log ('B.set didn\'t overwrite a parent because of type mismatch. Pass a truthy third argument to force this behavior. Path', path);
+               return true;
+            }
             target [v] = targetType === 'object' ? {} : [];
          }
          target = target [v];
@@ -116,8 +121,20 @@ Please refer to readme.md to read the annotated source (but not yet!).
    dale.do (['add', 'rem', 'set'], function (v) {
       B.listen ({id: v, verb: v, path: []}, function (x, value) {
          if (x.verb === 'set') var prev = B.get (x.path);
-         B [x.verb].apply (null, [x.path].concat ([].slice.call (arguments, 1)));
-         if (x.verb === 'add' || x.verb === 'rem')     B.do ('change', x.path);
+         if (B [x.verb].apply (null, [x.path].concat ([].slice.call (arguments, 1))) !== true) return;
+         if (x.verb === 'add' || x.verb === 'rem') {
+            B.do ('change', x.path);
+            var args = [].slice.call (arguments, 1);
+            if (x.verb === 'add') dale.do (dale.times (args.length, B.get (x.path).length - args.length), function (i) {
+               B.do ('change', x.path.concat (i));
+            });
+            if (x.verb === 'rem') {
+               if (type (args [0]) === 'array') args = args [0];
+               dale.do (args, function (i) {
+                  B.do ('change', x.path.concat (i));
+               });
+            }
+         }
          if (x.verb === 'set' && ! B.eq (prev, value)) B.do ('change', x.path);
       });
    });
@@ -150,8 +167,6 @@ Please refer to readme.md to read the annotated source (but not yet!).
          ['evs',   evs,   'array', 'each'],
          function () {return dale.do (evs, function (ev) {
             return [
-               ['ev options', ev [3], ['undefined', 'object'], 'oneOf'],
-               [ev [3] !== undefined, ['ev options', dale.keys (ev [3]), ['args', 'rawArgs'], 'eachOf', teishi.test.equal]],
                ['ev.ev',   ev [0], 'string'],
                ['ev.verb', ev [1], 'string'],
                r.isPath (ev [2], 'B.ev')
@@ -170,18 +185,22 @@ Please refer to readme.md to read the annotated source (but not yet!).
       return dale.obj (Evs, attrs, function (ev, evname) {
          var output = '';
          dale.do (ev, function (entry) {
-            entry [3] = entry [3] || {};
             var args = [JSON.stringify (entry [1]), JSON.stringify (entry [2])];
-            var keys = dale.keys (entry [3]);
-            if (keys.indexOf ('args') === -1 && keys.indexOf ('rawArgs') === -1) {
-               entry [3].rawArgs = ['this.value'];
-               keys.push ('rawArgs');
-            }
-            if (keys.indexOf ('args') !== -1) {
-               if (type (entry [3].args) === 'object' || entry [3].args === undefined) entry [3].args = [entry [3].args];
-               args = args.concat (dale.do (entry [3].args, B.str));
-            }
-            if (keys.indexOf ('rawArgs') !== -1) args = args.concat (entry [3].rawArgs);
+            if (entry.length < 4) entry [3] = {rawArgs: 'this.value'};
+            dale.do (entry.slice (3), function (arg) {
+               if (type (arg) === 'object') {
+                  var keys = dale.keys (arg);
+                  if (keys.indexOf ('args') === -1 && keys.indexOf ('rawArgs') === -1) args = args.concat (B.str (arg));
+                  else {
+                     if (keys.indexOf ('args') !== -1)    {
+                        if (type (arg.args) === 'object' || arg.args === undefined) arg.args = [arg.args];
+                        args = args.concat (dale.do (arg.args, B.str));
+                     }
+                     if (keys.indexOf ('rawArgs') !== -1) args = args.concat (arg.rawArgs);
+                  }
+               }
+               else args = args.concat (B.str (arg));
+            });
             output += 'B.do (' + args.join (', ') + ');';
          });
          return [evname, output];
@@ -217,13 +236,14 @@ Please refer to readme.md to read the annotated source (but not yet!).
 
       var listeners = [];
 
-      if (dale.stop (params.listen, false, function (args) {
+      if (dale.stop (params.listen, false, function (args, k) {
          var routeId = dale.stopNot (args, undefined, function (arg) {
             if (type (arg) === 'object' && arg.id) return arg.id;
          });
          if (routeId) return log ('B.view', 'Cannot pass `id` property in args to listener.');
          var route = B.listen.apply (null, args);
          if (! B.prod && route === false) {
+            log ('B.view', 'There was an error creating event listener #' + (k + 1) + ' on view with path: ', path);
             dale.do (listeners, function (route) {B.forget (route)});
             return false;
          }
@@ -447,7 +467,7 @@ Please refer to readme.md to read the annotated source (but not yet!).
             }
          });
 
-         var detached = {};
+         var detached = {}, active;
 
          dale.do (diff, function (v, k) {
             if (v [1].match (/^>/)) return;
@@ -458,7 +478,7 @@ Please refer to readme.md to read the annotated source (but not yet!).
             if (v [0] === 'keep') {
                if (v [1].match (/<.+ {.*"opaque":true.*}/)) v [2].el.innerHTML = '';
                insert (v [2].el.parentNode.removeChild (v [2].el), v [2].New, k);
-               if (v [2].active && v [1].match (/[^<\s]+/g) [0] !== 'a') v [2].el.focus ? v [2].el.focus () : v [2].el.setActive ();
+               if (v [2].active && v [1].match (/[^<\s]+/g) [0] !== 'a') active = v [2].el;
                return;
             }
             if (v [1].match (/^</)) {
@@ -477,8 +497,10 @@ Please refer to readme.md to read the annotated source (but not yet!).
                            if (v) return [v.name, v.value];
                         });
                      }
+
                      var newAttrs = JSON.parse (v [1].match (/{.+/) || '{}');
-                     dale.do (dale.fil (oldAttrs, undefined, function (v) {
+                     dale.do (dale.fil (oldAttrs, undefined, function (v, k) {
+                        if (type (v) === 'string') v = {name: k};
                         if (newAttrs [v.name] === undefined) return v.name;
                      }), function (name) {
                         if (name === 'value')    el.value    = undefined;
@@ -501,7 +523,7 @@ Please refer to readme.md to read the annotated source (but not yet!).
                   }
                   insert (el, v [2].New, k);
                   v [2].el = el;
-                  if (old && old [2].active && v [1].match (/[^<\s]+/g) [0] !== 'a') el.focus ? el.focus () : el.setActive ();
+                  if (old && old [2].active && v [1].match (/[^<\s]+/g) [0] !== 'a') active = el;
                }
             }
             else {
@@ -518,6 +540,12 @@ Please refer to readme.md to read the annotated source (but not yet!).
                else v [2].el.parentNode.removeChild (v [2].el);
             }
          });
+      }
+
+      if (active) {
+         active.focus ? active.focus () : active.setActive ();
+         active.blur ();
+         active.focus ? active.focus () : active.setActive ();
       }
 
       route.view = newView [0];

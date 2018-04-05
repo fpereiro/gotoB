@@ -6,7 +6,7 @@ gotoв is a framework for making the frontend of a web application (henceforth w
 
 ## Current status of the project
 
-The current version of gotoв, v1.1.0, is considered to be *somewhat stable* and *mostly complete*. [Suggestions](https://github.com/fpereiro/gotoB/issues) and [patches](https://github.com/fpereiro/gotoB/pulls) are welcome. Besides bug fixes, these are the future changes planned:
+The current version of gotoв, v1.2.0, is considered to be *somewhat stable* and *mostly complete*. [Suggestions](https://github.com/fpereiro/gotoB/issues) and [patches](https://github.com/fpereiro/gotoB/pulls) are welcome. Besides bug fixes, these are the future changes planned:
 
 - Add missing documentation.
 - Extend cross-browser compatibility.
@@ -15,9 +15,9 @@ The current version of gotoв, v1.1.0, is considered to be *somewhat stable* and
 
 ## Examples
 
-- Counter: [live example](http://autocode.dk/gotob/examples/counter.html) - [code](https://github.com/fpereiro/gotoB/blob/master/examples/counter.html).
-- TodoMVC: [live example](http://autocode.dk/gotob/examples/todomvc.html) - [code](https://github.com/fpereiro/gotoB/blob/master/examples/todomvc.js).
-- Mini shopping cart: [live example](http://autocode.dk/gotob/examples/kliko.html) - [code](https://github.com/fpereiro/gotoB/blob/master/examples/kliko.js).
+- Counter: [live example](http://altocode.nl/gotob/examples/counter.html) - [code](https://github.com/fpereiro/gotoB/blob/master/examples/counter.html).
+- TodoMVC: [live example](http://altocode.nl/gotob/examples/todomvc.html) - [code](https://github.com/fpereiro/gotoB/blob/master/examples/todomvc.js).
+- Mini shopping cart: [live example](http://altocode.nl/gotob/examples/kliko.html) - [code](https://github.com/fpereiro/gotoB/blob/master/examples/kliko.js).
 
 ## Installation
 
@@ -30,7 +30,7 @@ gotoв is written in Javascript. You can use it in the browser by sourcing the p
 Or you can use these links to use the latest version - courtesy of [RawGit](https://rawgit.com) and [MaxCDN](https://maxcdn.com).
 
 ```html
-<script src="https://cdn.rawgit.com/fpereiro/gotoB/0a6b1d3c4343679a35c9289567153dd9e3a2a099/gotoB.min.js"></script>
+<script src=""></script>
 ```
 
 gotoв is exclusively a client-side library. Still, you can find it in npm: `npm install gotob`
@@ -234,6 +234,7 @@ And, of course, gotoв must be very useful for building a real webapp.
 - You have freedom to decide the technology you use.
 - Complexity is a massive turn-off for you.
 - You like ES5 javascript.
+- You miss not having to compile your javascript.
 - You have a bit of time upfront to understand gotoв's core concepts.
 - You enjoy understanding the internals of a tool, so that you can then use it with precision and confidence.
 - You like technology that's a bit strange.
@@ -256,7 +257,7 @@ And, of course, gotoв must be very useful for building a real webapp.
 - **Fast reload**: the edit-reload cycle should take under two seconds. No need to wait until no bundle is completed.
 - **Smallness**: gotoв and its dependencies are < 2k lines of consistent, annotated javascript. In other words, it is less than 2048 lines on top of [vanilla.js](http://vanilla-js.com/).
 - **Batteries included**: the core functionality for building a webapp is all provided. Whatever libraries you add on top will probably be for specific things (nice CSS, a calendar widget, etc.)
-- **Trivial to set up**: add `<script src="https://cdn.rawgit.com/fpereiro/gotoB/0a6b1d3c4343679a35c9289567153dd9e3a2a099/gotoB.min.js"></script>` at the bottom of the `<body>`.
+- **Trivial to set up**: add `<script src=""></script>` at the bottom of the `<body>`.
 - **Everything in plain sight**: all properties and state are directly accessible from the javascript console of the browser. DOM elements have stringified event handlers that can be inspected with any modern browser.
 - **Performance**: gotoв itself is small (~12kb when minified and gzipped, including all dependencies) so it is loaded and parsed quickly. It's view redrawing mechanism is not slow, but it trades speed in exchange for ease of use.
 - **Cross-browser compatibility**: a work in progress (see browser current compatibility above in the *Installation* section). My goal is to make gotoв work on IE6 and above.
@@ -281,7 +282,7 @@ In my experience, this added complexity is not easy to solve with straightforwar
 
 ## Tutorial
 
-I'm working on it like there's no tomorrow. If you want to turn up the heat, open [an issue](https://github.com/fpereiro/gotoB/issues) so I'll be compelled to finish it even sooner.
+I'm working on it. If you want to turn up the heat, open [an issue](https://github.com/fpereiro/gotoB/issues) so I'll be compelled to finish it even sooner.
 
 Meanwhile, you can check out [the examples](https://github.com/fpereiro/gotoB/tree/master/examples)!
 
@@ -295,7 +296,7 @@ Lemme finish the other two first.
 
 ## Source code
 
-The complete source code is contained in `gotoB.js`. gotoв itself is about 670 lines long; its dependencies are about 1260 lines; the whole thing is about 1930 lines.
+The complete source code is contained in `gotoB.js`. gotoв itself is about 680 lines long; its dependencies are about 1270 lines; the whole thing is about 1950 lines.
 
 Annotated source code will be forthcoming when the library stabilizes.
 

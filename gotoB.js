@@ -1,5 +1,5 @@
 /*
-gotoB - v1.0.0
+gotoB - v1.2.0
 
 Written by Federico Pereiro (fpereiro@gmail.com) and released into the public domain.
 
@@ -17,17 +17,16 @@ Please refer to readme.md to read the annotated source (but not yet!).
    var type = teishi.t, log = teishi.l;
 
    var r = window.R ();
-   var B = window.B = {v: '1.1.0', B: 'в', r: r, routes: r.routes, store: r.store, do: r.do, listen: r.listen, forget: r.forget};
+   var B = window.B = {v: '1.2.0', B: 'в', r: r, routes: r.routes, store: r.store, do: r.do, listen: r.listen, forget: r.forget};
 
-   // *** B.DEBUG ***
+   // *** B.EVENTLOG ***
 
-   B.debug = [];
+   B.eventlog = [];
 
-   B.listen ({id: 'debug', verb: '*', path: []}, function (x) {
-      var params = ({verb: x.verb, path: x.path});
-      if (arguments.length > 1) params.args = [].slice.call (arguments, 1);
-      B.debug.unshift (params);
-      if (B.verbose) log ('B.debug event #' + B.debug.length, params);
+   B.listen ({id: 'eventlog', verb: '*', path: []}, function (x) {
+      B.eventlog.unshift ({verb: x.verb, path: x.path, from: x.from});
+      if (arguments.length > 1) B.eventlog [0].args = [].slice.call (arguments, 1);
+      if (B.verbose) log ('B.eventlog event #' + B.eventlog.length, B.eventlog [0]);
    });
 
    // *** ARGS ***
@@ -109,33 +108,24 @@ Please refer to readme.md to read the annotated source (but not yet!).
       return error ? false : true;
    }
 
-   B.eq = function (a, b) {
-      if (teishi.simple (a) && teishi.simple (b)) return a === b;
-      if (teishi.t (a, true) !== teishi.t (b, true)) return false;
-      if (teishi.s (dale.keys (a).sort ()) !== teishi.s (dale.keys (b).sort ())) return false;
-      return dale.stop (a, false, function (v, k) {
-         return B.eq (v, b [k]);
-      }) === false ? false : true;
-   }
-
    dale.do (['add', 'rem', 'set'], function (v) {
       B.listen ({id: v, verb: v, path: []}, function (x, value) {
          if (x.verb === 'set') var prev = B.get (x.path);
          if (B [x.verb].apply (null, [x.path].concat ([].slice.call (arguments, 1))) !== true) return;
          if (x.verb === 'add' || x.verb === 'rem') {
-            B.do ('change', x.path);
+            B.do (x, 'change', x.path);
             var args = [].slice.call (arguments, 1);
             if (x.verb === 'add') dale.do (dale.times (args.length, B.get (x.path).length - args.length), function (i) {
-               B.do ('change', x.path.concat (i));
+               B.do (x, 'change', x.path.concat (i));
             });
             if (x.verb === 'rem') {
                if (type (args [0]) === 'array') args = args [0];
                dale.do (args, function (i) {
-                  B.do ('change', x.path.concat (i));
+                  B.do (x, 'change', x.path.concat (i));
                });
             }
          }
-         if (x.verb === 'set' && ! B.eq (prev, value)) B.do ('change', x.path);
+         if (x.verb === 'set' && ! teishi.eq (prev, value)) B.do (x, 'change', x.path);
       });
    });
 
@@ -157,7 +147,10 @@ Please refer to readme.md to read the annotated source (but not yet!).
       return output;
    }
 
-   B.ev = function (attrs, evs) {
+   B.ev = function () {
+
+      var attrs = arguments.length === 1 ? {} : arguments [0];
+      var evs   = arguments.length === 1 ? arguments [0] : arguments [1];
 
       if (type (evs) === 'array' && type (evs [0]) === 'string') evs = [evs];
 
@@ -174,9 +167,9 @@ Please refer to readme.md to read the annotated source (but not yet!).
          })}
       ])) return false;
 
-      var Evs = {};
+      var Evs = {}, Attrs = teishi.c (attrs);
       dale.do (evs, function (ev) {
-         dale.do (ev [0].split (/,\s/), function (evname) {
+         dale.do (ev [0].split (/,\s*/), function (evname) {
             if (! Evs [evname]) Evs [evname] = [ev];
             else                Evs [evname].push (ev);
          });
@@ -201,20 +194,21 @@ Please refer to readme.md to read the annotated source (but not yet!).
                }
                else args = args.concat (B.str (arg));
             });
-            output += 'B.do (' + args.join (', ') + ');';
+            output += 'B.do ({from: {ev: "' + evname + '", attrs: ' + B.str (Attrs) + '}}, ' + args.join (', ') + ');';
          });
          return [evname, output];
       });
    }
 
-   B.view = function (path) {
-
-      var params = arguments.length === 2 ? {} : arguments [1];
-      var rfun   = arguments [arguments.length === 2 ? 1 : 2];
+   B.view = function () {
+      var argc = 0;
+      var x      = type (arguments [argc]) === 'object' ? arguments [argc++] : {};
+      var path   = arguments [argc++];
+      var params = type (arguments [argc]) === 'object' ? arguments [argc++] : {};
+      var rfun   = arguments [argc];
 
       if (! B.prod && teishi.stop ('B.view', [
          r.isPath (path, 'B.view'),
-         ['params', params, ['object', 'undefined'], 'oneOf'],
          ['rfun',   rfun,   'function'],
          function () {return [
             ['params.tag',      params.tag, [undefined].concat (lith.k.tags), 'oneOf', teishi.test.equal],
@@ -251,25 +245,17 @@ Please refer to readme.md to read the annotated source (but not yet!).
          if (! B.routes [route].parent) B.routes [route].parent = id;
       }) === false) return false;
 
-      var drawView = function (x, value) {
-
-         var view = rfun (x, value);
-         var html = lith.g (view, B.prod);
-
-         if (! B.prod && html === false) {
-            view = ['pre', ['Invalid lith: ', teishi.simple (view) ? view.toString () : JSON.stringify (view, null, '   ')]];
-            html = lith.g (view, B.prod);
-         }
-
-         return [view, html];
-      }
 
       B.listen ('change', path, {id: id, priority: -1}, function (x) {
-         var view = drawView (x, B.get (path));
-         B.resolve (id, view);
+         B.resolve (x, id, function () {
+            x.from.unshift ({ev: 'redraw', id: id, path: path});
+            return B.drawView (x, B.get (path), rfun);
+         });
       });
 
-      var view = drawView ({verb: 'change', path: path}, B.get (path));
+      var x2 = dale.obj (x, {verb: 'change', path: path}, function (v, k) {return [k, v]});
+
+      var view = B.drawView (x2, B.get (path), rfun);
 
       if (params.ondraw)   B.routes [id].ondraw   = params.ondraw;
       if (params.onforget) B.routes [id].onforget = params.onforget;
@@ -296,7 +282,7 @@ Please refer to readme.md to read the annotated source (but not yet!).
       c.place (target, 'afterBegin', view);
 
       dale.do (B.getChildren (view), function (id) {
-         if (B.routes [id] && B.routes [id].ondraw) B.routes [id].ondraw (id);
+         if (B.routes [id] && B.routes [id].ondraw) B.routes [id].ondraw ({from: [{ev: 'mount', target: target}], route: B.routes [id]});
       });
    }
 
@@ -304,15 +290,15 @@ Please refer to readme.md to read the annotated source (but not yet!).
 
       if (! B.prod && type (target) !== 'string' || ! target.match (/^(body|#[^\s]+)$/)) return log ('B.unmount', 'target must be either \'body\' or an id selector, but instead is ' + target);
 
-      target = target === 'body' ? c (target) [0] : c (target);
+      var Target = target === 'body' ? c (target) [0] : c (target);
 
-      if (! B.prod && ! target) return log ('B.unmount', 'target not found.');
+      if (! B.prod && ! Target) return log ('B.unmount', 'target not found.');
 
       var onforget = function (route) {
-         if (route.onforget) route.onforget (route.id);
+         if (route.onforget) route.onforget ({from: [{ev: 'unmount', target: target}], route: route});
       }
 
-      var ids = B.getChildren (target.innerHTML);
+      var ids = B.getChildren (Target.innerHTML);
 
       dale.do (ids, function (id) {
          if (B.routes [id]) B.forget (id, onforget);
@@ -326,6 +312,19 @@ Please refer to readme.md to read the annotated source (but not yet!).
 
    // *** B.VIEW INTERNALS ***
 
+   B.drawView = function (x, value, rfun) {
+
+      var view = rfun (x, value);
+      var html = lith.g (view, B.prod);
+
+      if (! B.prod && html === false) {
+         view = ['pre', ['Invalid lith: ', teishi.simple (view) ? view.toString () : JSON.stringify (view, null, '   ')]];
+         html = lith.g (view, B.prod);
+      }
+
+      return [view, html];
+   }
+
    B.getChildren = function (view) {
       var children = (view || '').match (/id="в[0-9a-f]+/g) || [];
       return dale.do (children, function (v) {
@@ -338,16 +337,16 @@ Please refer to readme.md to read the annotated source (but not yet!).
    B.resolvequeue = [];
    B.resolving    = false;
 
-   B.resolve = function (id, newView, rec) {
+   B.resolve = function (x, id, newView, rec) {
 
-      if (B.resolving && ! rec) return B.resolvequeue.push ([id, newView]);
+      if (B.resolving && ! rec) return B.resolvequeue.push ([x, id, newView]);
 
       B.resolving = true;
 
       var outro = function () {
          var next;
          var index = dale.stopNot (B.resolvequeue, undefined, function (v, k) {
-            if (B.routes [v [0]]) return k;
+            if (B.routes [v [1]]) return k;
          });
 
          if (index !== undefined) {
@@ -358,21 +357,22 @@ Please refer to readme.md to read the annotated source (but not yet!).
          else B.resolving = false;
       }
 
-      var route = B.routes [id];
+      var route = B.routes [id], newView = newView ();
 
       var rootElement = document.getElementById (id);
 
+      var onforget = function (route) {
+         if (route.onforget) route.onforget (x);
+      }
+
       if (! rootElement) {
-         log ('B.resolve', 'Attempted to redraw dangling view, omitting redraw & deleting route.', {route: {id: id, path: B.routes [id].path}, view: newView [0]});
-         B.forget (id, B.routes [id].onforget);
+         log ('B.resolve', 'Attempted to redraw dangling view, omitting redraw & deleting route.', {route: {id: id, path: route.path}, view: newView [0]});
+         x.from.unshift ({ev: 'danglingView'});
+         B.forget (id, onforget);
          return outro ();
       }
 
       var diff = B.diff (B.prediff (route.view), B.prediff (newView [0]));
-
-      var onforget = function (route) {
-         if (route.onforget) route.onforget (route.id);
-      }
 
       dale.do (B.routes, function (route) {
          if (route.parent === id && route.id.match (/^в[0-9a-f]+$/)) B.forget (route.id, onforget);
@@ -383,20 +383,20 @@ Please refer to readme.md to read the annotated source (but not yet!).
          c ('#' + id).innerHTML = newView [1];
       }
       else {
-         var insert = function (el, where, debugpos) {
-            var p = find (where, 'insert1', debugpos);
+         var insert = function (el, where, position) {
+            var p = find (where, 'insert1', position);
             if (p) p.parentNode.insertBefore (el, p);
-            else   find (where.slice (0, where.length - 1), 'insert2', debugpos).appendChild (el);
+            else   find (where.slice (0, where.length - 1), 'insert2', position).appendChild (el);
          }
 
-         var find = function (where, debug, debugpos) {
+         var find = function (where, action, position) {
             var cur = rootElement;
             dale.do (where, function (v, k) {
                if (! cur) {
-                  log ('BOOM! YOU FOUND A BUG IN gotoB! Please open a pull request at http://github.com/fpereiro/gotoB/issues and paste the text below:\n', JSON.stringify ({
-                     debug: debug,
-                     debugpos: debugpos,
-                     diffitem: diff [debugpos].slice (0, 2).join (' '),
+                  var data = {
+                     action: action,
+                     position: position,
+                     diffitem: diff [position].slice (0, 2).join (' '),
                      id: id,
                      where: where,
                      k: k,
@@ -405,7 +405,9 @@ Please refer to readme.md to read the annotated source (but not yet!).
                      oldView: route.view,
                      newView: newView [0],
                      diff: dale.obj (teishi.c (diff), function (v2, k2) {return [k2, v2]})
-                  }));
+                  };
+                  x.from.unshift ({ev: 'gotoB error', data: data});
+                  log ('BOOM! YOU FOUND A BUG IN gotoB! Please open a pull request at http://github.com/fpereiro/gotoB/issues and paste the text below:\n', JSON.stringify (data));
                   throw new Error ('gotoB redraw error!');
                }
                cur = cur.childNodes [v];
@@ -503,7 +505,7 @@ Please refer to readme.md to read the annotated source (but not yet!).
                         if (type (v) === 'string') v = {name: k};
                         if (newAttrs [v.name] === undefined) return v.name;
                      }), function (name) {
-                        if (name === 'value')    el.value    = undefined;
+                        if (name === 'value')    el.value    = null;
                         if (name === 'checked')  el.checked  = false;
                         if (name === 'selected') el.selected = false;
                         el.removeAttribute (name);
@@ -514,6 +516,7 @@ Please refer to readme.md to read the annotated source (but not yet!).
                         if (k === 'selected') el.selected = v;
                         el.setAttribute (k, v);
                      });
+                     if (el.value !== newAttrs.value) el.value = newAttrs.value === undefined ? null : newAttrs.value;
                   }
                   else {
                      el = document.createElement (v [1].match (/[^<\s]+/g) [0]);
@@ -537,7 +540,9 @@ Please refer to readme.md to read the annotated source (but not yet!).
                      .replace (/&#96;/g,  '`');
                   insert (document.createTextNode (v [1]), v [2].New, k);
                }
-               else v [2].el.parentNode.removeChild (v [2].el);
+               else {
+                  if (v [2].el) v [2].el.parentNode.removeChild (v [2].el);
+               }
             }
          });
       }
@@ -554,10 +559,10 @@ Please refer to readme.md to read the annotated source (but not yet!).
          var croute = B.routes [id];
          croute.priority += route.priority;
          if (! croute.parent) croute.parent = route.id;
-         if (croute.ondraw) croute.ondraw (croute.id);
+         if (croute.ondraw) croute.ondraw (x);
       });
 
-      if (route.ondraw) route.ondraw (id);
+      if (route.ondraw) route.ondraw (x);
 
       outro ();
    }
@@ -578,6 +583,7 @@ Please refer to readme.md to read the annotated source (but not yet!).
          output.push ('<' + input [0]);
          var attrs = type (input [1]) === 'object' ? input [1] : undefined;
          var conts = input [attrs ? 2 : 1];
+         if (input [0] === 'style' && type (conts) === 'array') conts = lith.css.g (conts);
          if (attrs) {
             output [output.length - 1] += ' ' + JSON.stringify (attrs);
             if (attrs.opaque) output.push ('<' + lith.g (conts, B.prod));

@@ -240,11 +240,11 @@
 
    // *** STORAGE ***
 
-   B.listen ('load', '*', function () {
+   B.listen ('load', '*', function (x) {
       if (! localStorage ['todos-gotoB']) {
          localStorage.setItem ('todos-gotoB', '{"todos": []}');
       }
-      B.do ('set', ['Data', 'todos'], JSON.parse (localStorage ['todos-gotoB']).todos);
+      B.do (x, 'set', ['Data', 'todos'], JSON.parse (localStorage ['todos-gotoB']).todos);
    });
 
    B.listen ('change', ['Data', 'todos'], function (x) {
@@ -257,15 +257,15 @@
 
    // *** HASH NAVIGATION ***
 
-   window.addEventListener ('hashchange', function () {B.do ('change', 'hash')});
+   window.addEventListener ('hashchange', function () {B.do ({from: {ev: 'hashchange'}}, 'change', 'hash')});
 
-   B.listen ('change', 'hash', function () {
+   B.listen ('change', 'hash', function (x) {
       var hash = window.location.hash.replace ('#/', '');
       if (hash !== 'all' && hash !== 'active' && hash !== 'completed') return window.location.hash = '#/all';
-      B.do ('set', ['State', 'display'], hash);
+      B.do (x, 'set', ['State', 'display'], hash);
    });
 
-   B.do ('change', 'hash');
+   B.do ({from: {ev: 'initializeHash'}}, 'change', 'hash');
 
    // *** MAIN VIEW ***
 
@@ -277,26 +277,26 @@
          if (keycode !== 13) return;
          var title = (B.get ('State', 'new-todo') || '').trim ();
          if (title === '') return;
-         B.do ('add', ['Data', 'todos'], {title: title, completed: false});
-         B.do ('set', ['State', 'new-todo'], '');
+         B.do (x, 'add', ['Data', 'todos'], {title: title, completed: false});
+         B.do (x, 'set', ['State', 'new-todo'], '');
       }],
 
       ['toggle', 'todos', function (x, value) {
          dale.do (B.get ('Data', 'todos'), function (todo) {
             todo.completed = value;
          });
-         B.do ('change', ['Data', 'todos']);
+         B.do (x, 'change', ['Data', 'todos']);
       }],
 
       ['startEdit', '*', function (x) {
          var index = x.path [0];
-         B.do ('set', ['State', 'edit-todo'], B.get ('Data', 'todos') [x.path [0]].title);
+         B.do (x, 'set', ['State', 'edit-todo'], B.get ('Data', 'todos') [x.path [0]].title);
 
          var editing = dale.stopNot (B.get ('Data', 'todos'), undefined, function (v2, k2) {
             if (v2.editing) return k2;
          });
-         if (editing !== undefined && editing !== x.path [0]) B.do ('set', ['Data', 'todos', editing, 'editing'], false);
-         B.do ('set', ['Data', 'todos', index, 'editing'], true);
+         if (editing !== undefined && editing !== x.path [0]) B.do (x, 'set', ['Data', 'todos', editing, 'editing'], false);
+         B.do (x, 'set', ['Data', 'todos', index, 'editing'], true);
          var target = c ('.editing input.edit') [0];
          target.focus ? target.focus () : target.setActive ();
       }],
@@ -305,27 +305,27 @@
          var index = x.path [0];
          if (! B.get ('Data', 'todos') [index] || ! B.get ('Data', 'todos') [index].editing) return;
          var newTitle = B.get ('State', 'edit-todo');
-         if (newTitle === '') B.do ('rem', ['Data', 'todos'], index);
+         if (newTitle === '') B.do (x, 'rem', ['Data', 'todos'], index);
          else {
-            B.do ('set', ['Data', 'todos', index, 'title'], newTitle);
-            B.do ('set', ['Data', 'todos', index, 'editing'], false);
+            B.do (x, 'set', ['Data', 'todos', index, 'title'], newTitle);
+            B.do (x, 'set', ['Data', 'todos', index, 'editing'], false);
          }
-         B.do ('set', ['State', 'edit-todo'], '');
+         B.do (x, 'set', ['State', 'edit-todo'], '');
       }],
 
       ['edit', '*', function (x, value, keycode) {
          if (keycode === 13) {
-            B.do ('set', ['State', 'edit-todo'], value);
-            return B.do ('finishEdit', x.path);
+            B.do (x, 'set', ['State', 'edit-todo'], value);
+            return B.do (x, 'finishEdit', x.path);
          }
          if (keycode === 27) {
-            B.do ('set', ['Data', 'todos', x.path [0], 'editing'], false);
-            B.do ('set', ['State', 'edit-todo'], '');
+            B.do (x, 'set', ['Data', 'todos', x.path [0], 'editing'], false);
+            B.do (x, 'set', ['State', 'edit-todo'], '');
          }
       }],
 
-      ['clear', 'completed', function () {
-         B.do ('set', ['Data', 'todos'], dale.fil (B.get ('Data', 'todos'), undefined, function (v) {
+      ['clear', 'completed', function (x) {
+         B.do (x, 'set', ['Data', 'todos'], dale.fil (B.get ('Data', 'todos'), undefined, function (v) {
             if (! v.completed) return v;
          }));
       }],
@@ -333,7 +333,7 @@
    ], ondraw: function () {
       var target = c ('.new-todo') [0];
       target.focus ? target.focus () : target.setActive ();
-   }}, function (v, todos) {
+   }}, function (x, todos) {
 
       var allCompleted = dale.stopNot (todos, true, function (v) {
          return v.completed;
@@ -345,9 +345,9 @@
       // *** MAIN VIEW PROPER ***
 
       return [
-         ['style', lith.css.g (Views.style)],
+         ['style', Views.style],
          ['section', {class: 'todoapp'}, [
-            B.view (['State', 'new-todo'], {tag: 'header', attrs: {class: 'header'}}, function (x, newTodo) {
+            B.view (x, ['State', 'new-todo'], {tag: 'header', attrs: {class: 'header'}}, function (x, newTodo) {
                return [
                   ['h1', 'todos'],
                   ['input', B.ev ({
@@ -367,7 +367,7 @@
                   ['input', B.ev ({class: 'toggle-all', type: 'checkbox', 'checked': allCompleted ? true : undefined},
                      ['onclick', 'toggle', 'todos', ! allCompleted]
                   )],
-                  B.view (['State'], {tag: 'ul', attrs: {class: 'todo-list'}}, function (x, State) {
+                  B.view (x, ['State'], {tag: 'ul', attrs: {class: 'todo-list'}}, function (x, State) {
 
                      return dale.do (todos, function (v, k) {
 
@@ -376,10 +376,10 @@
 
                         return ['li', {class: ['todo', v.completed ? 'completed' : '', v.editing ? 'editing' : ''].join (' ')}, [
                            ['div', {class: 'view'}, [
-                              ['input', B.ev ({class: 'toggle', type: 'checkbox', checked: v.completed ? 'true' : undefined},
+                              ['input', B.ev ({class: 'toggle', type: 'checkbox', checked: v.completed},
                                  ['onclick', 'set', ['Data', 'todos', k, 'completed'], ! v.completed]
                               )],
-                              ['label', B.ev ({}, ['ondblclick', 'startEdit', k]), v.title],
+                              ['label', B.ev (['ondblclick', 'startEdit', k]), v.title],
                               ['button', B.ev ({class: 'destroy'}, ['onclick', 'rem', ['Data', 'todos'], k])],
                            ]],
                            ['input', B.ev ({class: 'edit', type: 'text', value: State ['edit-todo']}, [
@@ -424,7 +424,7 @@
 
    B.mount ('body', Views.main ());
 
-   B.do ('load', ['data', 'calc']);
+   B.do ({from: {ev: 'initializeLoad'}}, 'load', ['data', 'calc']);
 
    /*
    XXX ADD AUTOMATIC TESTS

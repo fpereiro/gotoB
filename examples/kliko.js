@@ -4,8 +4,8 @@
 
    var view = function () {
       return B.view (['Data'], {listen: [
-         ['reload', 'data', function () {
-            B.do ('set', ['Data', 'items'], [
+         ['reload', 'data', function (x) {
+            B.do (x, 'set', ['Data', 'items'], [
                {title: 'A book on design', price: 5},
                {title: 'Something useless', price: 8},
                {title: 'Kittens & sunshine', price: 11},
@@ -21,30 +21,30 @@
             if (! q.match (/^\d+$/)) return alert ('Please enter a valid amount.');
             item.amount = parseInt (q);
 
-            if (! B.get ('Data', 'cart')) B.do ('set', ['Data', 'cart'], []);
+            if (! B.get ('Data', 'cart')) B.do (x, 'set', ['Data', 'cart'], []);
             var matching = dale.stopNot (B.get ('Data', 'cart'), undefined, function (cartitem, k) {
                if (cartitem.title === item.title) return k;
             });
 
-            B.do ('set', ['Data', 'addto', x.path [0]], '');
-            if (matching === undefined) return B.do ('add', ['Data', 'cart'], item);
-            B.do ('set', ['Data', 'cart', matching, 'amount'], B.get ('Data', 'cart', matching, 'amount') + parseInt (q));
+            B.do (x, 'set', ['Data', 'addto', x.path [0]], '');
+            if (matching === undefined) return B.do (x, 'add', ['Data', 'cart'], item);
+            B.do (x, 'set', ['Data', 'cart', matching, 'amount'], B.get ('Data', 'cart', matching, 'amount') + parseInt (q));
          }],
-         ['change', ['Data', 'cart'], function () {
+         ['change', ['Data', 'cart'], function (x) {
             var cart = B.get ('Data', 'cart');
             var total = 0;
             dale.do (cart, function (item) {
                total += item.amount * item.price;
             });
-            B.do ('set', ['Data', 'total'], total);
+            B.do (x, 'set', ['Data', 'total'], total);
          }],
-         ['checkout', [], function () {
+         ['checkout', [], function (x) {
             var cart = B.get ('Data', 'cart');
             alert ('PROFIT! ' + teishi.s (cart));
-            B.do ('set', ['Data', 'cart'], []);
+            B.do (x, 'set', ['Data', 'cart'], []);
          }]
       ], ondraw: function () {
-         if (! B.get ('Data', 'items')) B.do ('reload', 'data');
+         if (! B.get ('Data', 'items')) B.do ({from: {ev: 'initializeData'}}, 'reload', 'data');
       }}, function (x, Data) {
 
          if (! Data) return;
@@ -53,10 +53,10 @@
          var colsright = ['title', 'price', 'subtotal', 'actions'];
 
          return [
-            ['style', lith.css.g ([
+            ['style', [
                ['body', {padding: 15}],
                ['span.action', {color: 'blue', cursor: 'pointer', 'text-decoration': 'underline'}]
-            ])],
+            ]],
             ['div', {class: 'left pure-u-1-2'}, [
                ['h3', 'Product list'],
                ['h4', [dale.fil (Data.items, undefined, function (item) {

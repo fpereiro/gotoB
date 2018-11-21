@@ -6,7 +6,7 @@ gotoв is a framework for making the frontend of a web application (henceforth w
 
 ## Current status of the project
 
-The current version of gotoв, v1.2.0, is considered to be *somewhat stable* and *mostly complete*. [Suggestions](https://github.com/fpereiro/gotoB/issues) and [patches](https://github.com/fpereiro/gotoB/pulls) are welcome. Besides bug fixes, these are the future changes planned:
+The current version of gotoв, v1.2.1, is considered to be *somewhat stable* and *mostly complete*. [Suggestions](https://github.com/fpereiro/gotoB/issues) and [patches](https://github.com/fpereiro/gotoB/pulls) are welcome. Besides bug fixes, these are the future changes planned:
 
 - Add missing documentation.
 - Extend cross-browser compatibility.
@@ -27,10 +27,10 @@ gotoв is written in Javascript. You can use it in the browser by sourcing the p
 <script src="gotoB.min.js"></script>
 ```
 
-Or you can use these links to use the latest version - courtesy of [RawGit](https://rawgit.com) and [MaxCDN](https://maxcdn.com).
+Or you can use this link to use the latest version - courtesy of [jsDelivr](https://jsdelivr.com).
 
 ```html
-<script src="https://cdn.rawgit.com/fpereiro/gotoB/b80bc99ec3dcba0d830d061bff1bcb3d253dc7de/gotoB.min.js"></script>
+<script src=""></script>
 ```
 
 gotoв is exclusively a client-side library. Still, you can find it in npm: `npm install gotob`
@@ -40,7 +40,7 @@ gotoв is pure ES5 javascript. Browser compatibility is as follows:
 - Chrome 15 (released 2011/10/25) and above.
 - Firefox 22 (released 2013/02/23) and above.
 - Safari 5.1 (released 2011/07/20) and above.
-- Internet Explorer 9 (released 2011/03/14) and above. **Note: gotoв has issues with maintaining focus on inputs with IE9 and IE10.**
+- Internet Explorer 9 (released 2011/03/14) and above.
 - Microsoft Edge 14 (released 2016/02/19) and above.
 - Opera 11.6 (released 2011/12/07) and above.
 - Yandex 14.12 (released 2014/12/11) and above.
@@ -253,13 +253,13 @@ And, of course, gotoв must be very useful for building a real webapp.
 
 ### What does gotoв care about?
 
-- **Ease of use**: almost all the functionality you need is contained in four functions (one for listening to an event (`B.listen`), one for firing an event (`B.do`), one for stringifying an event call into a DOM attribute (`B.ev`) and one for creating dynamic views which rely on events (`B.change`)). There's three more functions to effect data changes (`B.add`, `B.rem` & `B.set`) and one for reading data from the store (`B.get`).
+- **Ease of use**: almost all the functionality you need is contained in four functions (one for listening to an event (`B.listen`), one for firing an event (`B.do`), one for stringifying an event call into a DOM attribute (`B.ev`) and one for creating dynamic views which rely on events (`B.view`)). There's three more functions to effect data changes (`B.add`, `B.rem` & `B.set`) and one for reading data from the store (`B.get`).
 - **Fast reload**: the edit-reload cycle should take under two seconds. No need to wait until no bundle is completed.
 - **Smallness**: gotoв and its dependencies are < 2k lines of consistent, annotated javascript. In other words, it is less than 2048 lines on top of [vanilla.js](http://vanilla-js.com/).
 - **Batteries included**: the core functionality for building a webapp is all provided. Whatever libraries you add on top will probably be for specific things (nice CSS, a calendar widget, etc.)
-- **Trivial to set up**: add `<script src="https://cdn.rawgit.com/fpereiro/gotoB/b80bc99ec3dcba0d830d061bff1bcb3d253dc7de/gotoB.min.js"></script>` at the bottom of the `<body>`.
+- **Trivial to set up**: add `<script src=""></script>` at the bottom of the `<body>`.
 - **Everything in plain sight**: all properties and state are directly accessible from the javascript console of the browser. DOM elements have stringified event handlers that can be inspected with any modern browser.
-- **Performance**: gotoв itself is small (~12kb when minified and gzipped, including all dependencies) so it is loaded and parsed quickly. It's view redrawing mechanism is not slow, but it trades speed in exchange for ease of use.
+- **Performance**: gotoв itself is small (~12kb when minified and gzipped, including all dependencies) so it is loaded and parsed quickly. Its view redrawing mechanism is not slow, but it trades speed in exchange for ease of use.
 - **Cross-browser compatibility**: a work in progress (see browser current compatibility above in the *Installation* section). My goal is to make gotoв work on IE6 and above.
 
 ## Why use a javascript framework *at all*?
@@ -294,9 +294,16 @@ Same.
 
 Lemme finish the other two first.
 
+## Comparison with React
+
+- State is held globally.
+- Instead of a component, create a view. A view is a function that returns literals (and can do it nestedly through other functions).
+- Event handlers generate DOM event handlers that you can inspect.
+- Functional structures are optional. You can do it, but it's up to you. It's not imposed on you.
+
 ## Source code
 
-The complete source code is contained in `gotoB.js`. gotoв itself is about 680 lines long; its dependencies are about 1270 lines; the whole thing is about 1950 lines.
+The complete source code is contained in `gotoB.js`. gotoв itself is about 700 lines long; its dependencies are about 1280 lines; the whole thing is about 1980 lines.
 
 Annotated source code will be forthcoming when the library stabilizes.
 

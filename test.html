@@ -279,10 +279,10 @@
                   if (B.get ('Other') !== undefined) return 'B.rem didn\'t remove toplevel property.';
                   C = 0;
                   dale.do ([0, 2], function (i) {
-                     B.listen ('change', ['Data', 'items', i], {burn: true}, function () {C++});
+                     B.listen ('change', ['Data', 'items', /(0|2)/], {burn: true}, function () {C++});
                   });
                   if (B.do (x, 'rem', ['Data', 'items'], 0, 2) !== true) return 'B.rem didn\'t return true.';
-                  if (C !== 2) return 'change event is not being fired on subkeys when removing them.';
+                  if (C !== 2) return 'change event is not being fired on subkeys when removing them (or there is an issue with regex steps in paths).';
                   if (Data.items.length !== 4) return 'B.rem didn\'t remove array items properly.';
                   if (type (Data.items [0]) !== 'array') return 'B.rem didn\'t remove array items properly.';
                   if (Data.items [1] !== 'four') return 'B.rem didn\'t remove array items properly.';
@@ -469,17 +469,17 @@
 
                   if (B.view ('path', {listen: [{verb: 'a', path: 'b'}]}, e) !== false) return 'B.view accepted listen with invalid args.';
 
-                  if (B.view ('path', {listen: [/notverb/, 'path', e]}, e) !== false) return 'B.view accepted invalid verb in listen.';
+                  if (B.view ('path', {listen: [null, 'path', e]}, e) !== false) return 'B.view accepted invalid verb in listen.';
 
-                  if (B.view ('path', {listen: [[/notverb/, 'path', e]]}, e) !== false) return 'B.view accepted invalid verb in listen.';
+                  if (B.view ('path', {listen: [[{}, 'path', e]]}, e) !== false) return 'B.view accepted invalid verb in listen.';
 
-                  if (B.view ('path', {listen: ['verb', /notpath/, e]}, e) !== false) return 'B.view accepted invalid path in listen.';
+                  if (B.view ('path', {listen: ['verb', null, e]}, e) !== false) return 'B.view accepted invalid path in listen.';
 
-                  if (B.view ('path', {listen: [['verb', /notpath/, e]]}, e) !== false) return 'B.view accepted invalid path in listen.';
+                  if (B.view ('path', {listen: [['verb', [[]], e]]}, e) !== false) return 'B.view accepted invalid path in listen.';
 
-                  if (B.view ('path', {listen: [['verb', 'path', e], ['verb', /path/, e]]}, e) !== false) return 'B.view accepted invalid second listen.';
+                  if (B.view ('path', {listen: [['verb', 'path', e], ['verb', {}, e]]}, e) !== false) return 'B.view accepted invalid second listen.';
 
-                  if (B.view ('path', {listen: [['verb', 'path', e], ['verb', /path/, e]]}, e) !== false) return 'B.view accepted invalid second listen.';
+                  if (B.view ('path', {listen: [['verb', 'path', e], ['verb', null, e]]}, e) !== false) return 'B.view accepted invalid second listen.';
 
                   if (B.view ('path', {listen: ['a', 'b', {id: 'anything'}, e]}) !== false) return 'B.view accepted listener with id.';
 
@@ -1343,6 +1343,121 @@
                   var t = Date.now ();
                   B.do (x, 'set', ['State', 'items'], dale.times (1));
                   if (Date.now () - t > 1000) return 'B.trample is not working!';
+               });
+
+               Views.select = function () {
+                  return B.view (['State', 'select'], {ondraw: function (x) {
+                     var s = B.get ('State', 'select');
+                     if (s === 0) return B.do (x, 'set', ['State', 'select'], 1);
+                  }}, function (x, select) {
+                     return [
+                        ['select', [
+                           ['option', {value: 0, selected: 0 === select}, 0],
+                           ['option', {value: 1, selected: 1 === select}, 1],
+                           select === 0 ? [] : ['option', {value: 2}, 2],
+                        ]],
+                        select === 1 ? [] : ['select', [
+                           ['option', {value: 0, selected: true}],
+                        ]],
+                        ['select', [
+                           ['option', {value: 1, selected: 0 === select}, 1],
+                           ['option', {value: 0, selected: 1 === select}, 0],
+                        ]],
+                     ];
+                  });
+               }
+
+               Views.textarea = function () {
+                  return B.view (['State', 'textarea'], {listen: [
+                     ['shuffle', '*', function (x) {
+                        var shuffleArray = function (array) {
+                           dale.do (dale.times (array.length - 1, array.length - 1, -1), function (k) {
+                              var randomIndex = Math.floor (Math.random () * (k + 1));
+                              var temp = array [k];
+                              array [k] = array [randomIndex];
+                              array [randomIndex] = temp;
+                           });
+                           return array;
+                        }
+                        B.do (x, 'set', ['State', 'textarea'], shuffleArray (B.get ('State', 'textarea')));
+                        B.do (x, 'change', ['State', 'textarea']);
+                     }],
+                  ], ondraw: function () {
+                  }}, function (x, textarea) {
+                     return [
+                        dale.do (textarea, function (i) {
+                           return ['textarea', i];
+                        }),
+                        dale.do (textarea, function (i) {
+                           return ['input', {type: 'checkbox', checked: i % 2 === 0}];
+                        }),
+                     ];
+                  });
+               }
+
+               Test ('moving selects & textareas', function () {
+                  B.do (x, 'set', ['State', 'view'], 'select');
+                  B.do (x, 'set', ['State', 'select'], 0);
+                  var firstOption = c ('option') [0];
+                  // `selected` as empty string is only in IE and Edge
+                  if (firstOption.getAttribute ('selected') !== null && firstOption.getAttribute ('selected') !== '') return 'Falsy value was inserted as attribute by B.prediff.';
+
+                  if (c ('option') [1].selected !== true || c ('option') [2].selected !== false) return 'Option values were not updated!';
+
+                  B.do (x, 'set', ['State', 'textarea'], dale.times (5));
+
+                  B.do (x, 'set', ['State', 'view'], 'textarea');
+
+                  if (! teishi.eq (dale.do (c ('textarea'), function (textarea) {
+                     return parseInt (textarea.value);
+                  }), B.get ('State', 'textarea'))) return 'Textarea value mismatch error #1.';
+
+                  if (! teishi.eq (dale.do (c ('input'), function (input) {
+                     return input.checked;
+                  }), dale.do (B.get ('State', 'textarea'), function (v) {
+                     return v % 2 === 0;
+                  }))) return 'Checked input mismatch error #1.';
+
+                  B.do (x, 'set', ['State', 'textarea'], dale.times (5, 10));
+
+                  if (! teishi.eq (dale.do (c ('textarea'), function (textarea) {
+                     return parseInt (textarea.value);
+                  }), B.get ('State', 'textarea'))) return 'Textarea value mismatch error #2.';
+
+                  if (! teishi.eq (dale.do (c ('input'), function (input) {
+                     return input.checked;
+                  }), dale.do (B.get ('State', 'textarea'), function (v) {
+                     return v % 2 === 0;
+                  }))) return 'Checked input mismatch error #2.';
+
+                  dale.do (c ('textarea'), function (textarea) {
+                     textarea.value = '';
+                  });
+
+                  B.do (x, 'shuffle', '*');
+
+                  if (! teishi.eq (dale.do (c ('textarea'), function (textarea) {
+                     return parseInt (textarea.value);
+                  }), B.get ('State', 'textarea'))) return 'Textarea value mismatch error #3.';
+
+                  if (! teishi.eq (dale.do (c ('input'), function (input) {
+                     return input.checked;
+                  }), dale.do (B.get ('State', 'textarea'), function (v) {
+                     return v % 2 === 0;
+                  }))) return 'Checked input mismatch error #3.';
+
+                  B.do (x, 'set', ['State', 'textarea'], ['a', 'b', undefined, 'd', 'e']);
+
+                  if (! teishi.eq (dale.do (c ('textarea'), function (textarea) {
+                     return textarea.value || undefined;
+                  }), B.get ('State', 'textarea'))) return 'Textarea value mismatch error #4.';
+
+                  if (! teishi.eq (dale.do (c ('input'), function (input) {
+                     return input.checked;
+                  }), dale.do (B.get ('State', 'textarea'), function (v) {
+                     return v % 2 === 0;
+                  }))) return 'Checked input mismatch error #4.';
+
                });
 
                B.do (x, 'test', 'attrs');

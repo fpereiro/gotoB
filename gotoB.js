@@ -1,5 +1,5 @@
 /*
-gotoB - v1.2.0
+gotoB - v1.2.1
 
 Written by Federico Pereiro (fpereiro@gmail.com) and released into the public domain.
 
@@ -17,7 +17,7 @@ Please refer to readme.md to read the annotated source (but not yet!).
    var type = teishi.t, log = teishi.l;
 
    var r = window.R ();
-   var B = window.B = {v: '1.2.0', B: 'в', r: r, routes: r.routes, store: r.store, do: r.do, listen: r.listen, forget: r.forget};
+   var B = window.B = {v: '1.2.1', B: 'в', r: r, routes: r.routes, store: r.store, do: r.do, listen: r.listen, forget: r.forget};
 
    // *** B.EVENTLOG ***
 
@@ -245,7 +245,6 @@ Please refer to readme.md to read the annotated source (but not yet!).
          if (! B.routes [route].parent) B.routes [route].parent = id;
       }) === false) return false;
 
-
       B.listen ('change', path, {id: id, priority: -1}, function (x) {
          B.resolve (x, id, function () {
             x.from.unshift ({ev: 'redraw', id: id, path: path});
@@ -469,7 +468,7 @@ Please refer to readme.md to read the annotated source (but not yet!).
             }
          });
 
-         var detached = {}, active;
+         var detached = {}, active, selected = [], unselected = [], checked = [], textareas = [];
 
          dale.do (diff, function (v, k) {
             if (v [1].match (/^>/)) return;
@@ -477,13 +476,22 @@ Please refer to readme.md to read the annotated source (but not yet!).
                if (v [0] !== 'rem') diff [k - 1] [2].el.innerHTML = v [1].slice (1);
                return;
             }
+            if (v [1] [0] !== '<' && v [0] !== 'rem' && v [2].New.length > 1) {
+               var Parent = find (v [2].New.slice (0, -1));
+               if (Parent.tagName === 'TEXTAREA') textareas.push ([Parent, v [1]]);
+            }
             if (v [0] === 'keep') {
                if (v [1].match (/<.+ {.*"opaque":true.*}/)) v [2].el.innerHTML = '';
-               insert (v [2].el.parentNode.removeChild (v [2].el), v [2].New, k);
-               if (v [2].active && v [1].match (/[^<\s]+/g) [0] !== 'a') active = v [2].el;
-               return;
+
+               // This if is because of the way IE/Edge treat text elements (they simply bring text instead of a textNode).
+               if (! v [2].el) insert (document.createTextNode (v [1]), v [2].New, k);
+               else {
+                  insert (v [2].el.parentNode.removeChild (v [2].el), v [2].New, k);
+
+                  if (v [2].active && v [1].match (/[^<\s]+/g) [0] !== 'a') active = v [2].el;
+               }
             }
-            if (v [1].match (/^</)) {
+            else if (v [1].match (/^</)) {
                if (v [0] === 'rem') {
                   if (v [2].match === undefined || v [2].match > k) detached [v [2].old] = v [2].el.parentNode.removeChild (v [2].el);
                }
@@ -493,30 +501,25 @@ Please refer to readme.md to read the annotated source (but not yet!).
                      var old = diff [v [2].match];
                      if (! detached [old [2].old]) detached [old [2].old] = old [2].el;
                      el = old [2].el;
-                     var oldAttrs = el.attributes;
-                     if (type (oldAttrs, true) === 'moznamedattrmap') {
-                        oldAttrs = dale.obj (oldAttrs, function (v) {
-                           if (v) return [v.name, v.value];
-                        });
-                     }
-
+                     var oldAttrs = dale.obj (el.attributes, function (v) {
+                        // The check for v is required in FF22, IE<=10 & Opera<=11.6
+                        if (v && v.specified) return [v.name, v.value];
+                     });
                      var newAttrs = JSON.parse (v [1].match (/{.+/) || '{}');
                      dale.do (dale.fil (oldAttrs, undefined, function (v, k) {
                         if (type (v) === 'string') v = {name: k};
                         if (newAttrs [v.name] === undefined) return v.name;
-                     }), function (name) {
-                        if (name === 'value')    el.value    = null;
-                        if (name === 'checked')  el.checked  = false;
-                        if (name === 'selected') el.selected = false;
-                        el.removeAttribute (name);
+                     }), function (k) {
+                        el.removeAttribute (k);
+                        if (['value', 'checked', 'selected'].indexOf (k) !== -1) el [k] = k === 'value' ? '' : false;
+                        if (k === 'selected') unselected.push (el);
                      });
                      dale.do (newAttrs, function (v, k) {
-                        if (k === 'value')    el.value    = v;
-                        if (k === 'checked')  el.checked  = v;
-                        if (k === 'selected') el.selected = v;
                         el.setAttribute (k, v);
+                        if (['value', 'checked', 'selected'].indexOf (k) !== -1) el [k] = v;
                      });
-                     if (el.value !== newAttrs.value) el.value = newAttrs.value === undefined ? null : newAttrs.value;
+                     if (el.attributes && el.attributes.selected) selected.push (el);
+                     if (el.attributes && el.attributes.checked)  checked.push  (el);
                   }
                   else {
                      el = document.createElement (v [1].match (/[^<\s]+/g) [0]);
@@ -544,13 +547,27 @@ Please refer to readme.md to read the annotated source (but not yet!).
                   if (v [2].el) v [2].el.parentNode.removeChild (v [2].el);
                }
             }
+            if (v [1].match (/<textarea/) && v [0] !== 'rem') textareas.push ([v [2].el]);
          });
-      }
 
-      if (active) {
-         active.focus ? active.focus () : active.setActive ();
-         active.blur ();
-         active.focus ? active.focus () : active.setActive ();
+         if (active) {
+            active.focus ? active.focus () : active.setActive ();
+            active.blur ();
+            active.focus ? active.focus () : active.setActive ();
+         }
+
+         dale.do (selected,   function (el) {el.selected = true});
+         dale.do (unselected, function (el) {el.selected = false});
+         dale.do (checked,    function (el) {el.checked  = true});
+
+         var Textareas = dale.fil (textareas, undefined, function (v) {
+            if (v.length === 2) return v [0];
+         });
+
+         dale.do (textareas, function (v) {
+            if (v.length === 2) return v [0].value = v [1];
+            if (Textareas.indexOf (v [0]) === -1) v [0].value = '';
+         });
       }
 
       route.view = newView [0];
@@ -581,13 +598,17 @@ Please refer to readme.md to read the annotated source (but not yet!).
 
       if (lith.k.tags.indexOf (input [0]) !== -1) {
          output.push ('<' + input [0]);
-         var attrs = type (input [1]) === 'object' ? input [1] : undefined;
+
+         var attrs = type (input [1]) !== 'object' ? undefined : dale.obj (input [1], function (v, k) {
+            if (v || v === 0) return [k, v];
+         });
+
          var conts = input [attrs ? 2 : 1];
          if (input [0] === 'style' && type (conts) === 'array') conts = lith.css.g (conts);
          if (attrs) {
             output [output.length - 1] += ' ' + JSON.stringify (attrs);
             if (attrs.opaque) output.push ('<' + lith.g (conts, B.prod));
-            else if (attrs.id && attrs.id.match (/^в[0-9a-f]+$/g)) {
+            else if (attrs.id !== undefined && (attrs.id + '').match (/^в[0-9a-f]+$/g)) {
                conts = B.routes [attrs.id].view;
             }
          }

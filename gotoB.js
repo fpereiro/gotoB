@@ -1,5 +1,5 @@
 /*
-gotoB - v1.2.1
+gotoB - v1.2.2
 
 Written by Federico Pereiro (fpereiro@gmail.com) and released into the public domain.
 
@@ -17,7 +17,7 @@ Please refer to readme.md to read the annotated source (but not yet!).
    var type = teishi.t, log = teishi.l;
 
    var r = window.R ();
-   var B = window.B = {v: '1.2.1', B: 'в', r: r, routes: r.routes, store: r.store, do: r.do, listen: r.listen, forget: r.forget};
+   var B = window.B = {v: '1.2.2', B: 'в', r: r, routes: r.routes, store: r.store, do: r.do, listen: r.listen, forget: r.forget};
 
    // *** B.EVENTLOG ***
 
@@ -565,7 +565,7 @@ Please refer to readme.md to read the annotated source (but not yet!).
          });
 
          dale.do (textareas, function (v) {
-            if (v.length === 2) return v [0].value = v [1];
+            if (v.length === 2) return v [0].value = v [1].replace (/&amp;/g, '&').replace (/&lt;/g, '<').replace (/&gt;/g, '>').replace (/&quot;/g, '"').replace (/&#39;/g, "'").replace (/&#96;/g, '`');
             if (Textareas.indexOf (v [0]) === -1) v [0].value = '';
          });
       }

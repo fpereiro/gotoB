@@ -6,7 +6,7 @@ gotoв is a framework for making the frontend of a web application (henceforth w
 
 ## Current status of the project
 
-The current version of gotoв, v1.2.1, is considered to be *somewhat stable* and *mostly complete*. [Suggestions](https://github.com/fpereiro/gotoB/issues) and [patches](https://github.com/fpereiro/gotoB/pulls) are welcome. Besides bug fixes, these are the future changes planned:
+The current version of gotoв, v1.2.2, is considered to be *somewhat stable* and *mostly complete*. [Suggestions](https://github.com/fpereiro/gotoB/issues) and [patches](https://github.com/fpereiro/gotoB/pulls) are welcome. Besides bug fixes, these are the future changes planned:
 
 - Add missing documentation.
 - Extend cross-browser compatibility.
@@ -30,7 +30,7 @@ gotoв is written in Javascript. You can use it in the browser by sourcing the p
 Or you can use this link to use the latest version - courtesy of [jsDelivr](https://jsdelivr.com).
 
 ```html
-<script src="https://cdn.jsdelivr.net/gh/fpereiro/gotoB@d3bd1c3349c45e305c35b85f4a2936e4228e9118/gotoB.min.js"></script>
+<script src=""></script>
 ```
 
 gotoв is exclusively a client-side library. Still, you can find it in npm: `npm install gotob`
@@ -192,9 +192,7 @@ var counterView = function () {
    return B.view (['State', 'counter'], function (x, counter) {
       return [
          ['h1', 'The counter is ' + counter],
-         ['button', B.ev ({},
-            ['onclick', 'set', ['State', 'counter'], counter + 1]
-         ), 'Increment counter']
+         ['button', B.ev (['onclick', 'set', ['State', 'counter'], counter + 1]), 'Increment counter']
       ];
    });
 }
@@ -257,7 +255,7 @@ And, of course, gotoв must be very useful for building a real webapp.
 - **Fast reload**: the edit-reload cycle should take under two seconds. No need to wait until no bundle is completed.
 - **Smallness**: gotoв and its dependencies are < 2k lines of consistent, annotated javascript. In other words, it is less than 2048 lines on top of [vanilla.js](http://vanilla-js.com/).
 - **Batteries included**: the core functionality for building a webapp is all provided. Whatever libraries you add on top will probably be for specific things (nice CSS, a calendar widget, etc.)
-- **Trivial to set up**: add `<script src="https://cdn.jsdelivr.net/gh/fpereiro/gotoB@d3bd1c3349c45e305c35b85f4a2936e4228e9118/gotoB.min.js"></script>` at the bottom of the `<body>`.
+- **Trivial to set up**: add `<script src=""></script>` at the bottom of the `<body>`.
 - **Everything in plain sight**: all properties and state are directly accessible from the javascript console of the browser. DOM elements have stringified event handlers that can be inspected with any modern browser.
 - **Performance**: gotoв itself is small (~12kb when minified and gzipped, including all dependencies) so it is loaded and parsed quickly. Its view redrawing mechanism is not slow, but it trades speed in exchange for ease of use.
 - **Cross-browser compatibility**: a work in progress (see browser current compatibility above in the *Installation* section). My goal is to make gotoв work on IE6 and above.

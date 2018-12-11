@@ -1386,10 +1386,17 @@
                   }}, function (x, textarea) {
                      return [
                         dale.do (textarea, function (i) {
+                           return ['textarea', {class: 'main'}, i ? '<' + i + '>&amp;</html>' : undefined];
+                        }),
+                        dale.do (textarea, function (i) {
                            return ['textarea', i];
                         }),
                         dale.do (textarea, function (i) {
-                           return ['input', {type: 'checkbox', checked: i % 2 === 0}];
+                           return ['input', {class: 'check', type: 'checkbox', checked: i % 2 === 0}];
+                        }),
+                        ['br'],
+                        dale.do (textarea, function (i) {
+                           return ['input', {class: 'text', value: i ? '<' + i + '><' : undefined}];
                         }),
                      ];
                   });
@@ -1408,27 +1415,43 @@
 
                   B.do (x, 'set', ['State', 'view'], 'textarea');
 
-                  if (! teishi.eq (dale.do (c ('textarea'), function (textarea) {
-                     return parseInt (textarea.value);
-                  }), B.get ('State', 'textarea'))) return 'Textarea value mismatch error #1.';
+                  if (! teishi.eq (dale.do (c ('textarea.main'), function (textarea) {
+                     return textarea.value;
+                  }), dale.do (B.get ('State', 'textarea'), function (v) {
+                     return '<' + v + '>&amp;</html>';
+                  }))) return 'Textarea value mismatch error #1.';
 
-                  if (! teishi.eq (dale.do (c ('input'), function (input) {
+                  if (! teishi.eq (dale.do (c ('input.check'), function (input) {
                      return input.checked;
                   }), dale.do (B.get ('State', 'textarea'), function (v) {
                      return v % 2 === 0;
                   }))) return 'Checked input mismatch error #1.';
 
+                  if (! teishi.eq (dale.do (c ('input.text'), function (input) {
+                     return input.value;
+                  }), dale.do (B.get ('State', 'textarea'), function (v) {
+                     return '<' + v + '><';
+                  }))) return 'Text input mismatch error #1.';
+
                   B.do (x, 'set', ['State', 'textarea'], dale.times (5, 10));
 
-                  if (! teishi.eq (dale.do (c ('textarea'), function (textarea) {
-                     return parseInt (textarea.value);
-                  }), B.get ('State', 'textarea'))) return 'Textarea value mismatch error #2.';
+                  if (! teishi.eq (dale.do (c ('textarea.main'), function (textarea) {
+                     return textarea.value;
+                  }), dale.do (B.get ('State', 'textarea'), function (v) {
+                     return '<' + v + '>&amp;</html>';
+                  }))) return 'Textarea value mismatch error #2.';
 
-                  if (! teishi.eq (dale.do (c ('input'), function (input) {
+                  if (! teishi.eq (dale.do (c ('input.check'), function (input) {
                      return input.checked;
                   }), dale.do (B.get ('State', 'textarea'), function (v) {
                      return v % 2 === 0;
                   }))) return 'Checked input mismatch error #2.';
+
+                  if (! teishi.eq (dale.do (c ('input.text'), function (input) {
+                     return input.value;
+                  }), dale.do (B.get ('State', 'textarea'), function (v) {
+                     return '<' + v + '><';
+                  }))) return 'Text input mismatch error #2.';
 
                   dale.do (c ('textarea'), function (textarea) {
                      textarea.value = '';
@@ -1436,27 +1459,43 @@
 
                   B.do (x, 'shuffle', '*');
 
-                  if (! teishi.eq (dale.do (c ('textarea'), function (textarea) {
-                     return parseInt (textarea.value);
-                  }), B.get ('State', 'textarea'))) return 'Textarea value mismatch error #3.';
+                  if (! teishi.eq (dale.do (c ('textarea.main'), function (textarea) {
+                     return textarea.value;
+                  }), dale.do (B.get ('State', 'textarea'), function (v) {
+                     return '<' + v + '>&amp;</html>';
+                  }))) return 'Textarea value mismatch error #3.';
 
-                  if (! teishi.eq (dale.do (c ('input'), function (input) {
+                  if (! teishi.eq (dale.do (c ('input.check'), function (input) {
                      return input.checked;
                   }), dale.do (B.get ('State', 'textarea'), function (v) {
                      return v % 2 === 0;
                   }))) return 'Checked input mismatch error #3.';
 
+                  if (! teishi.eq (dale.do (c ('input.text'), function (input) {
+                     return input.value;
+                  }), dale.do (B.get ('State', 'textarea'), function (v) {
+                     return '<' + v + '><';
+                  }))) return 'Text input mismatch error #3.';
+
                   B.do (x, 'set', ['State', 'textarea'], ['a', 'b', undefined, 'd', 'e']);
 
-                  if (! teishi.eq (dale.do (c ('textarea'), function (textarea) {
+                  if (! teishi.eq (dale.do (c ('textarea.main'), function (textarea) {
                      return textarea.value || undefined;
-                  }), B.get ('State', 'textarea'))) return 'Textarea value mismatch error #4.';
+                  }), dale.do (B.get ('State', 'textarea'), function (v) {
+                     return v ? '<' + v + '>&amp;</html>' : undefined;
+                  }))) return 'Textarea value mismatch error #4.';
 
-                  if (! teishi.eq (dale.do (c ('input'), function (input) {
+                  if (! teishi.eq (dale.do (c ('input.check'), function (input) {
                      return input.checked;
                   }), dale.do (B.get ('State', 'textarea'), function (v) {
                      return v % 2 === 0;
                   }))) return 'Checked input mismatch error #4.';
+
+                  if (! teishi.eq (dale.do (c ('input.text'), function (input) {
+                     return input.value || undefined;
+                  }), dale.do (B.get ('State', 'textarea'), function (v) {
+                     return v ? '<' + v + '><' : undefined;
+                  }))) return 'Text input mismatch error #4.';
 
                });
 

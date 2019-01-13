@@ -30,7 +30,7 @@ gotoв is written in Javascript. You can use it in the browser by sourcing the p
 Or you can use this link to use the latest version - courtesy of [jsDelivr](https://jsdelivr.com).
 
 ```html
-<script src=""></script>
+<script src="https://cdn.jsdelivr.net/gh/fpereiro/gotob@50d142497e0a169c831de13b61bb839cca036c41/gotoB.min.js"></script>
 ```
 
 gotoв is exclusively a client-side library. Still, you can find it in npm: `npm install gotob`
@@ -255,7 +255,7 @@ And, of course, gotoв must be very useful for building a real webapp.
 - **Fast reload**: the edit-reload cycle should take under two seconds. No need to wait until no bundle is completed.
 - **Smallness**: gotoв and its dependencies are < 2k lines of consistent, annotated javascript. In other words, it is less than 2048 lines on top of [vanilla.js](http://vanilla-js.com/).
 - **Batteries included**: the core functionality for building a webapp is all provided. Whatever libraries you add on top will probably be for specific things (nice CSS, a calendar widget, etc.)
-- **Trivial to set up**: add `<script src=""></script>` at the bottom of the `<body>`.
+- **Trivial to set up**: add `<script src="https://cdn.jsdelivr.net/gh/fpereiro/gotob@50d142497e0a169c831de13b61bb839cca036c41/gotoB.min.js"></script>` at the bottom of the `<body>`.
 - **Everything in plain sight**: all properties and state are directly accessible from the javascript console of the browser. DOM elements have stringified event handlers that can be inspected with any modern browser.
 - **Performance**: gotoв itself is small (~12kb when minified and gzipped, including all dependencies) so it is loaded and parsed quickly. Its view redrawing mechanism is not slow, but it trades speed in exchange for ease of use.
 - **Cross-browser compatibility**: a work in progress (see browser current compatibility above in the *Installation* section). My goal is to make gotoв work on IE6 and above.
@@ -301,7 +301,7 @@ Lemme finish the other two first.
 
 ## Source code
 
-The complete source code is contained in `gotoB.js`. gotoв itself is about 700 lines long; its dependencies are about 1280 lines; the whole thing is about 1980 lines.
+The complete source code is contained in `gotoB.js`. gotoв itself is about 710 lines long; its dependencies are about 1280 lines; the whole thing is about 1990 lines.
 
 Annotated source code will be forthcoming when the library stabilizes.
 

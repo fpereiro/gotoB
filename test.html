@@ -1367,18 +1367,20 @@
                   });
                }
 
+               var shuffleArray = function (array) {
+                  if (array.length === 0) return array;
+                  dale.do (dale.times (array.length - 1, array.length - 1, -1), function (k) {
+                     var randomIndex = Math.floor (Math.random () * (k + 1));
+                     var temp = array [k];
+                     array [k] = array [randomIndex];
+                     array [randomIndex] = temp;
+                  });
+                  return array;
+               }
+
                Views.textarea = function () {
                   return B.view (['State', 'textarea'], {listen: [
                      ['shuffle', '*', function (x) {
-                        var shuffleArray = function (array) {
-                           dale.do (dale.times (array.length - 1, array.length - 1, -1), function (k) {
-                              var randomIndex = Math.floor (Math.random () * (k + 1));
-                              var temp = array [k];
-                              array [k] = array [randomIndex];
-                              array [randomIndex] = temp;
-                           });
-                           return array;
-                        }
                         B.do (x, 'set', ['State', 'textarea'], shuffleArray (B.get ('State', 'textarea')));
                         B.do (x, 'change', ['State', 'textarea']);
                      }],
@@ -1398,6 +1400,26 @@
                         dale.do (textarea, function (i) {
                            return ['input', {class: 'text', value: i ? '<' + i + '><' : undefined}];
                         }),
+                     ];
+                  });
+               }
+
+               Views.selectShuffle = function () {
+                  return B.view (['State', 'selectshuffle'], {ondraw: function () {
+                     if (! B.get ('State', 'selectshuffle')) B.do ('set', ['State', 'selectshuffle'], 1);
+                  }}, function (x, c) {
+                     if (! c) return ['select', [
+                        ['option', 1],
+                        ['option', {selected: true}, 2],
+                        ['option', 3],
+                     ]];
+                     return [
+                        ['select'],
+                        ['select', [
+                           ['option', 1],
+                           ['option', {selected: true}, 2],
+                           ['option', 3],
+                        ]],
                      ];
                   });
                }
@@ -1496,6 +1518,10 @@
                   }), dale.do (B.get ('State', 'textarea'), function (v) {
                      return v ? '<' + v + '><' : undefined;
                   }))) return 'Text input mismatch error #4.';
+
+                  B.do ('set', ['State', 'view'], 'selectShuffle');
+
+                  if (c ('select') [1].value !== '2') return 'new select with two kept options that were selected before error';
 
                });
 

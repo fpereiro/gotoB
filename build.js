@@ -1,5 +1,5 @@
 /*
-gotoB - v0.2.1
+gotoB - v1.2.3
 
 Written by Federico Pereiro (fpereiro@gmail.com) and released into the public domain.
 
@@ -17,7 +17,7 @@ To build gotoB, run `node build`. If everything works well, a file named `gotoB.
 
    var build = function (files, dev) {
 
-      var concat = '';
+      var concat = '', t = Date.now ();
       dale.do (files, function (v) {
          concat += fs.readFileSync (v, 'utf8');
       });
@@ -52,7 +52,7 @@ To build gotoB, run `node build`. If everything works well, a file named `gotoB.
 
             fs.writeFile ('gotoB.min.js', code, 'utf8', function (error) {
                if (error) return log ('Error', 'writeFile error.');
-               log ('Success', 'gotoB.min.js built successfully!', code.length + ' bytes total,', zipcode.length + ' bytes minified & gzipped,', lines, 'lines of source code.');
+               log ('Success', 'gotoB.min.js built successfully in ' + Math.round ((Date.now () - t) / 10) / 100 + 's!', code.length + ' bytes total,', zipcode.length + ' bytes minified & gzipped,', lines, 'lines of source code.');
             });
          });
       });

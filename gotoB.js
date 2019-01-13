@@ -1,5 +1,5 @@
 /*
-gotoB - v1.2.2
+gotoB - v1.2.3
 
 Written by Federico Pereiro (fpereiro@gmail.com) and released into the public domain.
 
@@ -17,7 +17,7 @@ Please refer to readme.md to read the annotated source (but not yet!).
    var type = teishi.t, log = teishi.l;
 
    var r = window.R ();
-   var B = window.B = {v: '1.2.2', B: 'в', r: r, routes: r.routes, store: r.store, do: r.do, listen: r.listen, forget: r.forget};
+   var B = window.B = {v: '1.2.3', B: 'в', r: r, routes: r.routes, store: r.store, do: r.do, listen: r.listen, forget: r.forget};
 
    // *** B.EVENTLOG ***
 
@@ -486,6 +486,10 @@ Please refer to readme.md to read the annotated source (but not yet!).
                // This if is because of the way IE/Edge treat text elements (they simply bring text instead of a textNode).
                if (! v [2].el) insert (document.createTextNode (v [1]), v [2].New, k);
                else {
+                  if (v [1].match (/<option/)) {
+                     var attrs = JSON.parse (v [1].match (/{.+/) || '{}');
+                     if (attrs.selected) selected.push (v [2].el);
+                  }
                   insert (v [2].el.parentNode.removeChild (v [2].el), v [2].New, k);
 
                   if (v [2].active && v [1].match (/[^<\s]+/g) [0] !== 'a') active = v [2].el;

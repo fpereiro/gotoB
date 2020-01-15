@@ -1,6 +1,6 @@
 # Tutorial
 
-This tutorial is conceived as a small book that gently explains how to develop the frontend of a web application using gotoX.
+This tutorial is conceived as a small book that gently explains how to develop the frontend of a web application using gotoв.
 
 This tutorial requires you to have some knowledge of HTML, CSS and js (Javascript), but only a little bit.
 
@@ -36,7 +36,7 @@ Frontend and backend are the two sides of the coin of a web application. To full
 
 In a web application, frontend and backend interact constantly.
 
-gotoX is a frontend library, so by itself it cannot allow you to create a complete web application. We will however create a small "mock server" that will allow our tutorial to look pretty much like the real thing, so that when you have your server, your frontend will be ready!
+gotoв is a frontend library, so by itself it cannot allow you to create a complete web application. We will however create a small "mock server" that will allow our tutorial to look pretty much like the real thing, so that when you have your server, your frontend will be ready!
 
 ### js... what is it good for?
 
@@ -48,7 +48,7 @@ Around 2005, it became possible for js to retrieve information from the server a
 
 Most web applications today use js to update its views. Some still rely on the server sending most of the HTML and CSS.
 
-gotoX takes a once radical, but today quite mainstream approach: it relies 100% on js to create and update its HTML and CSS. This means that gotoX is 100% reliant on js.
+gotoв takes a once radical, but today quite mainstream approach: it relies 100% on js to create and update its HTML and CSS. This means that gotoв is 100% reliant on js.
 
 ### Really, why js?
 
@@ -72,11 +72,11 @@ You can call it `app` - put it somewhere where you can easily find it later.
 
 ### Step 1-2: create a base HTML file
 
-Wait! Didn't we say that gotoX is pure js? Well, almost! Before starting to *draw* our application, we need to create a page that our browser will open. Remember that web browsers still open HTML pages.
+Wait! Didn't we say that gotoв is pure js? Well, almost! Before starting to *draw* our application, we need to create a page that our browser will open. Remember that web browsers still open HTML pages.
 
 This HTML will do a few things to set up the ground to get our js running. In particular, it will load two things:
 
-- gotoX, which is a js file.
+- gotoв, which is a js file.
 - Another js file which will contain our application logic.
 
 With your text editor, create a new file named `index.html` within the work folder you created on Step 1-1. In it, place the following content:
@@ -104,7 +104,7 @@ Let's break this down:
 4. `<body>` and `</body>` delimit the body of the page.
 5. Inside the head there are two `<meta>` tags. The first one allows to cleanly display non-[ASCII](https://en.wikipedia.org/wiki/ASCII) characters, which is something essential. The second one allows for creating applications that will look good on mobile devices.
 6. Inside the head there's a `<link>` tag which an loads an external CSS file called [Normalize.css](https://necolas.github.io/normalize.css). While this is not strictly necessary, it is extremely useful because it makes CSS behavior more consistent across different browsers.
-7. Inside the body there's two `<script>` tags. The first one loads an external js file which contains gotoX, the library itself. The second `<script>` is our application!
+7. Inside the body there's two `<script>` tags. The first one loads an external js file which contains gotoв, the library itself. The second `<script>` is our application!
 
 ### Step 1-3: create a js file to contain the code for the application
 

@@ -8,21 +8,35 @@ This tutorial requires you to have some knowledge of HTML, CSS and js (Javascrip
 
 ### Why develop web applications
 
-Let's start at the beginning. A web application is an application that runs on a web browser. This allows your application to run on any device that has a web browser and is connected to the internet. Web applications require no installation.
+You're probably familiar with three types of applications:
 
-Let's rephrase that: if you write a web application, you have the potential to reach anyone with a smartphone or a computer, without requiring any installation.
+- Native mobile applications, both the ones that come preinstalled on a phone or tablet, plus those you can install from either Google's Play Store or Apple's App Store.
+- Native desktop applications, such as Microsoft's Office suite.
+- Web applications, which run on web browsers on both mobile and desktop devices, without requiring installation.
 
-Billions of people are one click away from using your application. And if you write your application in a certain way, you can provide most (if not all) of your users with a great experience, no matter what device or browser they are using.
+Web applications are different from native applications in a few respects:
+
+- **No installation required**: the user accesses the application directly from the browser, which is already installed.
+- **One application for all devices**: if properly written, a web application can be seamlessly used from mobile and desktop devices.
+- **It is a service**: instead of storing most of its information on the users' device like native applications do, web applications retrieve and store information on a server that is accessible through an internet connection.
+
+By merely requiring a device with internet a web browser, and no installation, web applications allow you to reach billions of people with minimal friction. And by providing a service that stores information, web applications prevent users from losing data or being locked into a single device; web applications provide an ultimate level of access and mobility to their users.
 
 ### How does a web application work?
 
-A web application is an application that runs in a web browser. When you click on a link (or write an address in the URL bar of a browser), a web page is loaded. This web page contains HTML, CSS and perhaps some js.
+As we just saw, a web application is an application that runs in a web browser. When you click on a link (or write an address in the URL bar of a browser), a web page is loaded. This web page contains HTML, CSS and perhaps some js.
 
-The HTML and CSS represent the actual content on the page. HTML is what is shown on the page, while the CSS changes the way that the HTML looks. js is usually there to produce some changes on the HTML and CSS, but it is not strictly necessary.
+The HTML and CSS represent the actual content on the page. HTML is what is shown on the page, while the CSS changes the way that the HTML looks. js is usually there to produce some changes on the HTML and CSS, but it is not strictly necessary and it is actually possible to write web applications without js.
+
+HTML, CSS and js are text files, really. They have to conform to certain rules (very strict in the case of js), but they are humanly readable and can be opened on any text editor.
+
+When you load a web page, an HTML file (which is text that conforms to certain rules, nothing else) may contain further CSS or js inside of it. These CSS or js files are also text, also conforming to certain rules.
+
+The browser, while receiving HTML, CSS and js, starts putting things on the screen - and that's what you see when the page is fully loaded.
 
 ### What is the difference between a web page and a web application?
 
-A web page is static and doesn't change. In contrast, an application is a web page that is more than just a web page, because it has the potential to receive information from an user and then reflect it back. The distinctive feature of an application is that it receives user data and responds to it.
+A web page is static and doesn't change. In contrast, an application is a web page that is more than just a web page, because it has the potential to receive information from an user and then reflect it back. The distinctive feature of an application is that what the user sees on the screen is updated without the page being refreshed or a link being clicked.
 
 ### The two sides of a web application
 
@@ -30,7 +44,7 @@ You might have heard the terms *frontend*, *backend*, *client* and *server* in t
 
 The terms *frontend* and *client* refer to the same thing: the HTML, CSS and js that gets loaded in your browser and is seen by your users.
 
-The terms *backend* and *server* refer to the same thing: a program that provides files to a web browser, and also handles other operations like storing user data.
+The terms *backend* and *server* refer to the same thing: a program that provides files (like HTML, CSS and js, plus images) to a web browser, and also handles other operations like storing user data.
 
 Frontend and backend are the two sides of the coin of a web application. To fully build a web application, you need to do both.
 
@@ -40,27 +54,39 @@ gotoв is a frontend library, so by itself it cannot allow you to create a compl
 
 ### js... what is it good for?
 
-js was meant originally to create small animations that would make HTML and CSS look a bit niftier. Over time it grew in importance and nowadays it is essential for the creation of web applications. It is important to understand why.
+js was meant originally to create small animations that would make HTML and CSS look a bit niftier. It was also there to help with validating user-submitted forms. Over time it grew in importance and nowadays it is essential for the creation of web applications. It is important to understand why.
 
-Mere web pages are static and don't change after they are loaded in a browser. After a page is loaded, a user can click on a link and go to another page, which will also be loaded.
+Mere web pages are static and don't change after they are loaded in a browser. After a page is loaded, a user can click on a link and go to another page, which will also be loaded. It is possible to create applications by loading a new page after each user operation, but the experience was not comparable to those of existing native applications.
 
-Around 2005, it became possible for js to retrieve information from the server and update the page without a *page refresh*. For many, including me, this marks the birth of true web applications, since the redrawing of the same page without triggering a full refresh completely changed the quality of the users' experience.
+Page refreshes affect user experience negatively in two ways: first, they slow down the user's interaction with the application. Second, they get rid of valuable state that is either lost or has to be painstakingly reproduced (for example, how far down a user has scrolled down a list).
 
-Most web applications today use js to update its views. Some still rely on the server sending most of the HTML and CSS.
+Around 2005, it became possible for js to retrieve information from the server and update the page without a *page refresh*. For many, including me, this marks the birth of true web applications, since the redrawing of the same page without triggering a full refresh completely changed the quality of the users' experience. This allowed web applications to compete with native applications.
 
-gotoв takes a once radical, but today quite mainstream approach: it relies 100% on js to create and update its HTML and CSS. This means that gotoв is 100% reliant on js.
+The role of js is essential: it both retrieves information from the server *in the background* (i.e.: without triggering a page refresh) and updates the HTML (and perhaps the CSS) in the page.
 
-### Really, why js?
+Most web applications today are dependent on js for both retrieving information and updating the page. Some still rely on the server sending most of the HTML and CSS, only using js for visual effects.
+
+gotoв takes a once radical, but today quite mainstream approach: it relies 100% on js to *create and update* all of the HTML and CSS. This means that gotoв is 100% reliant on js.
+
+### Why js and not HTML & CSS?
 
 js is a powerful programming language. In it, you can define any logic you need in a short and expressive way. HTML and CSS, in contrast, are not programming languages - they are *markup languages*.
 
-Markup languages tell you what's there. But they don't have the full power of a programming language available. This means essentially, that a markup language cannot do things like *do something depending on a condition* (conditional), *repeat something a certain number of times* (iteration) or *replacing something with something else* (interpolation).
+Markup languages tell you what's there - it is akin to a roll call: *A, then B, then C...*. Markup languages don't have the power of a programming language. A markup language cannot do things like *do something depending on a condition* (conditional), *repeat something a certain number of times* (iteration) or *replacing something with something else* (interpolation).
 
-Using js to create and update HTML and CSS can make our application short and expressive, which means less development time, easier maintenance and less bugs.
+To write any non-trivial web application, you will need logic to modify the HTML on the screen. This is, in my view, the first central problem of web applications: *how to generate HTML (and perhaps some CSS) using a programming language*.
+
+The traditional solution to this problem is HTML templates. A template is a chunk of HTML where certain parts get updated. Historically, the code responsible to "fill in" the HTML templates given certain user information was done by the *server*, which then served the HTML page to the browser.
+
+However, pretty quickly another solution emerged, which is to use js on the client (that is, on the browser itself) to fill in the template for the user. In this scenario, the client asks the server for the templates plus the user data, and then cooks up the HTML without having to trouble the server.
+
+gotoв takes a further step on this direction: it generates (almost) all its HTML and CSS using js itself, on the client, and with no templates! We will see how very soon. Because gotoв uses js to generate its HTML and CSS, it is 100% reliant on js.
+
+A web application powered by gotoв only requests data from the server, but almost no HTML or CSS.
 
 ## Chapter 1 - into the code
 
-To make you lose fear of code, I'm going to make you start a web application from scratch! You only need the following:
+To make you lose fear of code - in case you have any - I'm going to make you start a web application from scratch! You only need the following:
 
 - A computer.
 - A text editor.
@@ -72,9 +98,11 @@ You can call it `app` - put it somewhere where you can easily find it later.
 
 ### Step 1-2: create a base HTML file
 
-Wait! Didn't we say that gotoв is pure js? Well, almost! Before starting to *draw* our application, we need to create a page that our browser will open. Remember that web browsers still open HTML pages.
+Wait! Didn't we say that gotoв is pure js? Well, almost! Before starting to *draw* our application, we need to create a page that our browser will open. Remember that web browsers still open HTML pages - this is how all web applications (even the most sophisticated ones) get loaded.
 
-This HTML will do a few things to set up the ground to get our js running. In particular, it will load two things:
+Side note: what does the term *drawing* mean? It means 1) generating HTML; and 2) putting it on the page so that the user can see it.
+
+This base HTML file will do a few things to set up the ground to get our js running. In particular, it will load two things:
 
 - gotoв, which is a js file.
 - Another js file which will contain our application logic.
@@ -106,6 +134,11 @@ Let's break this down:
 6. Inside the head there's a `<link>` tag which an loads an external CSS file called [Normalize.css](https://necolas.github.io/normalize.css). While this is not strictly necessary, it is extremely useful because it makes CSS behavior more consistent across different browsers.
 7. Inside the body there's two `<script>` tags. The first one loads an external js file which contains gotoв, the library itself. The second `<script>` is our application!
 
+This HTML will load three files in total:
+- A CSS stylesheet (Normalize.css).
+- A js library (gotoв).
+- A js file containing the code of the application.
+
 ### Step 1-3: create a js file to contain the code for the application
 
 In the same folder, create an empty file named `app.js`.
@@ -113,3 +146,58 @@ In the same folder, create an empty file named `app.js`.
 ### Step 1-4: start your app!
 
 After this is done, open the HTML file in your browser. You should see an empty page . Keep this page open! Every time we complete a step, you can go back to the page, refresh it, and see your changes.
+
+## Chapter 2 - hello app
+
+### Step 2-1: put something in the screen
+
+It is time for the app to show something other than a blank page!
+
+Let's display a simple greeting. If we were doing this with pure HTML, we would write something like this:
+
+```html
+<h1>Hello, app!</h1>
+```
+
+And then we'd put that HTML - or more precisely, that `h1` tag - somewhere within the HTML body.
+
+This is how it's done with gotoв.
+
+```javascript
+var B = window.B;
+
+var view = function () {
+   return ['h1', 'Hello, app!'];
+}
+
+B.mount ('body', view);
+```
+
+The code above contains three parts:
+- Accessing the library.
+- A view (function that returns liths)
+- The mounting of the view into the body.
+
+
+
+
+TODO:
+- counter example with external variable and update function.
+
+```javascript
+var B = window.B;
+
+var view = function () {
+   return B.view ('counter', function (counter) {
+      if (counter === undefined) counter = 0;
+      return [
+         ['p', ['Counter is: ', counter]],
+         ['button', {onclick: B.ev ('set', 'counter', counter + 1)}, 'Increment counter'],
+      ];
+   });
+}
+
+B.mount ('body', view);
+```
+
+Explore HTML.

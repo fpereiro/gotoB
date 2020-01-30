@@ -50,7 +50,7 @@ Frontend and backend are the two sides of the coin of a web application. To full
 
 In a web application, frontend and backend interact constantly.
 
-gotoв is a frontend library, so by itself it cannot allow you to create a complete web application. We will however create a small "mock server" that will allow our tutorial to look pretty much like the real thing, so that when you have your server, your frontend will be ready!
+gotoв is a frontend library, so by itself it cannot allow you to create a complete web application. We will however create a small "mock server" that will allow our tutorial to look pretty much like the real thing, so that when you have your server, your frontend will be ready for it!
 
 ### js... what is it good for?
 
@@ -76,9 +76,9 @@ Markup languages tell you what's there - it is akin to a roll call: *A, then B, 
 
 To write any non-trivial web application, you will need logic to modify the HTML on the screen. This is, in my view, the first central problem of web applications: *how to generate HTML (and perhaps some CSS) using a programming language*.
 
-The traditional solution to this problem is HTML templates. A template is a chunk of HTML where certain parts get updated. Historically, the code responsible to "fill in" the HTML templates given certain user information was done by the *server*, which then served the HTML page to the browser.
+The traditional solution to this problem is HTML templates. A template is a chunk of HTML where certain parts get updated. Historically, the code responsible to "fill in" the HTML templates was executed by the *server*, which then served the HTML page to the browser. Many apps are still built in this way.
 
-However, pretty quickly another solution emerged, which is to use js on the client (that is, on the browser itself) to fill in the template for the user. In this scenario, the client asks the server for the templates plus the user data, and then cooks up the HTML without having to trouble the server.
+Over time another approach emerged, which is to use js on the client (that is, on the browser itself) to fill in the template for the user. In this scenario, the client asks the server for the templates plus the user data, and then cooks up the HTML without having to trouble the server.
 
 gotoв takes a further step on this direction: it generates (almost) all its HTML and CSS using js itself, on the client, and with no templates! We will see how very soon. Because gotoв uses js to generate its HTML and CSS, it is 100% reliant on js.
 
@@ -86,7 +86,7 @@ A web application powered by gotoв only requests data from the server, but almo
 
 ## Chapter 1 - into the code
 
-To make you lose fear of code - in case you have any - I'm going to make you start a web application from scratch! You only need the following:
+To make you lose fear of code - in case you have any - we're going to create together a web application from scratch! You only need the following:
 
 - A computer.
 - A text editor.
@@ -94,18 +94,15 @@ To make you lose fear of code - in case you have any - I'm going to make you sta
 
 ### Step 1-1: create a folder to contain the files of your application
 
-You can call it `app` - put it somewhere where you can easily find it later.
+You can call it `app` - put this folder somewhere where you can easily find it later.
 
 ### Step 1-2: create a base HTML file
 
-Wait! Didn't we say that gotoв is pure js? Well, almost! Before starting to *draw* our application, we need to create a page that our browser will open. Remember that web browsers still open HTML pages - this is how all web applications (even the most sophisticated ones) get loaded.
+Wait! Didn't we say that gotoв is pure js? Well, almost! Before starting to *draw* our application, we need to create a page that our browser will open to get things started. Remember that web browsers still open HTML pages - this is how all web applications (even the most sophisticated ones) get loaded.
 
 Side note: what does the term *drawing* mean? It means 1) generating HTML; and 2) putting it on the page so that the user can see it.
 
-This base HTML file will do a few things to set up the ground to get our js running. In particular, it will load two things:
-
-- gotoв, which is a js file.
-- Another js file which will contain our application logic.
+Let's now create a base HTML file that will set up the ground to get our application running.
 
 With your text editor, create a new file named `index.html` within the work folder you created on Step 1-1. In it, place the following content:
 
@@ -130,14 +127,16 @@ Let's break this down:
 2. `<html>` and `</html>` delimit the entire contents of the page.
 3. `<head>` and `</head>` delimit the head of the page.
 4. `<body>` and `</body>` delimit the body of the page.
-5. Inside the head there are two `<meta>` tags. The first one allows to cleanly display non-[ASCII](https://en.wikipedia.org/wiki/ASCII) characters, which is something essential. The second one allows for creating applications that will look good on mobile devices.
-6. Inside the head there's a `<link>` tag which an loads an external CSS file called [Normalize.css](https://necolas.github.io/normalize.css). While this is not strictly necessary, it is extremely useful because it makes CSS behavior more consistent across different browsers.
-7. Inside the body there's two `<script>` tags. The first one loads an external js file which contains gotoв, the library itself. The second `<script>` is our application!
+5. Inside the head there are two `<meta>` elements. The first one allows to cleanly display non-[ASCII](https://en.wikipedia.org/wiki/ASCII) characters, which is something essential. The second one allows for creating applications that will look good on mobile devices.
+6. Inside the head there's a `<link>` element which an loads an external CSS file called [Normalize.css](https://necolas.github.io/normalize.css). While this is not strictly necessary, it is extremely useful because it makes CSS behavior more consistent across different browsers.
+7. Inside the body there's two `<script>` elements. The first one loads an external js file which contains gotoв, the library itself. The second `<script>` is our application, also a js file!
 
 This HTML will load three files in total:
 - A CSS stylesheet (Normalize.css).
 - A js library (gotoв).
 - A js file containing the code of the application.
+
+Side note: all three files loaded above are all text files (the first being CSS, the last two being js). It is just text, interpreted in a certain way by the browser.
 
 ### Step 1-3: create a js file to contain the code for the application
 
@@ -147,57 +146,30 @@ In the same folder, create an empty file named `app.js`.
 
 After this is done, open the HTML file in your browser. You should see an empty page . Keep this page open! Every time we complete a step, you can go back to the page, refresh it, and see your changes.
 
-## Chapter 2 - hello app
+## Chapter 2 - the counter app
 
-### Step 2-1: put something in the screen
+Rather than hurrying to show you how to build apps with gotoв, my goal in this tutorial is to explain the essential concepts that are needed to build the frontend of a web application.
 
-It is time for the app to show something other than a blank page!
+We will start building the simplest possible web application (a counter!) and start with pure HTML, CSS and js; step by step, we will incorporate gotoв and see how it maps to the concepts we already understand. My hope is that by going slowly and surely, not only you will understand the library, but all the underlying concepts, so that you can build software with clarity and utmost confidence.
 
-Let's display a simple greeting. If we were doing this with pure HTML, we would write something like this:
+### Step 2-1: vanilla counter
 
-```html
-<h1>Hello, app!</h1>
-```
+We are going to build a counter app with pure js (also called [vanilla js](http://vanilla-js.com/)). The only restriction we have is that we're doing everything from js, instead of putting app elements on the HTML we created on step 1-2.
 
-And then we'd put that HTML - or more precisely, that `h1` tag - somewhere within the HTML body.
+Here's the specification for our counter:
 
-This is how it's done with gotoв.
+- There should be a `<p>` (paragraph) element telling us what's the number of the counter.
+- The counter value should start at 0.
+- There should be a button that increments the counter by 1 every time we click it.
 
-```javascript
-var B = window.B;
+Simple as it is, this app has most of the core patterns of a frontend, namely:
 
-var view = function () {
-   return ['h1', 'Hello, app!'];
-}
-
-B.mount ('body', view);
-```
-
-The code above contains three parts:
-- Accessing the library.
-- A view (function that returns liths)
-- The mounting of the view into the body.
-
-
-
-
-TODO:
-- counter example with external variable and update function.
+- Some information (the counter value) that affects what the user sees.
+- A place where that information is displayed (the `<p>` element).
+- A button where a user interaction (`click`) changes the counter value and hence the `<p>` that displays it.
 
 ```javascript
-var B = window.B;
+var p = '<p>Counter is 0</p>';
 
-var view = function () {
-   return B.view ('counter', function (counter) {
-      if (counter === undefined) counter = 0;
-      return [
-         ['p', ['Counter is: ', counter]],
-         ['button', {onclick: B.ev ('set', 'counter', counter + 1)}, 'Increment counter'],
-      ];
-   });
-}
-
-B.mount ('body', view);
+var button =
 ```
-
-Explore HTML.

@@ -17,18 +17,18 @@ You're probably familiar with three types of applications:
 Web applications are different from native applications in a few respects:
 
 - **No installation required**: the user accesses the application directly from the browser, which is already installed.
-- **One application for all devices**: if properly written, a web application can be seamlessly used from mobile and desktop devices.
+- **One application for all devices**: if properly written, a web application can be seamlessly used from both mobile and desktop devices.
 - **It is a service**: instead of storing most of its information on the users' device like native applications do, web applications retrieve and store information on a server that is accessible through an internet connection.
 
 By merely requiring a device with internet a web browser, and no installation, web applications allow you to reach billions of people with minimal friction. And by providing a service that stores information, web applications prevent users from losing data or being locked into a single device; web applications provide an ultimate level of access and mobility to their users.
 
 ### How does a web application work?
 
-As we just saw, a web application is an application that runs in a web browser. When you click on a link (or write an address in the URL bar of a browser), a web page is loaded. This web page contains HTML, CSS and perhaps some js.
+As we just saw, a web application is an application that runs in a web browser. When you click on a link (or write an address in the URL bar of a browser), a web page is loaded. This web page contains HTML, CSS and usually some js.
 
 The HTML and CSS represent the actual content on the page. HTML is what is shown on the page, while the CSS changes the way that the HTML looks. js is usually there to produce some changes on the HTML and CSS, but it is not strictly necessary and it is actually possible to write web applications without js.
 
-HTML, CSS and js are text files, really. They have to conform to certain rules (very strict in the case of js), but they are humanly readable and can be opened on any text editor.
+HTML, CSS and js are text files, really. They have to conform to certain rules (very strict ones in the case of js), but they are humanly readable and can be opened on any text editor.
 
 When you load a web page, an HTML file (which is text that conforms to certain rules, nothing else) may contain further CSS or js inside of it. These CSS or js files are also text, also conforming to certain rules.
 
@@ -36,7 +36,7 @@ The browser, while receiving HTML, CSS and js, starts putting things on the scre
 
 ### What is the difference between a web page and a web application?
 
-A web page is static and doesn't change. In contrast, an application is a web page that is more than just a web page, because it has the potential to receive information from an user and then reflect it back. The distinctive feature of an application is that what the user sees on the screen is updated without the page being refreshed or a link being clicked.
+A web page is static and doesn't change. In contrast, an application is a web page that is more than just a web page, because it has the potential to receive information from an user and then be updated. The distinctive feature of an application is that what the user sees on the screen is updated without the page being refreshed or a link being clicked.
 
 ### The two sides of a web application
 
@@ -46,6 +46,8 @@ The terms *frontend* and *client* refer to the same thing: the HTML, CSS and js 
 
 The terms *backend* and *server* refer to the same thing: a program that provides files (like HTML, CSS and js, plus images) to a web browser, and also handles other operations like storing user data.
 
+The *frontend* and the *backend* are connected through the internet.
+
 Frontend and backend are the two sides of the coin of a web application. To fully build a web application, you need to do both.
 
 In a web application, frontend and backend interact constantly.
@@ -54,7 +56,7 @@ gotoв is a frontend library, so by itself it cannot allow you to create a compl
 
 ### js... what is it good for?
 
-js was meant originally to create small animations that would make HTML and CSS look a bit niftier. It was also there to help with validating user-submitted forms. Over time it grew in importance and nowadays it is essential for the creation of web applications. It is important to understand why.
+js was meant originally to create small animations that would make HTML and CSS look a bit niftier. It was also there to help validating user-submitted forms. Over time it grew in importance and nowadays it is essential for the creation of web applications. It is important to understand why.
 
 Mere web pages are static and don't change after they are loaded in a browser. After a page is loaded, a user can click on a link and go to another page, which will also be loaded. It is possible to create applications by loading a new page after each user operation, but the experience was not comparable to those of existing native applications.
 
@@ -136,7 +138,7 @@ This HTML will load three files in total:
 - A js library (gotoв).
 - A js file containing the code of the application.
 
-Side note: all three files loaded above are all text files (the first being CSS, the last two being js). It is just text, interpreted in a certain way by the browser.
+Side note: all three files loaded above are all text files (the first being CSS, the last two being js). Remember: they're all just text files, interpreted in a certain way by the browser.
 
 ### Step 1-3: create a js file to contain the code for the application
 
@@ -150,11 +152,11 @@ After this is done, open the HTML file in your browser. You should see an empty 
 
 Rather than hurrying to show you how to build apps with gotoв, my goal in this tutorial is to explain the essential concepts that are needed to build the frontend of a web application.
 
-We will start building the simplest possible web application (a counter!) and start with pure HTML, CSS and js; step by step, we will incorporate gotoв and see how it maps to the concepts we already understand. My hope is that by going slowly and surely, not only you will understand the library, but all the underlying concepts, so that you can build software with clarity and utmost confidence.
+We will start building the simplest possible web application - a counter! My hope is that by going slowly and surely, not only you will understand the library, but all the underlying concepts of any web application, so that you can then build them with clarity and utmost confidence.
 
 ### Step 2-1: vanilla counter
 
-We are going to build a counter app with pure js (also called [vanilla js](http://vanilla-js.com/)). The only restriction we have is that we're doing everything from js, instead of putting app elements on the HTML we created on step 1-2.
+We are going to build a counter app with pure js (also called [vanilla js](http://vanilla-js.com/)). The only restriction we have is that we're doing everything from js, instead of adding things to the HTML file we created on step 1-2.
 
 Here's the specification for our counter:
 
@@ -168,8 +170,22 @@ Simple as it is, this app has most of the core patterns of a frontend, namely:
 - A place where that information is displayed (the `<p>` element).
 - A button where a user interaction (`click`) changes the counter value and hence the `<p>` that displays it.
 
-```javascript
-var p = '<p>Counter is 0</p>';
+Let's start by adding a paragraph element that will tell the user what's the current value of the counter. It could look something lke this:
 
-var button =
+```javascript
+var paragraph = '<p>Counter is 0</p>';
 ```
+
+Note that inside `<p>` (the opening tag of the paragraph) and `</p>` (the closing tag of the paragraph), there is the text `Counter is 0`.
+
+It's time to **RTP** (refresh the page)! What do you see? Yep, it's blank!
+
+We need now to put this piece of HTML somewhere that will be visible. Let's put it in the `<body>` of the document.
+
+```javascript
+var paragraph = '<p>Counter is 0</p>';
+
+document.body.innerHTML = paragraph;
+```
+
+Developer tools:

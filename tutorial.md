@@ -160,7 +160,7 @@ We are going to build a counter app with pure js (also called [vanilla js](http:
 
 Here's the specification for our counter:
 
-- There should be a `<p>` (paragraph) element telling us what's the number of the counter.
+- There should be a `<p>` (paragraph) element telling us what's the value of the counter.
 - The counter value should start at 0.
 - There should be a button that increments the counter by 1 every time we click it.
 

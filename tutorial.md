@@ -4,7 +4,7 @@ This tutorial is conceived as a small book that gently explains how to develop t
 
 This tutorial requires you to have some knowledge of HTML, CSS and js (Javascript), but only a little bit. It is written first and foremost for those just dipping their feet into developing web applications. Experienced frontend devs might get bored, especially in the first sections.
 
-This is the resource I wanted to find back when I started writing web applications; ten years later, I'm writing it for those who are today in my position.
+This is the resource I wanted to find back when I started writing web applications; ten years later, I'm writing it for those who are today starting out.
 
 ## Introduction
 
@@ -391,13 +391,15 @@ Notice a few changes:
 - We reference this value when constructing `paragraph` the first time.
 - `increment` is much simpler, since it merely references `value` instead of having to extract it from some text and convert it to a number. This is because `value` already is available as a js variable.
 
+### Step 2-8: seeing the overall pattern of the app
+
 This app, simple as it may be, contains a great deal of the elements you'll encounter later when creating more complex apps. Let's add some comments to the code to see what the counter app can teach us about apps in general:
 
 ```javascript
 // Here we define values that will be used in the HTML and also updated by js.
 var value = 0;
 
-// Here we create a HTML string that we'll put into the page.
+// Here we create HTML strings that we'll put into the page.
 var paragraph = '<p id="counter">Counter is ' + value + '</p>';
 
 var button = '<button onclick="increment ()">Increment counter</button>';
@@ -412,3 +414,5 @@ var increment = function () {
    paragraph.innerHTML = 'Counter is ' + value;
 }
 ```
+
+Note: string references increment. That's how the circle is closed! Text diagram here!

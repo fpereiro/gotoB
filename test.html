@@ -10,9 +10,11 @@
       <script>
          var Time = {zero: new Date ().getTime ()};
       </script>
+      <!-- TODO: change to CDN link -->
+      <!--<script src="/json2.min.js"></script>-->
       <script src="gotoB.min.js"></script>
       <script>
-         Time ['0: load-gotoB'] = Date.now () - Time.zero;
+         Time ['0: load'] = teishi.time () - Time.zero;
       </script>
       <script>
          (function () {
@@ -21,23 +23,22 @@
 
             var dale = window.dale, teishi = window.teishi, lith = window.lith, c = window.c, B = window.B;
 
-            var type = teishi.t, log = window.teishi.l;
+            var type = teishi.type, eq = teishi.eq, last = teishi.last, clog = teishi.clog;
+            // TODO change after testing
+            dale.clog = function () {}
 
-            var Data  = window.Data  = B.store.Data  = {};
-            var State = window.State = B.store.State = {};
+            window.Data  = B.store.Data  = {};
+            window.State = B.store.State = {};
+
+            // *** TESTING ***
 
             var Test = function (tag, fun) {
-               if (B.prod) return;
                var error = fun ();
-               if (error) throw new Error (tag + ': ' + error);
-               log ('Test OK', tag);
+               if (! error) return B.say ('log', 'test OK', tag);
+               B.say ('log', 'test error', error);
+               B.eventlog ();
+               throw new Error (tag + ': ' + error);
             }
-
-            // *** PROD MODE ***
-
-            B.prod = false;
-
-            // *** ERRORS ***
 
             var Errorlist = [];
 
@@ -45,299 +46,291 @@
                Errorlist.unshift (arguments);
             }
 
-            // *** INITIAL ROUTES ***
+            // *** BASE LISTENERS ***
 
             Test ('initial setup', function () {
-               if (teishi.s (dale.keys (B.routes).sort ()) !== teishi.s (['add', 'eventlog', 'rem', 'set'])) return 'Initial routes mismatch.';
-               if (B.eventlog.length !== 0) return 'Extraneous elements in eventlog history.';
+               if (! eq (dale.keys (B.listeners).sort (), ['add', 'error', 'rem', 'set'])) return 'Initial listeners mismatch.';
+               // We use a setTimeout to wait until all the event listeners are set before we call the first we want to execute.
+               setTimeout (function () {B.say ('test', 'log')}, 0);
             });
 
-            // *** B.EVENTLOG ***
+            // *** B.LOG ***
 
-            B.listen ('test', 'eventlog', {burn: true}, function (x) {
+            B.listen ('test', 'log', {burn: true}, function (x) {
 
-               B.do (x, 'verb1', 'a path', 'booyah');
-               B.do (x, 'verb2', 'a path');
+               B.say (x, 'verb1', 'a path', 'booyah');
+               B.say (x, 'verb2', 'a path');
 
-               Test ('B.eventlog', function () {
-                  if (B.eventlog.length !== 3) return 'B.eventlogis not registering events.';
-                  if (B.eventlog [0].verb !== 'verb2') return 'B.eventlog is not registering verbs.';
-                  if (B.eventlog [0].path [0] !== 'a path') return 'B.eventlog is not registering paths.';
-                  if (B.eventlog [1].args [0] !== 'booyah') return 'B.eventlog is not registering args.';
-                  if (B.eventlog [0].args !== undefined) return 'B.eventlog is registering non-existing args.';
+               Test ('log', function () {
+                  if (B.log.length !== 4) return 'Invalid amount of log entries.';
+                  if (! eq ({verb: B.log [0].verb, path: B.log [0].path}, {verb: 'log', path: ['test OK']})) return 'Invalid test OK log.';
+                  if (! eq ({verb: B.log [1].verb, path: B.log [1].path}, {verb: 'test', path: ['log']})) return 'Invalid verb/path on first log item.';
+                  if (B.log [2].from !== B.log [1].id || B.log [3].from !== B.log [1].id) return 'Invalid from value in second and third log entries.';
                });
 
-               B.do (x, 'test', 'args');
+               B.say (x, 'test', 'error');
             });
 
-            setTimeout (function () {
-               B.do ('test', 'eventlog');
-            }, 0);
+            B.listen ('test', 'error', {burn: true}, function (x) {
 
-            // *** ARGS ***
+               Test ('show eventlog in case of error', function () {
+                  B.say (x, 'error', 'test error');
 
-            B.listen ('test', 'args', {burn: true}, function (x) {
+                  if (! c ('#eventlog'))     return 'Eventlog was not shown when error happened.';
+                  if (! c ('#errorwarning')) return 'Error warning was not shown when error happened.';
 
-               Data.items = [];
+                  // Turn off the error listener until it is tested.
+                  B.listeners.error.disabled = true;
 
-               Test ('args validations', function () {
-                  if (B.add ()                        !== false) return 'B.add accepted empty path.';
-                  if (B.add ([])                      !== false) return 'B.add accepted empty path.';
-                  if (B.add (/invalidpath/)           !== false) return 'B.add accepted invalid path.';
-                  if (B.add ({})                      !== false) return 'B.add accepted invalid path.';
-                  if (B.add (['Data', /invalidpath/]) !== false) return 'B.add accepted invalid path.';
-                  if (B.add (['Data'], 'whatever')  !== false) return 'B.add accepted target that is not an array.';
-
-                  if (B.rem ()                             !== false) return 'B.rem accepted undefined path.';
-                  if (B.rem (/invalidpath/)                !== false) return 'B.rem accepted invalid path.';
-                  if (B.rem ({})                           !== false) return 'B.rem accepted invalid path.';
-                  if (B.rem (['lalala'], 'whatever')       !== false) return 'B.rem accepted target that is not an array or object.';
-                  if (B.rem (['Data', 'items'], undefined) !== false) return 'B.rem accepted keys that are neither integers or strings';
-                  if (B.rem (['Data', 'items'], {a: 0})    !== false) return 'B.rem accepted keys that are neither integers or strings';
-                  if (B.rem (['Data', 'items'], [0, 'b'])  !== false) return 'B.rem accepted keys that are neither integers or strings';
-                  if (B.rem (['No item'], 0)  !== false) return 'B.rem didn\'t reject target that is simple.';
-
-                  if (B.get ('ok', /notok/)               !== undefined) return 'B.get accepted invalid path';
-                  if (B.get ({})                          !== undefined) return 'B.get accepted invalid path';
-                  if (B.get (['ok', /notok/])             !== undefined) return 'B.get accepted invalid path';
-                  if (B.get (['ok', /notok/], /dontcare/) !== undefined) return 'B.get accepted invalid path';
-
-                  if (B.set (/invalidpath/)                   !== false) return 'B.set accepted invalid path.';
-                  if (B.set ({})                              !== false) return 'B.set accepted invalid path.';
-                  if (B.set (['lalala', /nope/])              !== false) return 'B.set accepted invalid path.';
-                  if (B.set (/invalidpath/, 'something')      !== false) return 'B.set accepted invalid path.';
-                  if (B.set (['lalala', /nope/], 'something') !== false) return 'B.set accepted invalid path.';
+                  B.say (x, 'test', 'data');
                });
+            });
 
-               Test ('args circuit', function () {
+            // *** DATA FUNCTIONS ***
 
-                  var C = 0;
-                  B.do (x, 'add', ['Data'], 'whatever');
-                  B.do (x, 'rem', ['Data', 'items'], {a: 0});
-                  B.listen ('change', '*', {id: 'neverincr'}, function () {C++});
-                  if (C !== 0) return 'Invalid operations triggered change event.';
-                  B.forget ('neverincr');
+            B.listen ('test', 'data', {burn: true}, function (x) {
 
-                  if (B.get ('Data')            !== Data)       return 'B.get single path comparison #1 didn\'t work.';
-                  if (B.get (['Data'])          !== Data)       return 'B.get single path comparison #2 didn\'t work.';
-                  if (B.get (['Data', 'items']) !== Data.items) return 'B.get double path comparison #1 didn\'t work.';
-                  if (B.get ('Data', 'items')   !== Data.items) return 'B.get double path comparison #2 didn\'t work.';
+               Test ('data', function () {
 
-                  if (B.add (['Data', 'items'], 'one') !== true) return 'B.add didn\'t return true.';
-                  if (B.get ('Data', 'items', 0) !== 'one') return 'B.add didn\'t add element.';
-                  if (B.add (['Data', 'items'], ['two', 'three']) !== true) return 'B.add didn\'t return true.';
-                  if (B.add (['Data', 'array'], 2) !== true) return 'B.add didn\'t create array on undefined target.';
-                  if (B.get ('Data', 'array', 0) !== 2) return 'B.add didn\'t add element to array created on undefined target properly.';
-                  if (Data.items.length !== 2) return 'B.add didn\'t add array properly.';
-                  if (B.get ('Data', 'items', 1, 0) !== 'two') return 'B.add didn\'t add array properly.';
-                  if (B.get ('Data', 'items', 1, 1) !== 'three') return 'B.add didn\'t add array properly.';
-                  if (B.add (['Data', 'items'], undefined, 'four', {five: 5}) !== true) return 'B.add didn\'t return true.';
-                  if (Data.items.length !== 5) return 'B.add didn\'t add multiple arguments properly.';
-                  if (B.get ('Data', 'items', 2) !== undefined) return 'B.add didn\'t add undefined properly.';
-                  if (B.get ('Data', 'items', 3) !== 'four') return 'B.add didn\'t add multiple arguments properly.';
-                  if (B.get ('Data', 'items', 4, 'five') !== 5) return 'B.add didn\'t add multiple arguments properly.';
-                  if (B.add (['Data', 'items', 4], 'six') !== false) return 'B.add attempted to add element to object.';
+                  var error;
 
-                  if (B.set (['Data', 'items', 4, 'six'], 6) !== true) return 'B.set didn\'t return true.';
-                  if (B.get ('Data', 'items', 4, 'six') !== 6) return 'B.set didn\'t set object property in existing object.';
-                  if (B.set (['Data', 'items', 5], 'seven') !== true) return 'B.set didn\'t return true.';
-                  if (B.get ('Data', 'items', 5) !== 'seven') return 'B.set didn\'t set array element in existing array.';
-                  if (B.set (['Data', 'items', 6], false) !== true) return 'B.set didn\'t set false value.';
-                  if (B.get ('Data', 'items', 6) !== false) return 'B.get didn\'t return false value properly.';
-                  Data.items.splice (6, 1);
+                  // *** B.GET ***
 
-                  if (B.set ('Other', true) !== true) return 'B.set didn\'t return true.';
-                  if (B.get ('Other') !== true) return 'B.set didn\'t set toplevel property.';
+                  error = dale.stopNot ([['ok', /notok/], [/notok/], ['ok', null], [null], ['ok', {}], [{}], ['ok', undefined], [undefined], ['ok', NaN], [NaN]], undefined, function (v, k) {
+                     if (B.get.apply (null, v) !== undefined) return 'B.get accepted invalid path #' + (k + 1) + '-1.';
+                     if (B.get (v)             !== undefined) return 'B.get accepted invalid path #' + (k + 1) + '-2.';
+                  });
+                  if (error) return error;
 
-                  if (B.set (['Data', 'arr', 0], true) !== true) return 'B.set didn\'t return true.';
-                  if (type (Data.arr) !== 'array') return 'B.set didn\'t create nested structures (array).';
-                  if (B.get ('Data', 'arr', 0) !== true) return 'B.set didn\'t create nested structures (array).';
-                  if (B.set (['Data', 'obj', 'last'], 'playboy') !== true) return 'B.set didn\'t return true.';
-                  if (type (Data.obj) !== 'object') return 'B.set didn\'t create nested structures (object).';
-                  if (B.get ('Data', 'obj', 'last') !== 'playboy') return 'B.set didn\'t create nested structures (object).';
-                  if (B.set (['Data', 2], 'two') !== false) return 'B.set didn\'t return false when overwriting parent.';
+                  Data.items = ['hello'];
+                  Data.item  = 'hello';
 
-                  if (type (Data) !== 'object') return 'B.set overwrote target on type coercion.';
-                  if (B.get ('Data', 2) !== undefined) return 'B.set didn\'t write key when target required type coercion.';
-                  if (B.set (['Data', 'arr2', 1, 0, 'obj'], 'verynested') !== true) return 'B.set didn\'t return true.';
-                  if (type (B.get ('Data', 'arr2')) !== 'array') return 'B.set didn\'t create multiple nested sequence properly.';
-                  if (type (B.get ('Data', 'arr2', 1)) !== 'array') return 'B.set didn\'t create multiple nested sequence properly.';
-                  if (type (B.get ('Data', 'arr2', 1, 0)) !== 'object') return 'B.set didn\'t create multiple nested sequence properly.';
-                  if (B.get ('Data', 'arr2', 1, 0, 'obj') !== 'verynested') return 'B.set didn\'t create multiple nested sequence properly.';
-                  if (B.set (['Data', 'arr2'], null) !== true) return 'B.set didn\'t return true.';
-                  if (B.get ('Data', 'arr2') !== null) return 'B.set didn\'t overwrite array.';
+                  error = dale.stopNot ([[[], B.store], [['Data'], Data], [['Data', 'items'], Data.items], [['Data', 'items', 0], Data.items [0]], [['Data', 'item'], Data.item], [['foo'], undefined]], undefined, function (v, k) {
+                     if (B.get.apply (null, v [0]) !== v [1]) return 'B.get returned invalid value #' + (k + 1) + '-1.';
+                     if (B.get (v [0])             !== v [1]) return 'B.get returned invalid value #' + (k + 1) + '-2.';
+                  });
+                  if (error) return error;
 
-                  if (B.set (['Data', 'null'], null) !== true) return 'B.set didn\'t return true.';
-                  if (Data.null !== null) return 'B.set didn\'t set null value.';
-                  if (B.set (['Data', 'null', 'a'], 'b') !== false) return 'B.set didn\'t return false when overwriting parent.';
-                  if (B.get ('Data', 'null', 'a') === 'b') return 'B.set overwrote non-complex path.';
-                  if (B.set (['Data', 'null', 'a'], 'b', true) !== true) return 'B.set didn\'t return true when overwriting parent with flag.';
-                  if (Data.null.a !== 'b') return 'B.set didn\'t overwrite non-complex path when flag was passed.';
+                  delete Data.items;
+                  delete Data.item;
 
-                  if (B.rem (['No item'], 0)  !== false) return 'B.rem didn\'t reject target that is simple.';
-                  if (B.rem (['Data', 'arr2'], 0)  !== false) return 'B.rem didn\'t reject target that is simple.';
-                  if (B.rem (['Data', 'arr', 0], 0)  !== false) return 'B.rem didn\'t reject target that is simple.';
-                  if (B.rem ([], []) !== true) return 'B.rem didn\'t return true when removing no keys.';
-                  if (B.rem ([]) !== true) return 'B.rem didn\'t return true when removing no keys.';
-                  if (B.rem ([], 'Other') !== true) return 'B.rem didn\'t return true.';
-                  if (B.get ('Other') !== undefined) return 'B.rem didn\'t remove toplevel property.';
-                  if (B.rem (['Data', 'items'], 0, 2) !== true) return 'B.rem didn\'t return true.';
-                  if (Data.items.length !== 4) return 'B.rem didn\'t remove array items properly.';
-                  if (type (Data.items [0]) !== 'array') return 'B.rem didn\'t remove array items properly.';
-                  if (Data.items [1] !== 'four') return 'B.rem didn\'t remove array items properly.';
-                  if (B.rem (['Data', 'items'], 0) !== true) return 'B.rem didn\'t return true.';
-                  if (Data.items [0] !== 'four') return 'B.rem didn\'t remove array item properly.';
-                  if (B.rem (['Data', 'items'], 4, 'nonexistent') !== false) return 'B.rem accepted string element in keys when target was array.';
-                  if (B.rem (['Data', 'items'], 'nonexistent') !== false) return 'B.rem accepted string element in keys when target was array.';
-                  if (Data.items.length !== 3) return 'B.rem modified array when receiving noninteger index.';
-                  if (Data.items [0] !== 'four') return 'B.rem modified array when receiving noninteger index.';
-                  if (B.rem (['Data', 'items'], 9) !== true) return 'B.rem didn\'t return true.';
-                  if (Data.items.length !== 3) return 'B.rem modified array when receiving out of range index.';
-                  if (Data.items [0] !== 'four') return 'B.rem modified array when receiving out of range index.';
-                  if (B.rem (['Data', 'items'], 1, 9) !== true) return 'B.rem didn\'t return true.';
-                  if (Data.items.length !== 2) return 'B.rem didn\'t modify array when receiving out of range index.';
-                  if (Data.items [0] !== 'four') return 'B.rem didn\'t modify array when receiving out of range index.';
-                  if (Data.items [1] !== 'seven') return 'B.rem didn\'t modify array when receiving out of range index.';
+                  // *** B.SET ***
 
-                  if (B.rem (['Data', 'obj'], 'last') !== true) return 'B.rem didn\'t return true.';
-                  if (dale.keys (Data.obj).length !== 0) return 'B.rem didn\'t remove keys from object.';
-                  if (B.rem ('Data', 'obj') !== true) return 'B.rem didn\'t return true.';
-                  if (Data.obj !== undefined) return 'B.rem didn\'t remove object from array.';
-                  if (B.rem ('Data', dale.keys (Data)) !== true) return 'B.rem didn\'t return true.';
-                  if (dale.keys (Data).length !== 0) return 'B.rem didn\'t remove multiple objects from array.';
-
-               });
-
-               Test ('args circuit with events', function () {
-
-                  Data.items = [], C = 0;
-
-                  if (B.get ('Data')            !== Data)       return 'B.get single path comparison #1 didn\'t work.';
-                  if (B.get (['Data'])          !== Data)       return 'B.get single path comparison #2 didn\'t work.';
-                  if (B.get (['Data', 'items']) !== Data.items) return 'B.get double path comparison #1 didn\'t work.';
-                  if (B.get ('Data', 'items')   !== Data.items) return 'B.get double path comparison #2 didn\'t work.';
-
-                  dale.do ([0, 1], function (i) {
-                     B.listen ('change', ['Data', 'items', i], {burn: true}, function () {C++});
+                  error = dale.stopNot ([[/notok/, 'ok'], [/notok/], [null, 'ok'], [null], [{}, {}, 'ok'], [{}], [undefined, 'ok'], [undefined], [NaN, 'ok'], [NaN]], undefined, function (v, k) {
+                     if (k === 0) v.unshift (x);
+                     if (B.set.apply (null, v) !== false) return 'B.set accepted invalid path #' + (k + 1) + '.';
                   });
 
-                  if (B.do (x, 'add', ['Data', 'items'], 'one') !== true) return 'B.add didn\'t return true.';
-                  if (B.get ('Data', 'items', 0) !== 'one') return 'B.add didn\'t add element.';
-                  if (B.do (x, 'add', ['Data', 'items'], ['two', 'three']) !== true) return 'B.add didn\'t return true.';
-                  if (Data.items.length !== 2) return 'B.add didn\'t add array properly.';
-                  if (B.get ('Data', 'items', 1, 0) !== 'two') return 'B.add didn\'t add array properly.';
-                  if (B.get ('Data', 'items', 1, 1) !== 'three') return 'B.add didn\'t add array properly.';
-                  if (C !== 2) return 'change event is not being fired on subkeys when adding them.';
-                  if (B.do (x, 'add', ['Data', 'items'], undefined, 'four', {five: 5}) !== true) return 'B.add didn\'t return true.';
-                  if (Data.items.length !== 5) return 'B.add didn\'t add multiple arguments properly.';
-                  if (B.get ('Data', 'items', 2) !== undefined) return 'B.add didn\'t add undefined properly.';
-                  if (B.get ('Data', 'items', 3) !== 'four') return 'B.add didn\'t add multiple arguments properly.';
-                  if (B.get ('Data', 'items', 4, 'five') !== 5) return 'B.add didn\'t add multiple arguments properly.';
-                  var backup = teishi.s (B.get ('Data', 'items', 4));
-                  B.do (x, 'add', ['Data', 'items', 4], 'six')
-                  if (teishi.s (B.get ('Data', 'items', 4)) !== backup) return 'B.add added element to object.';
+                  if (error) return error;
 
-                  if (B.do (x, 'set', ['Data', 'items', 4, 'six'], 6) !== true) return 'B.set didn\'t return true.';
-                  if (B.get ('Data', 'items', 4, 'six') !== 6) return 'B.set didn\'t set object property in existing object.';
-                  if (B.do (x, 'set', ['Data', 'items', 5], 'seven') !== true) return 'B.set didn\'t return true.';
-                  if (B.get ('Data', 'items', 5) !== 'seven') return 'B.set didn\'t set array element in existing array.';
+                  if (B.set (x, [], 'a') !== false) return 'B.set accepted simple value with empty path #1.';
+                  if (B.set ([], 'a')    !== false) return 'B.set accepted simple value with empty path #2.';
+                  if (B.set (x, [], 333) !== false) return 'B.set accepted simple value with empty path #3.';
+                  if (B.set ([], 333)    !== false) return 'B.set accepted simple value with empty path #4.';
 
-                  if (B.do (x, 'set', 'Other', true) !== true) return 'B.set didn\'t return true.';
-                  if (B.get ('Other') !== true) return 'B.set didn\'t set toplevel property.';
-
-                  if (B.do (x, 'set', ['Data', 'arr', 0], true) !== true) return 'B.set didn\'t return true.';
-                  if (type (Data.arr) !== 'array') return 'B.set didn\'t create nested structures (array).';
-                  if (B.get ('Data', 'arr', 0) !== true) return 'B.set didn\'t create nested structures (array).';
-                  if (B.do (x, 'set', ['Data', 'obj', 'last'], 'playboy') !== true) return 'B.set didn\'t return true.';
-                  if (type (Data.obj) !== 'object') return 'B.set didn\'t create nested structures (object).';
-                  if (B.get ('Data', 'obj', 'last') !== 'playboy') return 'B.set didn\'t create nested structures (object).';
-                  backup = teishi.s (Data);
-                  B.do (x, 'set', ['Data', 2], 'two');
-                  if (backup !== teishi.s (Data)) return 'B.set overwrite parent.';
-
-                  if (type (Data) !== 'object') return 'B.set overwrote target on type coercion.';
-                  if (B.get ('Data', 2) !== undefined) return 'B.set didn\'t write key when target required type coercion.';
-                  if (B.do (x, 'set', ['Data', 'arr2', 1, 0, 'obj'], 'verynested') !== true) return 'B.set didn\'t return true.';
-                  if (type (B.get ('Data', 'arr2')) !== 'array') return 'B.set didn\'t create multiple nested sequence properly.';
-                  if (type (B.get ('Data', 'arr2', 1)) !== 'array') return 'B.set didn\'t create multiple nested sequence properly.';
-                  if (type (B.get ('Data', 'arr2', 1, 0)) !== 'object') return 'B.set didn\'t create multiple nested sequence properly.';
-                  if (B.get ('Data', 'arr2', 1, 0, 'obj') !== 'verynested') return 'B.set didn\'t create multiple nested sequence properly.';
-                  if (B.do (x, 'set', ['Data', 'arr2'], null) !== true) return 'B.set didn\'t return true.';
-                  if (B.get ('Data', 'arr2') !== null) return 'B.set didn\'t overwrite array.';
-
-                  if (B.do (x, 'set', ['Data', 'null'], null) !== true) return 'B.set didn\'t return true.';
-                  if (Data.null !== null) return 'B.set didn\'t set null value.';
-                  backup = teishi.s (Data);
-                  B.do (x, 'set', ['Data', 'null', 'a'], 'b');
-                  if (backup !== teishi.s (Data)) return 'B.set overwrote parent.';
-                  B.do (x, 'set', ['Data', 'null', 'a'], 'b', true);
-                  if (Data.null.a !== 'b') return 'B.set didn\'t overwrite non-complex path when flag was passed.';
-
-                  if (B.do (x, 'rem', [], 'Other') !== true) return 'B.rem didn\'t return true.';
-                  if (B.do (x, 'rem', [], []) !== true) return 'B.rem didn\'t return true when removing no keys.';
-                  if (B.do (x, 'rem', []) !== true) return 'B.rem didn\'t return true when removing no keys.';
-                  if (B.get ('Other') !== undefined) return 'B.rem didn\'t remove toplevel property.';
-                  C = 0;
-                  dale.do ([0, 2], function (i) {
-                     B.listen ('change', ['Data', 'items', /(0|2)/], {burn: true}, function () {C++});
+                  error = dale.stopNot ([[['Data', 'items', 0], null], [['State', 'view'], 'main'], ['foo', 'bar'], [[], []], [[], {}], [[0], 1]], undefined, function (v, k) {
+                     if (k === 0) v.unshift (x);
+                     if (B.set.apply (null, v) !== true)                 return 'B.set rejected valid arguments #'    + (k + 1) + '.';
+                     if (B.get (last (v, 2)) !== last (v)) return 'B.set didn\'t set value correctly #' + (k + 1) + '.';
                   });
-                  if (B.do (x, 'rem', ['Data', 'items'], 0, 2) !== true) return 'B.rem didn\'t return true.';
-                  if (C !== 2) return 'change event is not being fired on subkeys when removing them (or there is an issue with regex steps in paths).';
-                  if (Data.items.length !== 4) return 'B.rem didn\'t remove array items properly.';
-                  if (type (Data.items [0]) !== 'array') return 'B.rem didn\'t remove array items properly.';
-                  if (Data.items [1] !== 'four') return 'B.rem didn\'t remove array items properly.';
-                  if (B.do (x, 'rem', ['Data', 'items'], 0) !== true) return 'B.rem didn\'t return true.';
-                  if (Data.items [0] !== 'four') return 'B.rem didn\'t remove array item properly.';
-                  if (B.do (x, 'rem', ['Data', 'items'], 4, 'nonexistent') !== true) return 'B.rem didn\'t return true.';
-                  if (B.do (x, 'rem', ['Data', 'items'], 'nonexistent') !== true) return 'B.rem didn\'t return true.';
-                  if (Data.items.length !== 3) return 'B.rem modified array when receiving noninteger index.';
-                  if (Data.items [0] !== 'four') return 'B.rem modified array when receiving noninteger index.';
-                  if (B.do (x, 'rem', ['Data', 'items'], 9) !== true) return 'B.rem didn\'t return true.';
-                  if (Data.items.length !== 3) return 'B.rem modified array when receiving out of range index.';
-                  if (Data.items [0] !== 'four') return 'B.rem modified array when receiving out of range index.';
-                  if (B.do (x, 'rem', ['Data', 'items'], 1, 9) !== true) return 'B.rem didn\'t return true.';
-                  if (Data.items.length !== 2) return 'B.rem didn\'t modify array when receiving out of range index.';
-                  if (Data.items [0] !== 'four') return 'B.rem didn\'t modify array when receiving out of range index.';
-                  if (Data.items [1] !== 'seven') return 'B.rem didn\'t modify array when receiving out of range index.';
+                  if (error) return error;
 
-                  if (B.do (x, 'rem', ['Data', 'obj'], 'last') !== true) return 'B.rem didn\'t return true.';
-                  if (dale.keys (Data.obj).length !== 0) return 'B.rem didn\'t remove keys from object.';
-                  if (B.do (x, 'rem', 'Data', 'obj') !== true) return 'B.rem didn\'t return true.';
-                  if (Data.obj !== undefined) return 'B.rem didn\'t remove object from array.';
-                  if (B.do (x, 'rem', 'Data', dale.keys (Data)) !== true) return 'B.rem didn\'t return true.';
-                  if (dale.keys (Data).length !== 0) return 'B.rem didn\'t remove multiple objects from array.';
+                  error = dale.stopNot ([[['Data', 'items'], [0, 1, 2], {Data: {items: [0, 1, 2]}}], [['Data', 'key'], 'val', {Data: {items: [0, 1, 2], key: 'val'}}], [['Data', 0], 1, {Data: [1]}], [[], {Data: {}, State: {}}, {Data: {}, State: {}}]], undefined, function (v, k) {
+                     k === 0 ? B.set (x, v [0], v [1]) : B.set (v [0], v [1]);
+                     if (! eq (B.store, v [2])) return 'B.set overwrite error #' + (k + 1) + '.';
+                  });
+                  if (error) return error;
+
+                  // *** B.ADD ***
+
+                  error = dale.stopNot ([[/notok/, 'ok'], [/notok/], [null, 'ok'], [null], [{}, {}, 'ok'], [{}], [undefined, 'ok'], [undefined], [NaN, 'ok'], [NaN]], undefined, function (v, k) {
+                     if (k === 0) v.unshift (x);
+                     if (B.add.apply (null, v) !== false) return 'B.add accepted invalid path #' + (k + 1) + '.';
+                  });
+                  if (error) return error;
+
+                  error = dale.stopNot ([[['Data', 'items'], null, [null]], [['Data', 'items'], 0, [null, 0]], [['Data', 'items'], [null, 0]], [['Data', 'items'], 1, 2, [null, 0, 1, 2]]], undefined, function (v, k) {
+                     if (k === 0) v.unshift (x);
+                     if (B.add.apply (null, v.slice (0, -1)) !== true) return 'B.add rejected valid arguments #'     + (k + 1) + '.';
+                     if (! eq (B.get (v [k === 0 ? 1 : 0]), last (v)))        return 'B.add didn\'t add values correctly #' + (k + 1) + '.';
+                  });
+                  if (error) return error;
+
+                  if (B.add (x, 'Data', 0) !== false) return 'B.add didn\'t reject non-undefined target #1.';
+                  if (B.add ('Data', 0) !== false)    return 'B.add didn\'t reject non-undefined target #2.';
+
+                  B.add (x, 'foo');
+                  if (! eq (B.get ('foo'), [])) return 'B.add didn\'t create array when receiving an undefined target and no elements to push #1.';
+                  B.add ('foo');
+                  if (! eq (B.get ('foo'), [])) return 'B.add didn\'t create array when receiving an undefined target and no elements to push #2.';
+
+                  delete Data.items;
+                  delete B.store.foo;
+
+                  // *** B.REM ***
+
+                  error = dale.stopNot ([[/notok/, 'ok'], [/notok/], [null, 'ok'], [null], [{}, {}, 'ok'], [{}], [undefined, 'ok'], [undefined], [NaN, 'ok'], [NaN]], undefined, function (v, k) {
+                     if (k === 0) v.unshift (x);
+                     if (B.rem.apply (null, v) !== false) return 'B.rem accepted invalid path #' + (k + 1) + '.';
+                  });
+                  if (error) return error;
+
+                  B.set (['Data', 'items'], ['a', 'b', 'c']);
+
+                  error = dale.stopNot ([[['Data', 'items'], 'a'], [['Data', 'items'], 0.1], ['Data', 0], [[], /foo/], ['Data', ['items', /foo/]]], undefined, function (v, k) {
+                     if (k === 0) v.unshift (x);
+                     if (B.rem.apply (null, v) !== false) return 'B.rem allowed removing keys of the wrong type #' + (k + 1) + '.';
+                  });
+                  if (error) return error;
+
+                  error = dale.stopNot ([[['Data', 'foo'], 'a'], [[], 'foo'], ['Data', 'foo'], [['Data', 'items']], ['Data'], ['foo', /bar/], [['Data', 'items'], 5]], undefined, function (v, k) {
+                     if (k === 0) v.unshift (x);
+                     if (B.rem.apply (null, v) !== true) return 'B.rem returned error when performing no-op #' + (k + 1) + '.';
+                     if (! eq (B.store, {State: {}, Data: {items: ['a', 'b', 'c']}})) return 'B.rem modified store when performing no-op #' + (k + 1) + '.';
+                  });
+                  if (error) return error;
+
+                  var keys = [0, 2];
+
+                  if (B.rem (['Data', 'items'], keys) !== true) return 'B.rem returned error when performing operation #1.';
+                  if (! eq (B.get ('Data', 'items'), ['b']))    return 'B.rem didn\'t perform operation successfully #1.';
+                  if (! eq (keys, [0, 2])) return 'B.rem modified keys array #1.';
+                  if (B.rem ('Data', ['items']) !== true)       return 'B.rem returned error when performing operation #2.';
+                  if (! eq (B.get ('Data'), {}))                return 'B.rem didn\'t perform operation successfully #2.';
+
+                  B.set (['Data', 'items'], ['a', 'b', 'c']);
+
+                  if (B.rem.apply (null, [['Data', 'items']].concat (keys)) !== true) return 'B.rem returned error when performing operation #3.';
+                  if (! eq (B.get ('Data', 'items'), ['b']))    return 'B.rem didn\'t perform operation successfully #3.';
+                  if (! eq (keys, [0, 2])) return 'B.rem modified keys array #2.';
+                  if (B.rem ('Data', ['items']) !== true)       return 'B.rem returned error when performing operation #4.';
+                  if (! eq (B.get ('Data'), {}))                return 'B.rem didn\'t perform operation successfully #4.';
+
+                  if (B.rem ([], 'Data', 'State') !== true) return 'B.rem returned error when performing operation #5.';
+                  if (! eq (B.get (), {}))                  return 'B.rem didn\'t perform operation successfully #5.';
+
+                  B.set ([], {Data: {}, Store: {}});
+
+                  // *** DATA EVENTS ***
+
+                  var incrementOnChange = 0;
+
+                  var listener = B.listen ('change', [], function () {
+                     incrementOnChange++;
+                  });
+
+                  dale.go ([[/notok/, 'ok'], [/notok/], [null, 'ok'], [null], [{}, 'ok'], [{}], [undefined, 'ok'], [undefined], [NaN, 'ok'], [NaN]], function (v, k) {
+                     B.say.apply (null, [x, 'set'].concat (v));
+                  });
+
+                  B.set (['Data', 'items'], ['a', 'b', 'c']);
+
+                  dale.go ([[/notok/, 'ok'], [/notok/], [null, 'ok'], [null], [{}, 'ok'], [{}], [undefined, 'ok'], [undefined], [NaN, 'ok'], [NaN], [['Data', 'items', 0], 0]], function (v, k) {
+                     B.say.apply (null, [x, 'add'].concat (v));
+                  });
+
+                  // The last add will trigger an event (because it has a valid path) but it won't trigger a change event.
+                  if (dale.fil (B.log, undefined, function (log) {
+                     if (log.verb === 'change') return log;
+                  }).length) return 'change event logged with a data event receiving invalid arguments #1.';
+                  // The last add should trigger an error
+
+                  if (incrementOnChange !== 0) return 'change event fired with a data event receiving invalid arguments #1.';
+
+                  dale.go ([[/notok/, 'ok'], [/notok/], [null, 'ok'], [null], [{}, 'ok'], [{}], [undefined, 'ok'], [undefined], [NaN, 'ok'], [NaN]], function (v, k) {
+                     B.say.apply (null, [x, 'rem'].concat (v));
+                  });
+
+                  if (dale.fil (B.log, undefined, function (log) {
+                     if (log.verb === 'change') return log;
+                  }).length) return 'change event logged with a data event receiving invalid arguments #2.';
+
+                  if (incrementOnChange !== 0) return 'change event fired with a data event receiving invalid arguments #2.';
+
+                  // All these invalid invocations will trigger an event (because they have valid paths) but they won't trigger a change event.
+                  dale.go ([[['Data', 'items'], 'a'], ['Data', 0], [[], /foo/], ['Data', ['items', /foo/]]], function (v, k) {
+                     B.say.apply (null, [x, 'rem'].concat (v));
+                  });
+
+                  if (dale.fil (B.log, undefined, function (log) {
+                     if (log.verb === 'change') return log;
+                  }).length) return 'change event logged with a data event receiving invalid arguments #3.';
+
+                  if (incrementOnChange !== 0) return 'change event fired with a data event receiving invalid arguments #3.';
+
+                  var llog = last (B.log);
+                  if (! eq ({verb: llog.verb, path: llog.path, from: llog.from}, {verb: 'error', path: ['B.rem'], from: last (B.log, 2).id})) return 'error event not fired or fired improperly.';
+
+                  // no-ops
+                  dale.go ([['set', ['Data', 'items'], teishi.copy (B.get ('Data', 'items'))], ['set', [], teishi.copy (B.store)], ['set', 'foo', undefined], ['set', 'Data', B.get ('Data')], ['set', 'Data', teishi.copy (B.get ('Data'))], ['add', ['Data', 'items']], ['rem', ['Data', 'items'], 3, 4], ['rem', ['Data', 'items'], [3, 4]], ['rem', 'foo', 'bar'], ['rem', ['Data', 'items'], []], ['rem', ['Data', 'items']]], function (v, k) {
+                     B.say.apply (null, k % 2 === 0 ? [x].concat (v) : v);
+                  });
+
+                  if (dale.fil (B.log, undefined, function (log) {
+                     if (log.verb === 'change') return log;
+                  }).length) return 'change event logged with a data event performing a no-op.';
+
+                  if (incrementOnChange !== 0) return 'change event fired with a data event performing a no-op.';
+
+                  var error = dale.stopNot ([
+                     ['set', [], {Data: {}, Store: {}}],
+                     ['add', 'Array', 'whatever'],
+                     ['rem', [], 'Array'],
+                     ['add', ['Data', 'items'], 'one'],
+                     ['add', ['Data', 'items'], 'two', 'three'],
+                     ['add', ['Data', 'items'], 'four', 'five'],
+                     ['rem', ['Data', 'items'], 3, 4],
+                     ['rem', ['Data', 'items'], [0, 1, 2]],
+                     ['add', ['Data', 'items'], undefined, null, {three: 3}, false],
+                     ['set', 'Other', true],
+                     ['rem', [], 'Other'],
+                     ['set', ['Data', 'obj', 'last'], 'playboy'],
+                     ['set', ['Data', 'items', 0, 0], 'beep'],
+                     ['set', ['Data', 'null'], null],
+                     ['rem', 'Data', 'obj', 'null']
+                  ], undefined, function (test, k) {
+                     var evid = B.say.apply (null, [x].concat (test)), eprefix = 'Test #' + (k + 1) + ': ', path = type (test [1]) === 'array' ? test [1] : [test [1]];
+
+                     if (type (evid) !== 'string')      return eprefix + 'B.say didn\'t return event id.';
+                     if (incrementOnChange !== (k + 1)) return eprefix + 'no change event triggered.';
+                     var args = type (test [2]) === 'array' ? test [2] : test.slice (2);
+                     if (test [0] === 'rem') {
+                        if (dale.stop (args, true, function (key) {
+                           return dale.keys (B.get (test [1])).indexOf (key) > -1;
+                        })) return eprefix + 'rem didn\'t remove key.';
+                        return;
+                     }
+                     if (dale.stop (path, true, function (pathitem, k2) {
+                        var target = B.get (path.slice (0, k2));
+                        if (type (target) !== (type (pathitem) === 'string' ? 'object' : 'array')) return true;
+                     })) return eprefix + 'add/set didn\'t set parent target with the right type.';
+
+                     if (test [0] === 'add' && type (B.get (path)) !== 'array') return eprefix + 'add didn\'t set the target type correctly.';
+                     if (test [0] === 'set' && path.length) {
+                        if (type (B.get (path.slice (0, -1))) !== (type (last (path)) === 'string' ? 'object' : 'array')) return eprefix + 'set didn\'t set the target type correctly.';
+                     }
+                     if (test [0] === 'add' && ! eq (B.get (path).slice (B.get (path).length - args.length), args)) return eprefix + 'add didn\'t add the value correctly.';
+                     if (test [0] === 'set' && ! eq (B.get (test [1]), test [2])) return eprefix + 'set didn\'t set the value correctly.';
+                  });
+
+                  if (error) return error;
+
+                  B.forget (listener);
                });
 
-               Test ('teishi.eq', function () {
-                  if (! teishi.eq (Data, {})) return 'teishi.eq didn\'t compare an object properly.';
-                  if (teishi.eq (Data, [])) return 'teishi.eq didn\'t compare an object with an array properly.';
-                  if (teishi.eq ({}, [])) return 'teishi.eq didn\'t compare an object with an array properly.';
-                  if (teishi.eq ([], {})) return 'teishi.eq didn\'t compare an object with an array properly.';
-                  if (! teishi.eq (['a', 2], ['a', 2])) return 'teishi.eq didn\'t compare two arrays properly.';
-                  if (teishi.eq (['a', 2], ['a', 3])) return 'teishi.eq didn\'t compare two arrays properly.';
-               });
+               // We update the references since we've re-assigned Data and State during the above tests.
+               window.Data  = B.store.Data;
+               window.State = B.store.State;
 
-               B.do (x, 'test', 'B.ev');
-
+               B.say (x, 'test', 'B.ev');
             });
+
+            // *** B.EV ***
 
             B.listen ('test', 'B.ev', {burn: true}, function (x) {
 
-               Test ('B.ev validation', function () {
-                  if (B.ev () !== false) return 'B.ev accepted no arguments.';
-                  if (B.ev ('boo') !== false) return 'B.ev accepted invalid attrs.';
-                  if (B.ev (/booyah/) !== false) return 'B.ev accepted invalid attrs.';
-                  if (B.ev ({}) !== false) return 'B.ev accepted no evs.';
-                  if (B.ev ('') !== false) return 'B.ev accepted invalid evs.';
-                  if (B.ev ([['boo', 'a', 'b'], 'a']) !== false) return 'B.ev accepted invalid evs.';
-                  if (B.ev ({}, ['a', 'b']) !== false) return 'B.ev accepted ev with no path.';
-                  if (B.ev (['a', /notaverb/, []]) !== false) return 'B.ev accepted ev with invalid verb.';
-                  if (B.ev ({}, ['a', 'b', /notapath/]) !== false) return 'B.ev accepted ev with invalid path.';
-                  if (B.ev ([[['a', 'b', 'c']]]) !== false) return 'B.ev accepted ev with invalid path.';
-               });
-
                Test ('B.str', function () {
-                  if (B.str ([undefined, null, function () {return true}, false, /a/, 'a', 3, {a: '\'b', c: ['d"', NaN, Infinity], 'e-f': null}]) !== '[undefined, null, function () {return true}, false, /a/, "a", 3, {"a": "\'b", "c": ["d\\"", NaN, Infinity], "e-f": null}]') log ('Warning: B.str setting list of values in a different way.', B.str ([undefined, null, function () {return true}, false, /a/, 'a', 3, {a: '\'b', c: ['d"', NaN, Infinity], 'e-f': null}]));
+                  if (B.str ([undefined, null, function () {return true}, false, /a/, 'a', 3, {a: '\'b', c: ['d"', NaN, Infinity], 'e-f': null}]) !== '[undefined, null, function () {return true}, false, /a/, "a", 3, {"a": "\'b", "c": ["d\\"", NaN, Infinity], "e-f": null}]') clog ('Warning: B.str setting list of values in a different way.', B.str ([undefined, null, function () {return true}, false, /a/, 'a', 3, {a: '\'b', c: ['d"', NaN, Infinity], 'e-f': null}]));
                   var test = eval (B.str ([undefined, null, function () {return true}, false, /a/, 'a', 3, {a: '\'b', c: ['d"', NaN, Infinity], 'e-f': null}]));
 
                   if (test [0] !== undefined) return 'B.str didn\'t set undefined.';
@@ -350,1324 +343,88 @@
                   if (! test [7] || test [7].a !== "'b" || test [7].c [0] !== 'd"' || type (test [7].c [1]) !== 'nan' || test [7].c [2] !== Infinity) return 'B.str didn\'t set object properly.';
                });
 
+               Test ('B.ev validation', function () {
+                  var error = dale.stopNot ([
+                     [[/boo/],   'invalid verb'],
+                     [[[/boo/]], 'invalid verb'],
+                     [[null],   'invalid verb'],
+                     [[[null]], 'invalid verb'],
+                     [['boo'],   'no path'],
+                     [[['boo']], 'no path'],
+                     [['boo', 0.5],   'invalid path'],
+                     [[['boo'], [null]], 'invalid path']
+                  ], undefined, function (v, k) {
+                     if (B.ev.apply (null, v [0]) !== false) return 'B.ev accepted invalid arguments: ' + v [1] + ' (#' + (k + 1) + ').';
+                  });
+                  if (error) return error;
+               });
+
                Test ('B.ev valid input', function () {
 
-                  var r = B.ev (['on', 'a', 'b', {args: null}]);
-                  if (! r || r.on !== 'B.do ({from: {ev: "on", attrs: {}}}, "a", "b", null);') return 'B.ev didn\'t accept valid input #1.';
-                  r = B.ev ({}, ['on', 'a', 'b', {args: [null]}]);
-                  if (! r || r.on !== 'B.do ({from: {ev: "on", attrs: {}}}, "a", "b", null);') return 'B.ev didn\'t accept valid input #2.';
-                  r = B.ev (['on', 'a', 'b', {args: undefined}]);
-                  if (! r || r.on !== 'B.do ({from: {ev: "on", attrs: {}}}, "a", "b", undefined);') return 'B.ev didn\'t accept valid input #3.';
-                  r = B.ev (['on', 'a', 'b', {args: [undefined]}]);
-                  if (! r || r.on !== 'B.do ({from: {ev: "on", attrs: {}}}, "a", "b", undefined);') return 'B.ev didn\'t accept valid input #4.';
-                  r = B.ev (['on', 'a', 'b', {args: /a/}]);
-                  if (! r || r.on !== 'B.do ({from: {ev: "on", attrs: {}}}, "a", "b", /a/);') return 'B.ev didn\'t accept valid input #5.';
-                  r = B.ev (['on', 'a', 'b', {args: ['c', /a/, undefined, null, Infinity, NaN]}]);
-                  if (! r || r.on !== 'B.do ({from: {ev: "on", attrs: {}}}, "a", "b", "c", /a/, undefined, null, Infinity, NaN);') return 'B.ev didn\'t accept valid input #6.';
-                  r = B.ev (['on', 'a', 'b', {args: []}]);
-                  if (! r || r.on !== 'B.do ({from: {ev: "on", attrs: {}}}, "a", "b");') return 'B.ev didn\'t accept valid input #7.';
-                  r = B.ev (['on', 'a', 'b', {args: [['c', /a/, undefined, null, Infinity, NaN]]}]);
-                  if (! r || r.on !== 'B.do ({from: {ev: "on", attrs: {}}}, "a", "b", ["c", /a/, undefined, null, Infinity, NaN]);') return 'B.ev didn\'t accept valid input #8.';
-                  r = B.ev (['on', 'a', 'b', {args: true}]);
-                  if (! r || r.on !== 'B.do ({from: {ev: "on", attrs: {}}}, "a", "b", true);') return 'B.ev didn\'t accept valid input #9.';
-
-                  r = B.ev (['on', 'a', 'b']);
-                  if (! r || r.on !== 'B.do ({from: {ev: "on", attrs: {}}}, "a", "b", this.value);') return 'B.ev didn\'t accept valid input #10.';
-
-                  r = B.ev (['on', 'a', 'b', {rawArgs: ['event', 'this']}]);
-                  if (! r || r.on !== 'B.do ({from: {ev: "on", attrs: {}}}, "a", "b", event, this);') return 'B.ev didn\'t accept valid input #11.';
-
-                  r = B.ev (['on', 'a', 'b', {args: [[1], '"two'], rawArgs: ['event', 'this']}]);
-                  if (! r || r.on !== 'B.do ({from: {ev: "on", attrs: {}}}, "a", "b", [1], "\\"two", event, this);') return 'B.ev didn\'t accept valid input #11 bis.';
-
-                  r = B.ev (['on, off', 'a', 'b']);
-                  if (! r || r.on !== 'B.do ({from: {ev: "on", attrs: {}}}, "a", "b", this.value);' || r.off !== 'B.do ({from: {ev: "off", attrs: {}}}, "a", "b", this.value);' || dale.keys (r).length !== 2) return 'B.ev didn\'t create comma-separated events #1.';
-
-                  r = B.ev (['on, off', 'a', 'b', {args: true}]);
-
-                  if (! r || r.on !== 'B.do ({from: {ev: "on", attrs: {}}}, "a", "b", true);' || r.off !== 'B.do ({from: {ev: "off", attrs: {}}}, "a", "b", true);' || dale.keys (r).length !== 2) return 'B.ev didn\'t create comma-separated events #2.';
-
-                  r = B.ev (['on', 'a', 'b', {args: 2, rawArgs: 'event'}]);
-                  if (! r || r.on !== 'B.do ({from: {ev: "on", attrs: {}}}, "a", "b", 2, event);') return 'B.ev didn\'t accept valid input #12';
-
-                  r = B.ev ([['on', 'a', 'b', {args: 2, rawArgs: 'event'}], ['off', 'a', 'b', {args: 2, rawArgs: 'event'}]]);
-                  if (! r || r.on !== 'B.do ({from: {ev: "on", attrs: {}}}, "a", "b", 2, event);' || r.off !== 'B.do ({from: {ev: "off", attrs: {}}}, "a", "b", 2, event);') return 'B.ev didn\'t accept valid input #13';
-
-                  r = B.ev (['on', 'a', 'b', 2]);
-                  if (! r || r.on !== 'B.do ({from: {ev: "on", attrs: {}}}, "a", "b", 2);') return 'B.ev didn\'t accept valid input #14';
-
-                  var r = B.ev (['on', 'a', 'b', null]);
-                  if (! r || r.on !== 'B.do ({from: {ev: "on", attrs: {}}}, "a", "b", null);') return 'B.ev didn\'t accept valid input #15.';
-                  r = B.ev (['on', 'a', 'b', [null]]);
-                  if (! r || r.on !== 'B.do ({from: {ev: "on", attrs: {}}}, "a", "b", [null]);') return 'B.ev didn\'t accept valid input #16.';
-                  r = B.ev (['on', 'a', 'b', undefined]);
-                  if (! r || r.on !== 'B.do ({from: {ev: "on", attrs: {}}}, "a", "b", undefined);') return 'B.ev didn\'t accept valid input #17.';
-                  r = B.ev (['on', 'a', 'b', [undefined]]);
-                  if (! r || r.on !== 'B.do ({from: {ev: "on", attrs: {}}}, "a", "b", [undefined]);') return 'B.ev didn\'t accept valid input #18.';
-                  r = B.ev (['on', 'a', 'b', /a/]);
-                  if (! r || r.on !== 'B.do ({from: {ev: "on", attrs: {}}}, "a", "b", /a/);') return 'B.ev didn\'t accept valid input #19.';
-                  r = B.ev (['on', 'a', 'b', 'c', /a/, undefined, null, Infinity, NaN]);
-                  if (! r || r.on !== 'B.do ({from: {ev: "on", attrs: {}}}, "a", "b", "c", /a/, undefined, null, Infinity, NaN);') return 'B.ev didn\'t accept valid input #20.';
-                  r = B.ev (['on', 'a', 'b', []]);
-                  if (! r || r.on !== 'B.do ({from: {ev: "on", attrs: {}}}, "a", "b", []);') return 'B.ev didn\'t accept valid input #21.';
-                  r = B.ev (['on', 'a', 'b', ['c', /a/, undefined, null, Infinity, NaN]]);
-                  if (! r || r.on !== 'B.do ({from: {ev: "on", attrs: {}}}, "a", "b", ["c", /a/, undefined, null, Infinity, NaN]);') return 'B.ev didn\'t accept valid input #22.';
-                  r = B.ev (['on', 'a', 'b', true]);
-                  if (! r || r.on !== 'B.do ({from: {ev: "on", attrs: {}}}, "a", "b", true);') return 'B.ev didn\'t accept valid input #23.';
-
-                  r = B.ev (['on', 'a', 'b', [1], '"two', {rawArgs: ['event', 'this']}]);
-                  if (! r || r.on !== 'B.do ({from: {ev: "on", attrs: {}}}, "a", "b", [1], "\\"two", event, this);') return 'B.ev didn\'t accept valid input #24.';
-
-                  r = B.ev (['on, off, onoff', 'a', 'b', true]);
-                  if (! r || r.on !== 'B.do ({from: {ev: "on", attrs: {}}}, "a", "b", true);' || r.off !== 'B.do ({from: {ev: "off", attrs: {}}}, "a", "b", true);' || dale.keys (r).length !== 3 || ! r.onoff || r.onoff !== 'B.do ({from: {ev: "onoff", attrs: {}}}, "a", "b", true);') return 'B.ev didn\'t create comma-separated events #3.';
-
-                  r = B.ev (['on,off', 'a', 'b', true]);
-                  if (! r || r.on !== 'B.do ({from: {ev: "on", attrs: {}}}, "a", "b", true);' || r.off !== 'B.do ({from: {ev: "off", attrs: {}}}, "a", "b", true);' || dale.keys (r).length !== 2) return 'B.ev didn\'t create comma-separated events #4.';
-
-                  r = B.ev (['on,      off', 'a', 'b', true]);
-                  if (! r || r.on !== 'B.do ({from: {ev: "on", attrs: {}}}, "a", "b", true);' || r.off !== 'B.do ({from: {ev: "off", attrs: {}}}, "a", "b", true);' || dale.keys (r).length !== 2) return 'B.ev didn\'t create comma-separated events #5.';
-
-                  r = B.ev (['on', 'a', 'b', 2, {rawArgs: 'event'}]);
-                  if (! r || r.on !== 'B.do ({from: {ev: "on", attrs: {}}}, "a", "b", 2, event);') return 'B.ev didn\'t accept valid input #25';
-
-                  r = B.ev ([['on', 'a', 'b', 2, {rawArgs: 'event'}], ['off', 'a', 'b', 2, {rawArgs: 'event'}]]);
-                  if (! r || r.on !== 'B.do ({from: {ev: "on", attrs: {}}}, "a", "b", 2, event);' || r.off !== 'B.do ({from: {ev: "off", attrs: {}}}, "a", "b", 2, event);') return 'B.ev didn\'t accept valid input #26.';
-
-               });
-
-               B.do (x, 'test', 'B.view');
-
-            });
-
-            var e = function () {};
-            var f = function () {};
-            var getid = function () {return B.B + (B.count - 1)}
-
-            B.listen ('test', 'B.view', {burn: true}, function (x) {
-
-               var initialLength = dale.keys (B.routes).length;
-
-               Test ('B.view validation', function () {
-                  var routes = dale.keys (B.routes);
-
-                  if (B.view (/notapath/, e) !== false) return 'B.view accepted invalid path.';
-                  if (B.view (['path'], {attrs: {id: 'myid'}}, e) !== false) return 'B.view accepted id.';
-
-                  if (B.view ([], /notafun/) !== false) return 'B.view accepted invalid rfun.';
-
-                  if (B.view ([], {tag: 'paprika'}, e) !== false) return 'B.view accepted invalid tag.';
-                  if (B.view ([], {tag: /p/}, e) !== false) return 'B.view accepted invalid tag.';
-
-                  if (B.view ([], {attrs: /paprika/}, e) !== false) return 'B.view accepted invalid attrs.';
-
-                  if (B.view ([], {ondraw: /notafun/}, e) !== false) return 'B.view accepted invalid ondraw.';
-                  if (B.view ([], {onforget: /notafun/}, e) !== false) return 'B.view accepted invalid onforget.';
-
-                  if (B.view ('verb', 'path', e) !== false) return 'B.view accepted verb + path.';
-
-                  if (B.view ('path', {listen: {verb: 'a', path: 'b', rfun: e}}, e) !== false) return 'B.view accepted listen that is object.';
-
-                  if (B.view ('path', {listen: [{verb: 'a', path: 'b'}]}, e) !== false) return 'B.view accepted listen with invalid args.';
-
-                  if (B.view ('path', {listen: [null, 'path', e]}, e) !== false) return 'B.view accepted invalid verb in listen.';
-
-                  if (B.view ('path', {listen: [[{}, 'path', e]]}, e) !== false) return 'B.view accepted invalid verb in listen.';
-
-                  if (B.view ('path', {listen: ['verb', null, e]}, e) !== false) return 'B.view accepted invalid path in listen.';
-
-                  if (B.view ('path', {listen: [['verb', [[]], e]]}, e) !== false) return 'B.view accepted invalid path in listen.';
-
-                  if (B.view ('path', {listen: [['verb', 'path', e], ['verb', {}, e]]}, e) !== false) return 'B.view accepted invalid second listen.';
-
-                  if (B.view ('path', {listen: [['verb', 'path', e], ['verb', null, e]]}, e) !== false) return 'B.view accepted invalid second listen.';
-
-                  if (B.view ('path', {listen: ['a', 'b', {id: 'anything'}, e]}) !== false) return 'B.view accepted listener with id.';
-
-                  if (B.view ('path', {listen: [['verb', 'path', e], ['a', 'b', {id: 'anything'}, e]]}) !== false) return 'B.view accepted second listener with id.';
-
-                  if (B.view ('path', {listen: [[['verb', 'path', e]]]}, e) !== false) return 'B.view accepted invalid listen that is too nested.';
-
-                  var invalidView = B.view (['a', 'path'], {ondraw: e, onforget: f}, function () {
-                     return /notaview/;
+                  var error = dale.stopNot ([
+                     [[], ''],
+                     [['a', 'b'], ' B.say ({"from": id}, "a", "b", this.value);'],
+                     [['a', ['b']], ' B.say ({"from": id}, "a", ["b"], this.value);'],
+                     [['a', 'b', 'c'], ' B.say ({"from": id}, "a", "b", "c");'],
+                     [['a', 'b', undefined], ' B.say ({"from": id}, "a", "b", undefined);'],
+                     [['a', 'b', null], ' B.say ({"from": id}, "a", "b", null);'],
+                     [['a', 'b', null, true, NaN], ' B.say ({"from": id}, "a", "b", null, true, NaN);'],
+                     [['a', 'b', /null/], ' B.say ({"from": id}, "a", "b", /null/);'],
+                     [['a', 'b', {c: 'd'}], ' B.say ({"from": id}, "a", "b", {"c": "d"});'],
+                     [['a', 'b', [{c: 'd'}]], ' B.say ({"from": id}, "a", "b", [{"c": "d"}]);'],
+                     [['a', 'b', {raw: 'event'}], ' B.say ({"from": id}, "a", "b", event);'],
+                     [['a', 'b', 'c', {raw: 'event'}], ' B.say ({"from": id}, "a", "b", "c", event);'],
+                     [['a', 'b', 'c', {raw: 0}], ' B.say ({"from": id}, "a", "b", "c", {"raw": 0});'],
+                     [['a', 'b', 'c', {raw: ['not', 'a', 'string']}], ' B.say ({"from": id}, "a", "b", "c", {"raw": ["not", "a", "string"]});'],
+                     [['a', 'b', 'c', {raw: 'event', ignored: 'field'}], ' B.say ({"from": id}, "a", "b", "c", event);'],
+                     [['a', 'b', '"two', {raw: 'event'}, {raw: 'this'}], ' B.say ({"from": id}, "a", "b", "\\"two", event, this);'],
+                     [[['a', 'b'], ['c', 'd']], ' B.say ({"from": id}, "a", "b", this.value); B.say ({"from": id}, "c", "d", this.value);', true],
+                     [[['a', 'b'], ['c', 'd', {raw: 'event.preventDefault'}]], ' B.say ({"from": id}, "a", "b", this.value); B.say ({"from": id}, "c", "d", event.preventDefault);', true]
+                  ], undefined, function (v, k) {
+                     var result = 'var id = B.say ("ev", event.type, B.evh (this));' + v [1];
+                     if (B.ev.apply (null, v [0]) !== result) return 'B.ev error with valid arguments #' + (k + 1) + ': ' + B.ev.apply (null, v [0]) + ' Expected: ' + result;
                   });
-
-                  if (type (invalidView) !== 'array') return 'B.view didn\'t return lith when rfun returned invalid lith.';
-                  if (lith.g (invalidView) !== '<div id="в' + (B.count - 1) + '" path-в="a:path"><pre>Invalid lith: /notaview/</pre></div>') return 'B.view didn\'t return informative <pre> when rfun returned invalid lith';
-
-                  var id = B.B + (B.count - 1);
-
-                  if (B.routes [id].ondraw !== e) return 'B.view didn\'t correctly place ondraw in the route.';
-                  if (B.routes [id].onforget !== f) return 'B.view didn\'t correctly place onforget in the route.';
-                  if (type (B.routes [id].view) !== 'array') return 'B.view didn\t correctly place view in the route.';
-                  if (B.routes [id].view [0] !== 'pre') return 'B.view didn\t correctly place view in the route.';
-
-                  B.forget (id);
-
-                  if (dale.keys (B.routes).length !== routes.length) return 'B.view generated invalid routes.';
-               });
-
-               Test ('B.view valid input', function () {
-
-                  var initial = B.count;
-
-                  var view = B.view ([2, 3], e);
-
-                  if (type (view) !== 'array' || view [0] !== 'div' || type (view [1]) !== 'object' || view [1].id !== getid () || view [1] ['path-' + B.B] !== [2, 3].join (':')) return 'B.view didn\'t initialize view attributes properly with rfun returning undefined.';
-
-                  if (! B.routes [getid ()] || B.routes [getid ()].view !== undefined) return 'B.view didn\'t generate properly route with rfun returning undefined.';
-
-                  view = B.view ('a', function () {return 2});
-
-                  if (type (view) !== 'array' || view [0] !== 'div' || type (view [1]) !== 'object' || view [1].id !== getid () || view [1] ['path-' + B.B] !== 'a') return 'B.view didn\'t initialize view attributes properly #1.';
-
-                  if (! B.routes [getid ()] || B.routes [getid ()].view !== 2) return 'B.view didn\'t properly generate route #1.';
-
-                  view = B.view (['State', 'view'], {tag: 'p', attrs: {}, ondraw: e, onforget: f}, function () {return ['a', 1]});
-
-                  if (type (view) !== 'array' || view [0] !== 'p' || type (view [1]) !== 'object' || view [1].id !== getid () || view [1] ['path-' + B.B] !== 'State:view') return 'B.view didn\'t initialize view attributes properly #2.';
-
-                  if (! B.routes [getid ()] || B.routes [getid ()].verb !== 'change' || B.routes [getid ()].priority !== -1 || ! teishi.eq (B.routes [getid ()].view, ['a', 1]) || B.routes [getid ()].ondraw !== e || B.routes [getid ()].onforget !== f) return 'B.view didn\'t properly generate route #2.';
-
-                  view = B.view ({}, ['State', 'items', 0], {tag: 'input', attrs: {class: 'blue', type: 'text'}}, function () {});
-
-                  if (type (view) !== 'array' || view [0] !== 'input' || type (view [1]) !== 'object' || ! teishi.eq ({id: getid (), 'path-в': 'State:items:0', class: 'blue', type: 'text'}, view [1])) return 'B.view didn\'t initialize view attributes properly #3.';
-
-                  if (! B.routes [getid ()] || B.routes [getid ()].verb !== 'change' || B.routes [getid ()].priority !== -1 || ! teishi.eq (B.routes [getid ()].view, undefined)) return 'B.view didn\'t properly generate route #3.';
-
-                  view = B.view ('c', {listen: ['a', 'b', e]}, function () {});
-
-                  if (type (view) !== 'array') return 'B.view didn\'t properly generate route with listener #1.';
-
-                  var listeners = dale.fil (B.routes, undefined, function (route) {
-                     if (route.parent === getid ()) return route;
-                  });
-
-                  if (listeners.length !== 1 || ! teishi.eq (listeners [0], {verb: 'a', path: ['b'], id: listeners [0].id, rfun: e, parent: getid ()})) return 'B.view didn\'t register listeners properly #1.';
-
-                  view = B.view ('c', {listen: [['a', 'b', e]]}, function () {});
-
-                  if (type (view) !== 'array' || B.routes [getid ()].verb !== 'change' || B.routes [getid ()].priority !== -1) return 'B.view didn\'t properly generate route with listener #2.';
-
-                  listeners = dale.fil (B.routes, undefined, function (route) {
-                     if (route.parent === getid ()) return route;
-                  });
-
-                  if (listeners.length !== 1 || ! teishi.eq (listeners [0], {verb: 'a', path: ['b'], id: listeners [0].id, rfun: e, parent: getid ()})) return 'B.view didn\'t register listeners properly #2.';
-
-                  view = B.view ('c', {listen: [[{verb: 'a', path: 'b'}, e]]}, function () {});
-
-                  if (type (view) !== 'array' || B.routes [getid ()].verb !== 'change' || B.routes [getid ()].priority !== -1) return 'B.view didn\'t properly generate route with listener #3.';
-
-                  listeners = dale.fil (B.routes, undefined, function (route) {
-                     if (route.parent === getid ()) return route;
-                  });
-
-                  if (listeners.length !== 1 || ! teishi.eq (listeners [0], {verb: 'a', path: ['b'], id: listeners [0].id, rfun: e, parent: getid ()})) return 'B.view didn\'t register listeners properly #3.';
-
-                  view = B.view ('c', {listen: [['a', 'b', {parent: 'add', priority: 2, burn: true}, e]]}, function () {});
-
-                  if (type (view) !== 'array' || B.routes [getid ()].verb !== 'change' || B.routes [getid ()].priority !== -1) return 'B.view didn\'t properly generate route with listener #4.';
-
-                  var getListener = function () {
-                     return dale.stopNot (B.routes, undefined, function (route) {
-                        if (route.parent === 'add') return route;
-                     });
-                  }
-
-                  if (! teishi.eq (getListener (), {id: getListener ().id, verb: 'a', path: ['b'], parent: 'add', priority: 2, burn: true, rfun: e})) return 'B.view didn\'t register listeners properly #4.';
-
-                  B.forget (getListener ().id);
-
-                  view = B.view ('c', {listen: ['a', 'b', {parent: 'add', priority: 2, burn: true}, e]}, function () {});
-
-                  if (type (view) !== 'array' || B.routes [getid ()].verb !== 'change' || B.routes [getid ()].priority !== -1) return 'B.view didn\'t properly generate route with listener #5.';
-
-                  if (! teishi.eq (getListener (), {id: getListener ().id, verb: 'a', path: ['b'], parent: 'add', priority: 2, burn: true, rfun: e})) return 'B.view didn\'t register listeners properly #5.';
-
-                  B.forget (getListener ().id);
-
-                  view = B.view ('c', {listen: [['a', 'b', {parent: 'add', priority: 2, burn: true}, e], ['c', 'd', f]]}, function () {});
-
-                  if (type (view) !== 'array' || B.routes [getid ()].verb !== 'change' || B.routes [getid ()].priority !== -1) return 'B.view didn\'t properly generate route with listener #6.';
-
-                  if (! teishi.eq (getListener (), {id: getListener ().id, verb: 'a', path: ['b'], parent: 'add', priority: 2, burn: true, rfun: e})) return 'B.view didn\'t register listeners properly #6.';
-
-                  B.forget (getListener ().id);
-
-                  listeners = dale.fil (B.routes, undefined, function (route) {
-                     if (route.parent === getid ()) return route;
-                  });
-
-                  if (listeners.length !== 1 || ! teishi.eq (listeners [0], {verb: 'c', path: ['d'], id: listeners [0].id, rfun: f, parent: getid ()})) return 'B.view didn\'t register listeners properly #6.';
-
-                  view = B.view ('c', {listen: []}, e);
-
-                  if (! teishi.eq (view, ['div', {id: 'в20', 'path-в': 'c'}, ['LITERAL', '']])) return 'B.view didn\'t create view with empty listener.';
-
-                  dale.do (dale.times (B.count - initial, initial), function (id) {
-                     id = B.B + id;
-                     B.forget (id);
-                  });
-
-                  if (dale.keys (B.routes).length !== initialLength) return 'Cleanup failed #1.';
-               });
-
-               Test ('B.mount & B.unmount invalid input', function () {
-                  if (B.mount ('p') !== false) return 'B.mount accepted invalid target #1.';
-                  if (B.mount ('#a p') !== false) return 'B.mount accepted invalid target #2.';
-                  if (B.mount (22) !== false) return 'B.mount accepted invalid target #3.';
-                  if (B.mount ({}) !== false) return 'B.mount accepted invalid target #4.';
-                  if (B.mount ('body', /a/) !== false) return 'B.mount accepted invalid view #1.';
-                  if (B.mount ('body', {}) !== false) return 'B.mount accepted invalid view #2.';
-                  if (B.mount ('body', null) !== false) return 'B.mount accepted invalid view #3.';
-                  if (B.mount ('#nosuch', []) !== false) return 'B.mount accepted empty target.';
-
-                  if (B.unmount ('p') !== false) return 'B.unmount accepted invalid target #1.';
-                  if (B.unmount ('#a p') !== false) return 'B.unmount accepted invalid target #2.';
-                  if (B.unmount (22) !== false) return 'B.unmount accepted invalid target #3.';
-                  if (B.unmount ({}) !== false) return 'B.unmount accepted invalid target #4.';
-                  if (B.unmount ('#nosuch', []) !== false) return 'B.unmount accepted empty target.';
-               });
-
-
-               Test ('B.mount & B.unmount valid', function () {
-
-                  var original = c ('body *');
-
-                  B.mount ('body', B.view ([], function () {return 1}));
-
-                  var view = c ('#' + getid ());
-
-                  if (! view) return 'B.mount didn\'t place view #1.';
-                  if (view.innerHTML !== '1') return 'B.mount didn\'t place contents of view correctly #1.';
-                  if (c ('body *') [0] !== view) return 'B.mount didn\'t place view in the right place #1.';
-
-                  B.unmount ('body');
-
-                  if (dale.stop (c ('body *'), true, function (el, k) {
-                     return el !== original [k];
-                  })) return 'B.mount & B.unmount didn\'t leave everything unchanged.';
-
-                  B.mount ('body', B.view ([], function () {
-                     return B.view ([], {onforget: function (x) {
-                        if (type (x) !== 'object') throw new Error ('onforget from unmount received wrong context.');
-                        if (type (x.from) !== 'array') throw new Error ('onforget from unmount received wrong x.from.');
-                        if (x.from [0].ev !== 'unmount') throw new Error ('onforget from unmount received wrong x.from [0].ev.');
-                        if (x.from [0].target !== 'body') throw new Error ('onforget from unmount received wrong x.from [0].target.');
-                        if (type (x.route) !== 'object') throw new Error ('onforget from unmount received wrong x.route.');
-                        if (type (x.route.id) !== 'string') throw new Error ('onforget from unmount received wrong id.');
-                     }}, function () {
-                        return {a: 'b'};
-                     });
-                  }));
-
-                  view = c ('#' + getid ());
-
-                  log (view.innerHTML);
-
-                  if (! view) return 'B.mount didn\'t place view #2.';
-                  if (view.innerHTML !== '<pre>Invalid lith: {\n   "a": "b"\n}</pre>' && view.innerHTML !== '<pre>Invalid lith: {\n   "a":"b"\n}</pre>') return 'B.mount didn\'t place contents of view correctly #2.'
-
-                  if (c ('body * *') [0] !== view) return 'B.mount didn\'t place view in the right place #2.';
-
-                  B.mount ('body', B.view ([], function () {return ['p', 'a']}));
-
-                  view = c ('#' + getid ());
-
-                  if (! view) return 'B.mount didn\'t place view #3.';
-                  if (view.innerHTML !== '<p>a</p>') return 'B.mount didn\'t place contents of view correctly #3.';
-                  if (c ('body *') [0] !== view) return 'B.mount didn\'t place view in the right place #3.';
-
-                  B.unmount ('body');
-
-                  if (dale.stop (c ('body *'), true, function (el, k) {
-                     return el !== original [k];
-                  })) return 'B.mount & B.unmount didn\'t leave everything unchanged.';
-
-                  var counter = 0;
-
-                  B.mount ('body', B.view ([], {
-                     ondraw: function (x) {
-                        if (type (x) !== 'object') throw new Error ('ondraw received wrong context.');
-                        if (type (x.from) !== 'array') throw new Error ('ondraw received wrong x.from.');
-                        if (type (x.route) !== 'object') throw new Error ('ondraw received wrong x.route.');
-                        if (x.route.id !== getid ()) throw new Error ('ondraw received wrong id.');
-                        if (counter !== 0)   throw new Error ('ondraw timing error.');
-                        if (! c ('#' + x.route.id))  throw new Error ('ondraw was executed before the DOM elements were placed.');
-                        if (x.from [0].ev !== 'mount') throw new Error ('ondraw from mount received wrong x.from [0].ev.');
-                        if (x.from [0].target !== 'body') throw new Error ('ondraw from mount received wrong x.from [0].target.');
-                        counter++;
-                     },
-                     onforget: function (x) {
-                        if (type (x) !== 'object') throw new Error ('onforget received wrong context.');
-                        if (type (x.from) !== 'array') throw new Error ('onforget received wrong x.from.');
-                        if (type (x.route) !== 'object') throw new Error ('onforget received wrong x.route.');
-                        if (x.route.id !== getid ()) throw new Error ('onforget received wrong id.');
-                        if (counter !== 1)   throw new Error ('onforget timing error.');
-                        if (! c ('#' + x.route.id))  throw new Error ('onforget was executed after the DOM elements were removed.');
-                        counter++;
-                     },
-                  }, function () {return ['p', {class: 'vamo'}]}));
-
-                  view = c ('#' + getid ());
-
-                  if (! view) return 'B.mount didn\'t place view #4.';
-                  if (view.innerHTML !== '<p class="vamo"></p>') return 'B.mount didn\'t place contents of view correctly #4.';
-                  if (c ('body *') [0] !== view) return 'B.mount didn\'t place view in the right place #4.';
-
-                  if (counter !== 1) return 'ondraw was not executed.';
-
-                  B.unmount ('body');
-
-                  if (counter !== 2) return 'onforget was not executed.';
-
-                  if (dale.stop (c ('body *'), true, function (el, k) {
-                     return el !== original [k];
-                  })) return 'B.mount & B.unmount didn\'t leave everything unchanged.';
+                  if (error) return error;
 
                });
 
-               B.do (x, 'test', 'init');
-            });
-
-            var Views = {};
-
-            // *** INIT ***
-
-            B.listen ('test', 'init', {burn: true}, function (x) {
-
-               // *** BASE VIEW ***
-
-               Views.baseCSS = [
-                  ['body', {
-                     'background-color': '#c9c9c9',
-                     'font-family': '"Arial Narrow", Arial, sans-serif'
-                  }],
-                  ['#canvas', {
-                     width: .9,
-                     'min-height': 200,
-                     'border-top, border-bottom': 'solid 1px gray',
-                     'border-left, border-right': 'solid 2px gray',
-                     'margin, overflow': 'auto',
-                     'background-color': 'white'
-                  }],
-                  ['a, u', {cursor: 'pointer', 'text-decoration': 'underline', color: 'blue'}]
-               ];
-
-               Views.base = ['div', {id: 'canvas'}, [
-                  B.view (['State', 'view'], function (x, view) {
-                     return [
-                        ['style', Views.baseCSS],
-                        B.view ('State', function (x, state) {
-                           return Views [view] ? Views [view] () : state.default;
-                        })
-                     ];
-                  })
-               ]];
-
-               B.mount ('body', Views.base);
-
-               B.do (x, 'set', ['State', 'default'], [['To be'], ' determined']);
-
-               Test ('canvas initialization', function () {
-                  if (c ('body #canvas').length        !== 1) return 'Canvas not placed.';
-                  if (c ('body #canvas style').length  !== 1) return 'Inner style not placed.';
-                  if (c ('body #canvas div div').length !== 1) return 'Inner div not placed.';
-
-                  B.do (x, 'set', ['State', 'default'], ['h1', [['To be'], ' determined']]);
-                  if (c ('body #canvas div div h1') [0].innerHTML !== 'To be determined') return 'Content of inner div not placed properly.';
-
-                  var evs = B.eventlog.length;
-                  B.do (x, 'set', ['State', 'default'], ['h1', [['To be'], ' determined']]);
-                  if (B.eventlog.length - evs !== 1) return 'B.change didn\'t prevent redrawing on equal set.';
-                  if (c ('body #canvas div div h1') [0].innerHTML !== 'To be determined') return 'Content of inner div not placed properly.';
-
-               });
-
-               Test ('viewroutes', function () {
-                  var viewRoutes = dale.fil (dale.keys (B.routes), undefined, function (v) {
-                     if (v.match ('в')) return v;
-                  });
-                  if (viewRoutes.length !== 2) return 'Unexpected viewroutes.';
-                  var viewRoute = B.routes [viewRoutes [0]];
-                  if (viewRoute.verb !== 'change') return 'Invalid viewroute verb #1.';
-                  if (! teishi.eq (viewRoute.path, ['State', 'view'])) return 'Invalid viewroute path #1.';
-                  if (type (viewRoute.view) !== 'array') return 'Invalid viewroute view #1.';
-                  if (viewRoute.priority !== -1) return 'Invalid viewroute priority #1.';
-
-                  viewRoute = B.routes [viewRoutes [1]];
-                  if (viewRoute.verb !== 'change') return 'Invalid viewroute verb #2.';
-                  if (! teishi.eq (viewRoute.path, ['State'])) return 'Invalid viewroute path #2.';
-                  if (type (viewRoute.view) !== 'array') return 'Invalid viewroute view #2.';
-                  if (viewRoute.priority !== -2) return 'Invalid viewroute priority #2.';
-               });
-
-               Test ('dangling', function () {
-
-                  var d1 = B.view ([], {onforget: function (x) {
-                     if (type (x) !== 'object') throw new Error ('onforget from dangling error received wrong context.');
-                     if (type (x.from) !== 'array') throw new Error ('onforget from dangling error received wrong x.from.');
-                     if (x.from [0].ev !== 'danglingView') throw new Error ('onforget from dangling error received wrong x.from [0].ev.');
-                     if (type (x.route) !== 'object') throw new Error ('onforget from dangling error received wrong x.route.');
-                     if (type (x.route.id) !== 'string') throw new Error ('onforget from dangling error received wrong id.');
-                     if (type (x.route.path) !== 'array' || x.route.path.length !== 0) throw new Error ('onforget from dangling error received wrong x.route.path.');
-                  }}, function () {});
-
-                  B.do (x, 'set', ['Data', 'test'], 1);
-
-                  var viewRoutes = dale.fil (dale.keys (B.routes), undefined, function (v) {
-                     if (v.match ('в')) return v;
-                  });
-
-                  if (viewRoutes.length !== 2) return 'Dangling route was not removed.';
-
-                  delete B.eventlog [0].from;
-                  delete B.eventlog [0].route;
-
-                  if (! teishi.eq (B.eventlog [0], {verb: 'change', path: ['Data', 'test']})) return 'change event fired with wrong parameters.';
-
-               });
-
-               B.do (x, 'test', 'args');
-            });
-
-            // *** ARGS TEST ***
-
-            B.listen ('test', 'args', {burn: true}, function (x) {
-
-               Views.args = function () {
-                  return [
-                     B.view (['Data', 'title'], {tag: 'h1', attrs: {class: 'opa'}}, function (x, title) {return title}),
-                     ['div', {class: 'nav'}, B.view (['Data', 'items'], function (x, items) {
-                        return ['ul', {class: 'items'}, dale.do (items, function (v, k) {
-                           return ['li', {class: k}, v];
-                        })];
-                     })],
-                  ];
-               }
-
-               B.do (x, 'set', ['State', 'view'], 'args');
-
-               Data.items = [];
-
-               Test ('change view to args', function () {
-                  if (State.view !== 'args') return 'Data item not set!';
-               });
-
-               Test ('args view placed', function () {
-                  if (! c ('#canvas div div.nav')) return 'nav div not placed.';
-                  if (c ('#canvas div div.nav div ul.items') [0].innerHTML !== '') return 'ul not placed.';
-               });
-
-               B.do (x, 'set', ['Data', 'title'], 'One big title.');
-
-               Test ('view changed after set operation', function () {
-                  if (c ('#canvas h1') [0].innerHTML !== Data.title) return 'title not placed correctly.';
-               });
-
-               dale.do (['a', 'b', 'c', 'd'], function (v) {
-                  B.do (x, 'add', ['Data', 'items'], v);
-               });
-
-               Test ('views updated after add operation', function () {
-                  if (JSON.stringify (Data.items) !== JSON.stringify (['a', 'b', 'c', 'd'])) return 'add not working properly.';
-                  if (c ('ul.items li').length !== 4) return 'ul contents not updated.';
-               });
-
-               B.do (x, 'rem', ['Data', 'items'], [0, 2]);
-
-               Test ('views updated after rem operation', function () {
-                  if (JSON.stringify (Data.items) !== JSON.stringify (['b', 'd'])) return 'rem not working properly.';
-                  if (c ('ul.items li').length !== 2) return 'ul contents not updated.';
-                  if (c ('ul.items li') [0].innerHTML !== 'b') return 'rem not working properly.';
-               });
-
-               B.do (x, 'set', ['Data', 'items', 1], 'e');
-
-               Test ('views updated after set in array', function () {
-                  if (JSON.stringify (Data.items) !== JSON.stringify (['b', 'e'])) return 'rem not working properly.';
-                  if (c ('ul.items li').length !== 2) return 'ul contents not updated.';
-                  if (c ('ul.items li') [1].innerHTML !== 'e') return 'rem not working properly.';
-               });
-
-               B.do (x, 'set', ['Data', 'items'], {a: 'b', c: 'd'});
-
-               Test ('views updated after setting object', function () {
-                  if (JSON.stringify (Data.items) !== JSON.stringify ({a: 'b', c: 'd'})) return 'rem not working properly.';
-                  if (c ('ul.items li').length !== 2) return 'ul contents not updated.';
-                  if (c ('ul.items li.a').length !== 1) return 'ul contents not updated.';
-                  if (c ('ul.items li') [1].innerHTML !== 'd') return 'rem not working properly.';
-               });
-
-               B.do (x, 'rem', ['Data', 'items'], 'a');
-
-               Test ('views updated after removal', function () {
-                  if (JSON.stringify (Data.items) !== JSON.stringify ({c: 'd'})) return 'rem not working properly.';
-                  if (c ('ul.items li').length !== 1) return 'ul contents not updated.';
-                  if (c ('ul.items li.c').length !== 1) return 'ul contents not updated.';
-               });
-
-               B.do (x, 'rem', ['Data', 'items'], dale.keys (Data.items));
-
-               Test ('views updated after complete removal', function () {
-                  if (JSON.stringify (Data.items) !== JSON.stringify ({})) return 'rem not working properly.';
-                  if (c ('ul.items li').length !== 0) return 'ul contents not updated.';
-                  if (c ('ul.items li.c').length !== 0) return 'ul contents not updated.';
-               });
-
-               B.do (x, 'test', 'B.view additional');
-
-            });
-
-            // *** B.VIEW ADDITIONAL TESTS ***
-
-            B.listen ('test', 'B.view additional', {burn: true}, function (x) {
-
-               var counter1 = 0, counter2 = 0;
-
-               Views.escapes = function () {
-                  return B.view (['same', 'path'], function () {
-                     return [
-                        ['table', [
-                           ['thead', ['th']],
-                           ['tr', ['td', '"I have \'quotes\'!"']]
-                        ]],
-                        B.view (['same', 'path'], function () {
-                           return ['table', ['tbody', ['tr', ['td', '<`Me & you too!`>']]]];
-                        }),
-                        B.view (['same', 'path'], function () {
-                           return ['table', ['tr', ['td', '<eval>hack ()</eval>']]];
-                        }),
-                        B.view (['same', 'path'], function () {
-                           return ['table', [['thead'], [['tr', ['td', '<eval>hack ()</eval>']], ['br']]]];
-                        }),
-                        B.view (['same', 'path'], function () {
-                           return ['table', ['thead']];
-                        }),
-                        B.view (['same', 'path'], {ondraw: function () {
-                           if (B.get ('same', 'path') === undefined) B.do (x, 'set', ['same', 'path'], 1);
-                        }}, function () {
-                           return ['table', ['br']];
-                        })
-                     ];
-                  });
-               }
-
-               B.do (x, 'set', ['State', 'view'], 'escapes');
-
-               Test ('B.view quotes & special characters; and tbodys!', function () {
-
-                  B.do (x, 'change', ['same', 'path']);
-                  if (c ('table').length !== 6) return 'tables weren\'t created.';
-                  if (c ('tbody').length !== 5) return 'tbodys weren\'t created.';
-
-                  if (c ('table') [0].innerHTML !== '<thead><th></th></thead><tbody><tr><td>"I have \'quotes\'!"</td></tr></tbody>') return 'table #1 was not created properly.';
-                  if (c ('table') [1].innerHTML !== '<tbody><tr><td>&lt;`Me &amp; you too!`&gt;</td></tr></tbody>') return 'table #2 was not created properly.';
-                  if (c ('table') [2].innerHTML !== '<tbody><tr><td>&lt;eval&gt;hack ()&lt;/eval&gt;</td></tr></tbody>') return 'table #3 was not created properly.';
-                  if (c ('table') [3].innerHTML !== '<thead></thead><tbody><tr><td>&lt;eval&gt;hack ()&lt;/eval&gt;</td></tr><br></tbody>') return 'table #4 was not created properly.';
-
-                  if (c ('table') [4].innerHTML !== '<thead></thead>') return 'table #5 was not created properly.';
-
-                  if (c ('table') [5].innerHTML !== '<tbody><br></tbody>') return 'table #6 was not created properly.';
-
-                  B.do (x, 'change', ['same', 'path']);
-
-                  if (c ('table') [0].innerHTML !== '<thead><th></th></thead><tbody><tr><td>"I have \'quotes\'!"</td></tr></tbody>') return 'table #1 was not created properly.';
-                  if (c ('table') [1].innerHTML !== '<tbody><tr><td>&lt;`Me &amp; you too!`&gt;</td></tr></tbody>') return 'table #2 was not created properly.';
-                  if (c ('table') [2].innerHTML !== '<tbody><tr><td>&lt;eval&gt;hack ()&lt;/eval&gt;</td></tr></tbody>') return 'table #3 was not created properly.';
-                  if (c ('table') [3].innerHTML !== '<thead></thead><tbody><tr><td>&lt;eval&gt;hack ()&lt;/eval&gt;</td></tr><br></tbody>') return 'table #4 was not created properly.';
-
-                  if (c ('table') [4].innerHTML !== '<thead></thead>') return 'table #5 was not created properly.';
-
-                  if (c ('table') [5].innerHTML !== '<tbody><br></tbody>') return 'table #6 was not created properly.';
-               });
-
-               Views.tablebr = function () {
-                  return B.view (['a', 'path'], function () {
-                     return ['table', ['br']];
-                  });
-               }
-
-               B.do (x, 'set', ['State', 'view'], 'tablebr');
-
-               B.do (x, 'set', ['Data', 'viewevent1'], 7);
-               B.do (x, 'set', ['Data', 'viewevent2'], 9);
-
-               Views.viewevents = function () {
-                  return B.view (['Data', 'viewevent1'], {
-                     ondraw:   function (id) {checkid (id); checktd ('ondraw1'); Data.ondraw1++},
-                     onforget: function (id) {checkid (id); checktd ('onforget1'); Data.onforget1++},
-                     listen: ['a', 'b', function () {}]
-                  }, function (x, viewevent1) {
-                     return B.view (['Data', 'viewevent2'], {
-                        ondraw:   function (id) {checkid (id); checktd ('ondraw2'); Data.ondraw2++},
-                        onforget: function (id) {checkid (id); Data.onforget2++},
-                        listen: [
-                           ['a', 'b', function () {}],
-                           ['a', 'b', function () {}],
-                        ],
-                     }, function (x, viewevent2) {
-                        return ['td', {id: 'td'}, viewevent1 + viewevent2];
-                     });
-                  });
-               }
-
-               Data.ondraw1 = 0;
-               Data.ondraw2 = 0;
-               Data.onforget1 = 0;
-               Data.onforget2 = 0;
-
-               var checktd = function (where) {
-                  if (parseInt (c ('#td').innerHTML) !== (Data.viewevent1 + Data.viewevent2)) throw new Error ('ondraw/onforget timing error: ' + where);
-               }
-
-               var checkid = function (x) {
-                  if (type (x) !== 'object') throw new Error ('ondraw/onforget didn\'t receive context');
-                  if (type (x.from) !== 'array') throw new Error ('ondraw/onforget didn\'t receive x.from');
-                  if (type (x.route) !== 'object') throw new Error ('ondraw/onforget didn\'t receive x.route');
-                  if (type (x.route.id) !== 'string' || ! x.route.id.match (/^в[0-9a-f]+$/)) throw new Error ('ondraw/onforget didn\'t receive valid id.');
-               }
-
-               var compare = function (comparison) {
-                  return ('' + Data.ondraw1 + Data.ondraw2 + Data.onforget1 + Data.onforget2) !== comparison;
-               }
-
-               B.do (x, 'set', ['State', 'view'], 'viewevents');
-
-               Test ('Testing view events', function () {
-                  if (compare ('1100')) return 'ondraw/onforget didn\'t work #1.';
-                  B.do (x, 'set', ['Data', 'viewevent2'], 11);
-                  if (compare ('1200')) return 'ondraw/onforget didn\'t work #2.';
-                  B.do (x, 'set', ['Data', 'viewevent1'], 4);
-                  if (compare ('2301')) return 'ondraw/onforget didn\'t work #3.';
-                  B.do (x, 'change', ['State'], State);
-                  if (compare ('3412')) return 'ondraw/onforget didn\'t work #4.';
-                  B.do (x, 'set', ['State', 'view'], 'bla');
-                  if (compare ('3423')) return 'ondraw/onforget didn\'t work #5.';
-               });
-
-               Views.listen = function () {
-                  return B.view (['Data'], function (x, Data) {
-                     return [
-                        Data.extra ? [
-                           ['input', {value: 'throw focus off'}],
-                           ['input', {value: 'throw focus off'}],
-                           ['input', {value: 'throw focus off'}],
-                        ] : [],
-                        ['input', B.ev ({id: 'user', value: B.get ('Data', 'user')},                   ['onchange', 'set', ['Data', 'user']])],
-                        ['input', B.ev ({id: 'pass', value: B.get ('Data', 'pass'), type: 'password'}, ['onchange', 'set', ['Data', 'pass']])]
-                     ];
-                  });
-               }
-
-               B.do (x, 'set', ['State', 'view'], 'listen');
-
-               c ('#user').focus ();
-
-               B.do (x, 'set', ['Data', 'user'], 'hello!');
-               B.do (x, 'set', ['Data', 'pass'], 'secreto');
-
-               B.do (x, 'set', ['Data', 'extra'], true);
-
-               Test ('Focus & value tests', function () {
-                  if (document.activeElement !== c ('#user')) return 'focus wasn\'t preserved when it should.';
-
-                  if (c ('#user').value !== 'hello!') return 'value wasn\'t preserved when it should.';
-               });
-
-               // *** OPAQUE ***
-
-               Views.opaque = function () {
-
-                  return B.view (['State', 'ltable'], function (x, ltable) {
-                     return B.view (['State'], function (x, State) {
-                        return ['table', dale.do (dale.times (ltable), function (v) {
-                           return ['tr', dale.do (dale.times (ltable), function (v2, k2) {
-                              if (k2 === 0) return ['td', {class: 'something ' + State.opaqueclass, opaque: true}, ['input']];
-                              else return ['td', k2];
-                           })];
-                        })];
-                     });
-                  });
-               }
-
-               B.do (x, 'set', ['State', 'ltable'], 2);
-               B.do (x, 'set', ['State', 'view'], 'opaque');
-
-               Test ('Testing opaque elements', function () {
-                  var opaques = c ('.something');
-                  if (opaques.length !== 2) return 'Opaques were not created.';
-                  opaques = c ('.something input');
-                  if (opaques.length !== 2) return 'Opaque contents were not created.';
-
-                  c.fill ('.something', '<input><input>');
-                  B.do (x, 'set', ['State', 'ltable'], 4);
-                  opaques = c ('.something');
-                  if (opaques.length !== 4) return 'Opaques were not updated 1.';
-                  opaques = c ('.something input');
-                  if (opaques.length !== 4) return 'Opaque contents were not updated 1.';
-
-                  c.fill ('.something', 'boo');
-                  if (c ('.something') [0].innerHTML !== 'boo') return 'Opaque contents were not updated.';
-
-                  B.do (x, 'set', ['State', 'ltable'], 5);
-                  opaques = c ('.something');
-                  if (opaques.length !== 5) return 'Opaques were not updated 2.';
-                  opaques = c ('.something input');
-                  if (opaques.length !== 5) return 'Opaque contents were not updated 2.';
-
-                  c.fill ('.something', '<div><input><span></span></div>');
-
-                  B.do (x, 'set', ['State', 'ltable'], 4);
-                  B.do (x, 'set', ['State', 'opaqueclass'], 'style');
-
-                  opaques = c ('.style');
-                  if (opaques.length !== 4) return 'Opaques were not updated 3.';
-                  opaques = c ('.style input');
-                  if (opaques.length !== 4) return 'Opaque contents were not updated 3.';
-               });
-
-               B.do (x, 'test', 'prediff');
-
-            });
-
-            // *** PREDIFF TEST ***
-
-            B.listen ('test', 'prediff', {burn: true}, function (x) {
-
-               Views.prediff = function () {return [['just'], 'some', 'strings']}
-
-               B.do (x, 'set', ['State', 'view'], 'prediff');
-
-               Test ('B.prediff', function () {
-                  if (c ('div#canvas div div') [0].innerHTML !== 'justsomestrings') return 'prediff test wasn\'t passed.';
-               });
-
-               B.do (x, 'test', 'events');
-            });
-
-            // *** EVENTS TEST ***
-
-            B.listen ('test', 'events', {burn: true}, function (x) {
-
-               var counter = 0;
-
-               Views.events = function () {
-                  return B.view (x, ['Data'], {listen: [
-                     ['upload', 'i2', function (x, arg2, arg3) {
-                        Test ('form upload', function () {
-                           if (! x.from [1] || x.from [1].ev !== 'onclick' || ! x.from [1].attrs || x.from [1].attrs.value !== 'Submit') return 'B.ev didn\'t pass event or attributes in its stringified invocation to B.do.';
-                           if (JSON.stringify ({user: 'Talk about', pass: 'thepassion'}) !== JSON.stringify (Data.i2)) return 'form values weren\'t updated.';
-                           if (arg2 !== '"a"' || arg3 !== ',"b"') return 'extra args weren\'t passed properly.';
-                        });
-                     }],
-                     ['just', ['another', 'route'], function () {}]
-                  ]}, function (x, Data) {
-                     counter++;
-                     Test ('x.from inside view function', function () {
-                        if (counter === 1 && (! x.from || x.from.length !== 9 || x.from [0].verb !== 'test' || x.from [0].path [0] !== 'events')) return 'x.from B.view error #1';
-                        if (counter === 2 && (! x.from || x.from.length !== 4 || x.from [1].verb !== 'change' || x.from [1].path [1] !== 'i1')) return 'x.from B.view error #2';
-                        if (counter === 3 && (! x.from || x.from.length !== 12 || x.from [1].verb !== 'change' || x.from [1].path [1] !== 'i1')) return 'x.from B.view error #3';
-                        if (counter === 4 && (! x.from || x.from.length !== 4 || x.from [1].verb !== 'change' || x.from [1].path [2] !== 'user')) return 'x.from B.view error #4';
-                        if (counter === 5 && (! x.from || x.from.length !== 4 || x.from [1].verb !== 'change' || x.from [1].path [2] !== 'pass')) return 'x.from B.view error #5';
-                        if (counter === 6 && (! x.from || x.from.length !== 12 || x.from [1].verb !== 'change' || x.from [1].path [1] !== 'i3')) return 'x.from B.view error #6';
-                        if (counter === 7 && (! x.from || x.from.length !== 12 || x.from [1].verb !== 'change' || x.from [1].path [2] !== 'fries')) return 'x.from B.view error #7';
-                        if (counter === 8 && (! x.from || x.from.length !== 4 || x.from [1].verb !== 'change' || x.from [1].path [2] !== 'fries')) return 'x.from B.view error #8';
-                     });
-                     return [
-                        ['input', B.ev ({id: 'i1', value: B.get ('Data', 'i1')}, ['onchange', 'set', ['Data', 'i1']])],
-                        ['form', {id: 'i2'}, [
-                           ['input', B.ev ({name: 'user', type: 'text', value: B.get ('Data', 'i2', 'user')}, ['onchange', 'set', ['Data', 'i2', 'user']])],
-                           Data.i8 ? [] : ['input'],
-                           Data.i7 ? [] : ['input', {id: 'i7'}],
-                           ['input', B.ev ({name: 'pass', type: 'password', value: B.get ('Data', 'i2', 'pass')}, ['onchange', 'set', ['Data', 'i2', 'pass']])],
-                           ['input', B.ev ({type: 'button', value: 'Submit'}, ['onclick', 'upload', 'i2', {args: ['"a"', ',"b"']}])]
-                        ]],
-                        ['textarea', B.ev ({id: 'i3'}, ['onchange', 'set', ['Data', 'i3']]), B.get ('Data', 'i3')],
-                        ['form', {id: 'i4'}, [
-                           ['label', 'Fries'],
-                           ['input', B.ev ({
-                              type: 'checkbox',
-                              checked: B.get ('Data', 'i4', 'fries'),
-                           }, ['onchange', 'set', ['Data', 'i4', 'fries'], {args: ! B.get ('Data', 'i4', 'fries')}])],
-                        ]],
-                        ['form', {id: 'i5'}, dale.do (['red', 'green', 'blue'], function (v) {
-                           return [
-                              ['label', v],
-                              ['input', B.ev ({name: 'colors', type: 'radio', checked: B.get ('Data', 'i5') === v}, ['onchange', 'set', ['Data', 'i5'], {args: v}])]
-                           ];
-                        })],
-                        ['br'],
-                        ['select', B.ev (['onchange', 'set', ['Data', 'i6']]), dale.do (['select one', 'leisure', 'ok computer', 'second coming'], function (v) {
-                           return ['option', {selected: B.get ('Data', 'i6') === v ? true : undefined, value: v}, v];
-                        })],
-                     ];
-                  });
-               }
-
-               B.do (x, 'set', ['State', 'view'], 'events');
-
-               Test ('events', function () {
-                  c.set ('#i1', {value: 'i1'});
-                  if (Data.i1 !== 'i1') return 'input onchange didn\'t update properly.';
-                  B.do (x, 'set', ['Data', 'i1'], 'i1plus');
-                  if (c.get ('#i1', 'value').value !== 'i1plus') return 'input wasn\'t refreshed properly.';
-
-                  c.set ('#i2 [name="user"]', {value: 'Talk about'});
-                  c.set ('#i2 [name="pass"]', {value: 'thepassion'});
-
-                  // http://stackoverflow.com/a/20548330
-                  try {
-                     var ev = new Event ('click');
-                     c ('#i2 [type="button"]') [0].dispatchEvent (ev);
-                  }
-                  catch (error) {
-                     c ('#i2 [type="button"]') [0].click ();
-                  }
-
-                  B.do (x, 'set', ['Data', 'i3'], 'some text');
-                  if (c ('#i3').value !== 'some text') return 'textarea wasn\'t set properly';
-
-                  B.do (x, 'set', ['Data', 'i4', 'fries'], true);
-                  if (c ('#i4 input') [0].checked !== true) return 'checkbox wasn\'t checked.';
+               Test ('B.ev + logs', function () {
+                  c.fill ('body', lith.g ([
+                     ['input', {'class': 'noclass', onchange: B.ev ('verb', 'path')}],
+                  ]));
+
+                  c ('.noclass') [0].value = 'hello';
 
                   try {
-                     c ('#i4 input') [0].dispatchEvent (new Event ('change'));
+                     c.fire ('.noclass', 'change');
                   }
+                  // IE<=8
                   catch (error) {
-                     //http://stackoverflow.com/a/13439901
-                     if (document.createEvent) {
-                        var ev = document.createEvent ('Event');
-                        ev.initEvent ('change', true, true);
-                        c ('#i4 input') [0].dispatchEvent (ev);
-                     }
+                     c.fire ('.noclass', 'onchange');
                   }
 
-                  if (B.get ('Data', 'i4', 'fries') !== false) return 'checkbox didn\'t change data after being changed.';
-                  if (c ('#i4 input') [0].checked !== false) return 'checkbox wasn\'t unchecked.';
+                  var logs = [last (B.log, 2), last (B.log)];
 
-                  B.do (x, 'set', ['Data', 'i5'], 'green');
-                  if (c ('#i5 input') [1].checked !== true) return 'radio wasn\'t selected.';
+                  // IE<=8 adds other attributes to args, so we filter them out.
+                  logs [0].args = dale.go (logs [0].args, function (v) {
+                     return dale.obj (v, function (v2, k2) {
+                        if (k2 === 'class') return [k2, v2];
+                     });
+                  });
 
-                  B.do (x, 'set', ['Data', 'i6'], 'ok computer');
-
-                  if (c ('option') [2].selected !== true)       return 'select wasn\'t updated after data change 1.';
-                  if (c ('select') [0].value !== 'ok computer') return 'select wasn\'t updated after data change 2.';
-
-                  c ('#i7').focus ();
-
-                  B.do (x, 'set', ['Data', 'i8'], true);
-
-                  if (document.activeElement !== c ('#i7')) return 'focus wasn\'t preserved when it should.';
-
-                  B.do (x, 'set', ['Data', 'i7'], true);
-
-                  if (document.activeElement !== null && document.activeElement !== c ('body') [0]) {
-                     return 'focus was preserved when it shouldn\'t.';
-                  }
-
+                  if (! eq (logs [0], {t: logs [0].t, id: logs [0].id, from: undefined, verb: 'ev', path: ['change'], 'args': [{'class': 'noclass'}]})) return 'B.ev error: invalid logs #1.';
+                  if (! eq (logs [1], {t: logs [1].t, id: logs [1].id, from: logs [0].id, verb: 'verb', path: ['path'], args: ['hello']})) return 'B.ev error: invalid logs #2.';
                });
 
-               var counter = 0;
-               var db = function (wha, sec) {
-                  console.log ('DEBUG', wha, sec);
-               }
+               // Turn on again error handler
+               //B.listeners.error.disabled = false;
 
-               Views.selfmodify = function () {
-                  return B.view (x, ['State', 'self'], {tag: 'div', attrs: {class: 'self'}, ondraw: function (x) {
-                     if (! B.get ('State', 'self')) B.do (x, 'set', ['State', 'self'], 1);
-                  }, onforget: function () {
-                     B.do ('set', ['foo', 'bar'], 2);
-                  }}, function (x, self) {return [
-                     dale.do (dale.times (50), function () {
-                        return ['td', self];
-                     }),
-                     B.view (['foo', 'bar'], function () {counter++})
-                  ]});
-               }
+               B.say (x, 'test', 'B.elem');
 
-               B.do (x, 'set', ['State', 'view'], 'selfmodify');
-
-               Test ('B.view selfmodify', function () {
-                  var targets = c ('div.self td');
-                  if (targets.length !== 50) return 'selfmodify didn\'t update tds #1.';
-                  if (targets [0].innerHTML !== '1') return 'selfmodify didn\'t update tds #2.';
-                  B.verbose = false;
-                  if (counter !== 3) return 'selfmodify triggered itself a wrong number of times.';
-               });
-
-               Views.simult = function () {
-                  return [
-                     B.view (['Data', 'self'], {ondraw: function () {
-                        if (! B.get ('Data', 'self')) {
-                           if (B.resolvequeue.length !== 1) throw new Error ('B.resolvequeue error.');
-                           B.do (x, 'set', ['Data', 'self'], 1);
-                           if (B.resolvequeue.length !== 3) throw new Error ('B.resolvequeue error.');
-                        }
-                     }},
-                     function (x, self) {
-                        return ['td', self];
-                     }),
-                     B.view (x, ['Data', 'self'], function (x, self) {
-                        return ['td', self];
-                     })
-                  ];
-               }
-
-               B.do (x, 'set', ['State', 'view'], 'simult');
-
-               Test ('B.view simult', function () {
-                  var targets = c ('td');
-                  if (targets.length !== 2) return 'simult didn\'t update tds #1.';
-                  if (targets [0].innerHTML !== '1') return 'simult didn\'t update tds #2.';
-               });
-
-               B.trample = 2;
-
-               Views.trample = function () {
-                  return B.view (x, ['State', 'items'], function (x, items) {
-                     return ['table', [
-                        ['thead', ['tr', ['td', 'items']]],
-                        ['tbody', dale.do (items, function (v) {
-                           return ['tr', ['td', v]];
-                        })]
-                     ]];
-                  });
-               }
-
-               B.do (x, 'set', ['State', 'view'], 'trample');
-
-               Test ('B.resolve trample', function () {
-                  if (c ('table') [0].innerHTML !== '<thead><tr><td>items</td></tr></thead><tbody></tbody>') return 'booyah';
-                  B.do (x, 'set', ['State', 'items'], dale.times (200));
-                  var t = Date.now ();
-                  B.do (x, 'set', ['State', 'items'], dale.times (1));
-                  if (Date.now () - t > 1000) return 'B.trample is not working!';
-               });
-
-               Views.select = function () {
-                  return B.view (['State', 'select'], {ondraw: function (x) {
-                     var s = B.get ('State', 'select');
-                     if (s === 0) return B.do (x, 'set', ['State', 'select'], 1);
-                  }}, function (x, select) {
-                     return [
-                        ['select', [
-                           ['option', {value: 0, selected: 0 === select}, 0],
-                           ['option', {value: 1, selected: 1 === select}, 1],
-                           select === 0 ? [] : ['option', {value: 2}, 2],
-                        ]],
-                        select === 1 ? [] : ['select', [
-                           ['option', {value: 0, selected: true}],
-                        ]],
-                        ['select', [
-                           ['option', {value: 1, selected: 0 === select}, 1],
-                           ['option', {value: 0, selected: 1 === select}, 0],
-                        ]],
-                     ];
-                  });
-               }
-
-               var shuffleArray = function (array) {
-                  if (array.length === 0) return array;
-                  dale.do (dale.times (array.length - 1, array.length - 1, -1), function (k) {
-                     var randomIndex = Math.floor (Math.random () * (k + 1));
-                     var temp = array [k];
-                     array [k] = array [randomIndex];
-                     array [randomIndex] = temp;
-                  });
-                  return array;
-               }
-
-               Views.textarea = function () {
-                  return B.view (['State', 'textarea'], {listen: [
-                     ['shuffle', '*', function (x) {
-                        B.do (x, 'set', ['State', 'textarea'], shuffleArray (B.get ('State', 'textarea')));
-                        B.do (x, 'change', ['State', 'textarea']);
-                     }],
-                  ], ondraw: function () {
-                  }}, function (x, textarea) {
-                     return [
-                        dale.do (textarea, function (i) {
-                           return ['textarea', {class: 'main'}, i ? '<' + i + '>&amp;</html>' : undefined];
-                        }),
-                        dale.do (textarea, function (i) {
-                           return ['textarea', i];
-                        }),
-                        dale.do (textarea, function (i) {
-                           return ['input', {class: 'check', type: 'checkbox', checked: i % 2 === 0}];
-                        }),
-                        ['br'],
-                        dale.do (textarea, function (i) {
-                           return ['input', {class: 'text', value: i ? '<' + i + '><' : undefined}];
-                        }),
-                     ];
-                  });
-               }
-
-               Views.selectShuffle = function () {
-                  return B.view (['State', 'selectshuffle'], {ondraw: function () {
-                     if (! B.get ('State', 'selectshuffle')) B.do ('set', ['State', 'selectshuffle'], 1);
-                  }}, function (x, c) {
-                     if (! c) return ['select', [
-                        ['option', 1],
-                        ['option', {selected: true}, 2],
-                        ['option', 3],
-                     ]];
-                     return [
-                        ['select'],
-                        ['select', [
-                           ['option', 1],
-                           ['option', {selected: true}, 2],
-                           ['option', 3],
-                        ]],
-                     ];
-                  });
-               }
-
-               Test ('moving selects & textareas', function () {
-                  B.do (x, 'set', ['State', 'view'], 'select');
-                  B.do (x, 'set', ['State', 'select'], 0);
-                  var firstOption = c ('option') [0];
-                  // `selected` as empty string is only in IE and Edge
-                  if (firstOption.getAttribute ('selected') !== null && firstOption.getAttribute ('selected') !== '') return 'Falsy value was inserted as attribute by B.prediff.';
-
-                  if (c ('option') [1].selected !== true || c ('option') [2].selected !== false) return 'Option values were not updated!';
-
-                  B.do (x, 'set', ['State', 'textarea'], dale.times (5));
-
-                  B.do (x, 'set', ['State', 'view'], 'textarea');
-
-                  if (! teishi.eq (dale.do (c ('textarea.main'), function (textarea) {
-                     return textarea.value;
-                  }), dale.do (B.get ('State', 'textarea'), function (v) {
-                     return '<' + v + '>&amp;</html>';
-                  }))) return 'Textarea value mismatch error #1.';
-
-                  if (! teishi.eq (dale.do (c ('input.check'), function (input) {
-                     return input.checked;
-                  }), dale.do (B.get ('State', 'textarea'), function (v) {
-                     return v % 2 === 0;
-                  }))) return 'Checked input mismatch error #1.';
-
-                  if (! teishi.eq (dale.do (c ('input.text'), function (input) {
-                     return input.value;
-                  }), dale.do (B.get ('State', 'textarea'), function (v) {
-                     return '<' + v + '><';
-                  }))) return 'Text input mismatch error #1.';
-
-                  B.do (x, 'set', ['State', 'textarea'], dale.times (5, 10));
-
-                  if (! teishi.eq (dale.do (c ('textarea.main'), function (textarea) {
-                     return textarea.value;
-                  }), dale.do (B.get ('State', 'textarea'), function (v) {
-                     return '<' + v + '>&amp;</html>';
-                  }))) return 'Textarea value mismatch error #2.';
-
-                  if (! teishi.eq (dale.do (c ('input.check'), function (input) {
-                     return input.checked;
-                  }), dale.do (B.get ('State', 'textarea'), function (v) {
-                     return v % 2 === 0;
-                  }))) return 'Checked input mismatch error #2.';
-
-                  if (! teishi.eq (dale.do (c ('input.text'), function (input) {
-                     return input.value;
-                  }), dale.do (B.get ('State', 'textarea'), function (v) {
-                     return '<' + v + '><';
-                  }))) return 'Text input mismatch error #2.';
-
-                  dale.do (c ('textarea'), function (textarea) {
-                     textarea.value = '';
-                  });
-
-                  B.do (x, 'shuffle', '*');
-
-                  if (! teishi.eq (dale.do (c ('textarea.main'), function (textarea) {
-                     return textarea.value;
-                  }), dale.do (B.get ('State', 'textarea'), function (v) {
-                     return '<' + v + '>&amp;</html>';
-                  }))) return 'Textarea value mismatch error #3.';
-
-                  if (! teishi.eq (dale.do (c ('input.check'), function (input) {
-                     return input.checked;
-                  }), dale.do (B.get ('State', 'textarea'), function (v) {
-                     return v % 2 === 0;
-                  }))) return 'Checked input mismatch error #3.';
-
-                  if (! teishi.eq (dale.do (c ('input.text'), function (input) {
-                     return input.value;
-                  }), dale.do (B.get ('State', 'textarea'), function (v) {
-                     return '<' + v + '><';
-                  }))) return 'Text input mismatch error #3.';
-
-                  B.do (x, 'set', ['State', 'textarea'], ['a', 'b', undefined, 'd', 'e']);
-
-                  if (! teishi.eq (dale.do (c ('textarea.main'), function (textarea) {
-                     return textarea.value || undefined;
-                  }), dale.do (B.get ('State', 'textarea'), function (v) {
-                     return v ? '<' + v + '>&amp;</html>' : undefined;
-                  }))) return 'Textarea value mismatch error #4.';
-
-                  if (! teishi.eq (dale.do (c ('input.check'), function (input) {
-                     return input.checked;
-                  }), dale.do (B.get ('State', 'textarea'), function (v) {
-                     return v % 2 === 0;
-                  }))) return 'Checked input mismatch error #4.';
-
-                  if (! teishi.eq (dale.do (c ('input.text'), function (input) {
-                     return input.value || undefined;
-                  }), dale.do (B.get ('State', 'textarea'), function (v) {
-                     return v ? '<' + v + '><' : undefined;
-                  }))) return 'Text input mismatch error #4.';
-
-                  B.do ('set', ['State', 'view'], 'selectShuffle');
-
-                  if (c ('select') [1].value !== '2') return 'new select with two kept options that were selected before error';
-
-               });
-
-               B.do (x, 'test', 'attrs');
-
-            });
-
-            // *** ATTRS TEST ***
-
-            B.listen ('test', 'attrs', {burn: true}, function (x) {
-
-               B.do (x, 'set', ['Data', 'items'], [
-                  {id: 'widget1', title: 'Widget #1', price: 5,  checked: false},
-                  {id: 'widget2', title: 'Widget #2', price: 8,  checked: true},
-                  {id: 'widget3', title: 'Widget #3', price: 11, checked: true},
-                  {id: 'widget4', title: 'Widget #4', price: 4,  checked: false}
-               ]);
-
-               Views.attrs = function () {
-                  return B.view (x, ['Data'], function (x, Data) {
-                     return ['table', dale.do (Data.items, function (item, k) {
-                        if (Data.filter && Data.filter.match (item.title) === null) return;
-                        return ['tr', dale.do (['id', 'title', 'price', 'checked'], function (key) {
-                           if (key === 'checked') return ['td', [
-                              ['input', B.ev ({type: 'checkbox', checked: B.get ('Data', 'items', k, 'checked')}, ['onchange', 'set', ['Data', 'items', k, 'checked'], {args: ! B.get ('Data', 'items', k, 'checked')}])]
-                           ]];
-                           return ['td', item [key]];
-                        })];
-                     })];
-                  });
-               }
-
-               B.do (x, 'set', ['State', 'view'], 'attrs');
-
-               Test ('attrs', function () {
-                  if (c ('input') [0].checked !== false) return 'wrong checkbox was checked.';
-                  if (c ('input') [1].checked !== true) return 'checkbox wasn\'t checked.';
-                  if (c ('input') [2].checked !== true) return 'checkbox wasn\'t checked.';
-                  if (c ('input') [3].checked !== false) return 'wrong checkbox was checked.';
-
-                  B.do (x, 'set', ['Data', 'filter'], 'booyah');
-                  B.do (x, 'set', ['Data', 'filter'], '');
-
-                  if (c ('input') [0].checked !== false) return 'wrong checkbox was checked.';
-                  if (c ('input') [1].checked !== true) return 'checkbox wasn\'t checked.';
-                  if (c ('input') [2].checked !== true) return 'checkbox wasn\'t checked.';
-                  if (c ('input') [3].checked !== false) return 'wrong checkbox was checked.';
-
-               });
-
-               B.do (x, 'test', 'perf');
-
-            });
-
-            // *** PERFORMANCE ***
-
-            B.listen ('test', 'perf', {burn: true}, function (x) {
-
-               Views.perf = function () {
-                  return B.view (x, ['Data', 'perf'], function (x, perf) {
-                     if (! perf) return [];
-                     return ['table', {style: 'display: block'}, dale.do (perf.data, function (v, k) {
-                        return ['tr', dale.do (v, function (v2) {
-                           return ['td', {class: perf.class}, k + '-' + v2];
-                        })];
-                     })];
-                  });
-               }
-
-               var data = dale.do (dale.times (40), function (v) {
-                  return dale.do (dale.times (5), function (v2) {
-                     return v2;
-                  });
-               });
-
-               Time ['1: beforeperf'] = Date.now () - dale.acc (Time, function (a, b) {return a + b});
-
-               log ('Starting perf');
-
-               B.do (x, 'set', ['State', 'view'], 'perf');
-
-               Time ['2: perfsetview'] = Date.now () - dale.acc (Time, function (a, b) {return a + b});
-
-               log ('Done setting view');
-
-               B.do (x, 'set', ['Data', 'perf'], {});
-               B.do (x, 'set', ['Data', 'perf', 'data'], data);
-               Time ['3: perfsetdata'] = Date.now () - dale.acc (Time, function (a, b) {return a + b});
-               log ('Done updating view with all data');
-
-               B.do (x, 'set', ['Data', 'perf', 'data', 10, 2], 'something');
-               Time ['4: perfupdateone'] = Date.now () - dale.acc (Time, function (a, b) {return a + b});
-               log ('Done updating one item');
-
-               B.do (x, 'set', ['Data', 'perf', 'class'], 'aclass');
-               Time ['5: perfupdateall'] = Date.now () - dale.acc (Time, function (a, b) {return a + b});
-               log ('Done updating all items');
-
-               B.do (x, 'rem', ['Data', 'perf', 'data', 10], 2);
-               Time ['6: perfrem'] = Date.now () - dale.acc (Time, function (a, b) {return a + b});
-
-               log ('Done removing one item');
-
-               B.do (x, 'add', ['Data', 'perf', 'data', 10], 999);
-
-               Time ['7: perfadd'] = Date.now () - dale.acc (Time, function (a, b) {return a + b});
-
-               Time ['8: total'] = dale.acc (dale.fil (Time, undefined, function (v, k) {
-                  if (k !== 'zero') return v;
-               }), function (a, b) {return a + b});
-
-               delete Time.zero;
-
-               log ('Done adding one item');
-
-               Test ('Route cleanup', function () {
-                  if (dale.keys (B.routes).length !== 8) return 'Some routes were not cleaned up!';
-               });
-
-               B.do (x, 'test', 'success');
-            });
-
-            Views.done = function () {
-               return [
-                  ['h1', 'All tests were successful!'],
-                  ['pre', JSON.stringify (Time, null, '   ')],
-               ];
-            }
-
-            B.listen ('test', 'success', {burn: true}, function (x) {
-               if (Errorlist.length === 0) {
-                  B.do (x, 'set', ['State', 'view'], 'done');
-                  log ('Success', 'All tests were successful!');
-                  return;
-               }
-
-               Views.error = function () {
-                  return [
-                     ['h2', 'Errors found!'],
-                     ['pre', teishi.s (Errorlist, null, '   ')]
-                  ];
-               };
-               B.do (x, 'set', ['State', 'view'], 'error');
             });
 
          }) ();
+
       </script>
    </body>
 </html>

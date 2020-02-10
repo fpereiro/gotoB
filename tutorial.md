@@ -414,5 +414,3 @@ var increment = function () {
    paragraph.innerHTML = 'Counter is ' + value;
 }
 ```
-
-Note: string references increment. That's how the circle is closed! Text diagram here!

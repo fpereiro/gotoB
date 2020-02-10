@@ -2,22 +2,19 @@
 
 > "The only software that I like is one that I can easily understand and solves my problems. The amount of complexity I'm willing to tolerate is proportional to the size of the problem being solved." --[Ryan Dahl](http://tinyclouds.org/rant.html)
 
-gotoв is a framework for making the frontend of a web application (henceforth webapp).
+gotoв is a framework for making the frontend of a web application (henceforth *webapp*).
 
 ## Current status of the project
 
-The current version of gotoв, v1.2.3, is considered to be *somewhat stable* and *mostly complete*. [Suggestions](https://github.com/fpereiro/gotoB/issues) and [patches](https://github.com/fpereiro/gotoB/pulls) are welcome. Besides bug fixes, these are the future changes planned:
+The current version of gotoв, v2.0.0, is considered to be *stable* and *complete*. [Suggestions](https://github.com/fpereiro/gotoB/issues) and [patches](https://github.com/fpereiro/gotoB/pulls) are welcome. Besides bug fixes, there are no changes planned.
 
-- Add missing documentation.
-- Extend cross-browser compatibility.
-- Performance improvements.
-- Add annotated source code.
+gotoв is part of the [ustack](https://github.com/fpereiro/ustack), a set of libraries to build web applications which aims to be fully understandable by those who use it.
 
-## Examples
+## Why gotoв?
 
-- Counter: [live example](http://altocode.nl/gotob/examples/counter.html) - [code](https://github.com/fpereiro/gotoB/blob/master/examples/counter.html).
-- TodoMVC: [live example](http://altocode.nl/gotob/examples/todomvc.html) - [code](https://github.com/fpereiro/gotoB/blob/master/examples/todomvc.js).
-- Mini shopping cart: [live example](http://altocode.nl/gotob/examples/kliko.html) - [code](https://github.com/fpereiro/gotoB/blob/master/examples/kliko.js).
+gotoв is a framework optimized for understanding. Its purpose is to allow you to write webapps in a way that you can fully understand what's going on.
+
+In my experience, understanding leads to short and beautiful code that can last for years in a production setting. It is my sincere hope that you'll be able to use gotoв to create webapps and have a lot of fun while at it.
 
 ## Installation
 
@@ -30,7 +27,7 @@ gotoв is written in Javascript. You can use it in the browser by sourcing the p
 Or you can use this link to use the latest version - courtesy of [jsDelivr](https://jsdelivr.com).
 
 ```html
-<script src="https://cdn.jsdelivr.net/gh/fpereiro/gotob@50d142497e0a169c831de13b61bb839cca036c41/gotoB.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/fpereiro/gotob@/gotoB.min.js"></script>
 ```
 
 gotoв is exclusively a client-side library. Still, you can find it in npm: `npm install gotob`
@@ -49,20 +46,73 @@ The author wishes to thank [Browserstack](https://browserstack.com) for providin
 
 <a href="https://www.browserstack.com"><img src="https://bstacksupport.zendesk.com/attachments/token/kkjj6piHDCXiWrYlNXjKbFveo/?name=Logo-01.svg" width="150px" height="33px"></a>
 
-## gotoв fundamentals
+## Tutorial
 
-gotoв is built on four fundamentals. It is crucial to understand them in order to understand and use the framework.
+An in-depth tutorial is available [here](tutorial.md).
 
-1. Use of object literals to represent HTML & CSS.
-2. A global store that is updated through events.
-3. An event system that employs a combination of `verb` plus `path`.
-4. Views are functions that return object literals (see #1), use the global store as input (see #2) and are triggered by events (see #3).
+## The rest of the readme
+
+- [Examples](https://github.com/fpereiro/gotob#examples)
+- [Fundamentals](https://github.com/fpereiro/gotob#fundamentals)
+- [Frequently Asked Questions](https://github.com/fpereiro/gotob#faq)
+- [API reference](https://github.com/fpereiro/gotob#api-reference)
+- [Internals](https://github.com/fpereiro/gotob#internals)
+- [Annotated source code](https://github.com/fpereiro/gotob#annotated-source-code)
+- [License](https://github.com/fpereiro/gotob#license)
+
+## Examples
+
+### Counter app
+
+```
+var counter = function () {
+   return B.elem ('counter', function (counter) {
+      return ['div', [
+         ['h3', ['Counter is: ', counter || 0]],
+         ['button', {onclick: B.ev ('set', 'counter', (counter || 0) + 1)}, 'Increment counter']
+      ]];
+   });
+}
+
+B.mount ('body', todoList);
+```
+
+### Todo list
+
+```
+var todoList = function () {
+   return [
+      ['style', [
+         ['span.action', {color: 'blue', cursor: 'pointer', 'margin-left': 10}],
+      ]],
+      ['h3', 'Todos'],
+      B.elem ('todos', function (todos) {
+         return ['ul', dale.go (todos, function (todo, index) {
+            return ['li', [todo, ['span', {onclick: B.ev ('rem', 'todos', index)}, 'Remove']]];
+         })];
+      })
+   });
+}
+
+B.mount ('body', todoList);
+```
+
+You can find more examples [here](https://github.com/fpereiro/examples/list.md).
+
+## Fundamentals
+
+gotoв is built on four fundamentals. You need to understand them in order to use the framework.
+
+1. Object literals to represent HTML & CSS.
+2. A global store to hold all state and data.
+3. An event system that is used to update the store.
+4. Reactive elements (views) are functions that return object literals (see #1), use the global store as input (see #2) and are triggered by events (see #3).
 
 Let's see them in turn.
 
 ### #1: object literals to represent HTML & CSS
 
-By its very nature, a webapp needs to redraw parts of the page; for this reason, we need to generate HTML (and perhaps a bit of CSS) with client-side javascript.
+By its very nature, a webapp needs to redraw parts of the page; for this reason, we need to generate almost all of its HTML (and perhaps some of its CSS) with client-side javascript.
 
 The way we do this is by using object literals to represent HTML and CSS. Object literals are merely arrays and plain objects.
 
@@ -99,73 +149,80 @@ CSS can be also generated with the same type of straightforward mapping. You can
 We employ `B.store`, which is a plain object, to hold all state and data relevant to the webapp. For example:
 
 - Data brought from the server.
-- Name of the view that is currently being displaying.
+- Name of the view that is currently being displayed.
 - Data provided by the user that hasn't been submitted yet to the server.
 
 **Takeaway: if it affects any view or it will be submitted to the server, it belongs in `B.store`.**
 
-### #3: the global store must be updated through events.
+### #3: an event system to update the store.
 
 To update `B.store`, we use gotoв's event system, instead of modifying `B.store` directly.
 
-The function for **triggering** events is `B.do`. It receives as arguments a `verb`, a `path` and optional extra `arguments`. Let's see the following examples.
+The function for **triggering** events is `B.say`. It receives as arguments a `verb`, a `path` and optional extra `arguments`. Let's see the following examples.
 
 ```javascript
 // At the beginning, B.store is merely an empty object
 
-B.do ('set', 'username', 'mono');
+// We now say an event with verb `set`, path `username` and `mono` as its first argument.
+B.say ('set', 'username', 'mono');
 
 // Now, B.store is {username: 'mono'}
 
-B.do ('set', ['State', 'view'], 'main');
+// We now say an event with verb `set`, path `['State', 'view']` and `main` as its first argument.
+B.say ('set', ['State', 'view'], 'main');
 
 // Now, B.store is {username: 'mono', State: {view: 'main'}}
 
-B.do ('rem', [], 'username');
+// We now say an event with verb `rem`, path `[]` and `username` as its first argument.
+B.say ('rem', [], 'username');
 
 // Now, B.store is {State: {view: 'main'}}
 
-B.do ('rem', 'State', 'view');
+// We now say an event with verb `rem`, path `State` and `view` as its first argument.
+B.say ('rem', 'State', 'view');
 
 // Now, B.store is {State: {}}
 
-B.do ('set', ['Data', 'items'], ['foo', 'bar']);
+// We now say an event with verb `set`, path `['Data', 'items']` and `['foo', 'bar']` as its first argument.
+B.say ('set', ['Data', 'items'], ['foo', 'bar']);
 
 // Now, B.store is {State: {}, Data: {items: ['foo', 'bar']}}
 
-B.do ('add', ['Data', 'items'], 'boo');
+// We now say an event with verb `add`, path `['Data', 'items']` and `boo` as its first argument.
+B.say ('add', ['Data', 'items'], 'boo');
 
 // Now, B.store is {State: {}, Data: {items: ['foo', 'bar', 'boo']}}
 
-B.do ('rem', ['Data', 'items'], 0);
+// We now say an event with verb `rem`, path `['Data', 'items']` and `0` as its first argument.
+B.say ('rem', ['Data', 'items'], 0);
 
 // Now, B.store is {State: {}, Data: {items: ['bar', 'boo']}}
 ```
 
 It is important to notice that events can be used for things other than updating `B.store`, as we will see in the Tutorial section.
 
-**Takeaway: modify `B.store` by triggering events with `B.do`.**
+**Takeaway: modify `B.store` by triggering events with `B.say`.**
 
-### #4: Views are event listeners that use `B.store` and return object literals
+### #4: Reactive elements (views) are event listeners that use `B.store` and return object literals
 
-`B.view` is the gotoв function for creating views that are updated automatically. Let's see an example:
+`B.elem` is the gotoв function for creating HTML elements that are updated when the relevant part of the store changes. That's why they're called *reactive*, because they *react to a (relevant) change by updating themselves*. Let's see an example:
 
 ```javascript
 var counterView = function () {
-   return B.view (['State', 'counter'], function (x, counter) {
+   return B.elem (['State', 'counter'], function (counter) {
       return ['h1', 'The counter is ' + counter];
    });
 }
 ```
 
-`counterView` returns a view. Whenever `B.store.State.counter` is updated, the view will be automatically updated.
+`counterView` returns a reactive element. Whenever `B.store.State.counter` is updated, the `h1` reactive element will be automatically updated.
 
 ```javascript
-B.do ('set', ['State', 'counter'], 1);
+B.say ('set', ['State', 'counter'], 1);
 
 // <h1>The counter is 1</h1>
 
-B.do ('set', ['State', 'counter', 2);
+B.say ('set', ['State', 'counter', 2);
 
 // <h1>The counter is 2</h1>
 ```
@@ -174,33 +231,37 @@ You might be wondering: how can we trigger events from the DOM itself? One way o
 
 ```javascript
 var counterView = function () {
-   return B.view (['State', 'counter'], function (x, counter) {
-      return [
+   return B.elem (['State', 'counter'], function (counter) {
+      return ['div', [
          ['h1', 'The counter is ' + counter],
          ['button', {
-            onclick: "B.do ('set', ['State', 'counter'], " + (counter + 1) + ")"
+            onclick: "B.say ('set', ['State', 'counter'], " + (counter + 1) + ")"
          }, 'Increment counter']
-      ];
+      ]];
    });
 }
 ```
 
-But it is nicer to use `B.ev`:
+But it is better to use `B.ev`, which will create a stringified call to `B.say` that we can put within the `onclick` attribute directly.
 
 ```javascript
 var counterView = function () {
-   return B.view (['State', 'counter'], function (x, counter) {
-      return [
+   return B.elem (['State', 'counter'], function (counter) {
+      return ['div', [
          ['h1', 'The counter is ' + counter],
-         ['button', B.ev (['onclick', 'set', ['State', 'counter'], counter + 1]), 'Increment counter']
-      ];
+         ['button', {
+            onclick: B.ev ('set', ['State', 'counter'], counter + 1)
+         }, 'Increment counter']
+      ]];
    });
 }
 ```
 
-And that, in a nutshell, is how gotoв works. Object literals take care of templating; the global store takes care of our state & data; events perform all actions, including updating the global store; and views are functions that bring these three together, to create interfaces that are automatically updated when the store changes.
+And that, in a nutshell, is how gotoв works. Object literals take care of templating; the global store takes care of our state & data; events perform all actions, including updating the global store; and reactive elements are drawn by functions that are executed when a relevant part of the store changes.
 
-## Why another javascript framework?!?
+## FAQ
+
+### Why did you write another javascript framework?!?
 
 I experience two difficulties with existing javascript frontend frameworks:
 
@@ -216,94 +277,1014 @@ Rather than submit to this grind or reject it altogether (and missing out the po
 
 And, of course, gotoв must be very useful for building a real webapp.
 
-## Is gotoв for me?
+### Why use a javascript framework *at all*?
 
-### gotoв is probably **not** for you if
+So glad you asked.
 
-- You need to support browsers without javascript.
-- You need a widely supported framework, with a large community of devs and tools.
-- You need a fully proven approach for building very large webapps; gotoв has never been used at a large scale so it is unknown whether its abstractions can support large projects.
-- You are looking for a framework that is similar to Angular, Ember or React.
-- You need a very fast framework; gotoв chooses simplicity over performance in a couple of critical and permanent respects.
-- You need to get started with a project very quickly; gotoв requires some upfront effort to understand its core concepts.
+Before we had webapps, we had webpages. A webpage is something quite simple: an HTML file, with perhaps a bit of CSS to make it look better, plus a little bit of javascript to give it some dynamism. If the user clicks on a link on the page, another page is opened and the process is repeated again. If the user fills a form and submits it, when the server receives it, it redirects the user's browser to another page.
 
-### gotoв might be a good choice for you if
+All of this means two things: webpages need to 1) hold very little state; 2) once drawn, they don't change much (or at all).
+
+[With the advent of XMLHTTPRequest and ajax](https://www.youtube.com/watch?v=Fv9qT9joc0M&list=PL7664379246A246CB&index=4), everything changed. XMLHTTPRequest allows a web browser to retrieve information from the server *without redirecting to another page*, which means it can communicate with the server *without a page refresh*. This is where a webpage crosses the boundary and becomes a webapp. Changing the interface without refreshing the page improves the user experience for two reasons:
+
+1. **Performance**: if a page is already loaded, it is faster to retrieve new data and update it on the page than to retrieve the entire page (with all the associated markup, style and scripts) from the server.
+
+2. **Offline ability**: if the network connection (or the server) is down, instead of losing all state, the page can hold its state, warn the user, and attempt to communicate with the server until the connection is restored. Also as important, the page can be saving state to the server constantly without the user having to submit data and waiting for a reload. The archetypic incarnation of this approach is Gmail's web interface.
+
+These two advantages have two drawbacks: 1) we need to manage the state of the webapp; and 2) we must redraw the page when a relevant part of the state changes.
+
+In my experience, this added complexity is not easy to solve with straightforward imperative code. If you are writing a non-trivial webapp and you do it without recourse to libraries that help you deal with these two problems, you will probably encounter issues. However, **don't take my word for it!** If you still have doubts, you should probably follow your own path and work on this domain from first principles.
+
+### Is gotoв for me?
+
+**gotoв is for you if:**
 
 - You have freedom to decide the technology you use.
 - Complexity is a massive turn-off for you.
 - You like ES5 javascript.
 - You miss not having to compile your javascript.
-- You have a bit of time upfront to understand gotoв's core concepts.
 - You enjoy understanding the internals of a tool, so that you can then use it with precision and confidence.
 - You like technology that's a bit strange.
-- You want to build from scratch a small gotoв community together with me.
+- You want to build a community together with me.
 
-### Practices and features that gotoв happily *ignores*
+**gotoв is *not* for you if**:
 
-- **Browsers without javascript**: gotoв is 100% reliant on client-side javascript - if you want to create webapps that don't require javascript, gotoв cannot possibly help you create them.
-- **Post-2009 javascript**: everything's written in a subset of ES5 javascript. This means no transpilation, no different syntaxes, and no type declarations.
-- **Module loading**: gotoв and its dependencies happily and unavoidably bind to the global object. No CommonJS or AMD.
-- **Build/toolchain integration**: there's no integration with any standard tool for compiling HTML, CSS and js. gotoв itself is pre-built with a 20-line javascript file.
-- **Hot-reloading**: better get that F5 finger ready!
-- **Plugin system**: gotoв tries to give provide you all the essentials out of the box, without installation or configuration.
-- **Object-oriented programming**: gotoв uses objects mostly as namespaces. There's no inheritance and no use of `bind`. Classes are nowhere to be found.
-- **Pure functional programming**: [side-effects are expressed as events](https://github.com/fpereiro/recalc). The return values from event handlers are ignored, and every function has access to the global store. There's no immutability; the global state is modified through functions that update it in place.
+- You need to support browsers without javascript.
+- You need a widely supported framework, with a large community of devs and tools.
+- You are looking for a framework that is similar to Angular, Ember or React.
+- You need a very fast framework; gotoв chooses simplicity over performance in a couple of critical and permanent respects.
 
 ### What does gotoв care about?
 
-- **Ease of use**: almost all the functionality you need is contained in four functions (one for listening to an event (`B.listen`), one for firing an event (`B.do`), one for stringifying an event call into a DOM attribute (`B.ev`) and one for creating dynamic views which rely on events (`B.view`)). There's three more functions to effect data changes (`B.add`, `B.rem` & `B.set`) and one for reading data from the store (`B.get`).
+- **Ease of use**: 90% of the functionality you need is contained in three functions (one for saying an event (`B.say`), one for stringifying an event call into a DOM attribute (`B.ev`) and one for creating dynamic elements which are updated automatically (`B.elem`)). There's also three more events for performing data changes that you'll use often. But that's pretty much it.
 - **Fast reload**: the edit-reload cycle should take under two seconds. No need to wait until no bundle is completed.
 - **Smallness**: gotoв and its dependencies are < 2k lines of consistent, annotated javascript. In other words, it is less than 2048 lines on top of [vanilla.js](http://vanilla-js.com/).
 - **Batteries included**: the core functionality for building a webapp is all provided. Whatever libraries you add on top will probably be for specific things (nice CSS, a calendar widget, etc.)
-- **Trivial to set up**: add `<script src="https://cdn.jsdelivr.net/gh/fpereiro/gotob@50d142497e0a169c831de13b61bb839cca036c41/gotoB.min.js"></script>` at the bottom of the `<body>`.
+- **Trivial to set up**: add `<script src="https://cdn.jsdelivr.net/gh/fpereiro/gotob@/gotoB.min.js"></script>` at the bottom of the `<body>`.
 - **Everything in plain sight**: all properties and state are directly accessible from the javascript console of the browser. DOM elements have stringified event handlers that can be inspected with any modern browser.
-- **Performance**: gotoв itself is small (~12kb when minified and gzipped, including all dependencies) so it is loaded and parsed quickly. Its view redrawing mechanism is not slow, but it trades speed in exchange for ease of use.
-- **Cross-browser compatibility**: a work in progress (see browser current compatibility above in the *Installation* section). My goal is to make gotoв work on IE6 and above.
+- **Performance**: gotoв itself is small (~13kb when minified and gzipped, including all dependencies) so it is loaded and parsed quickly. Its view redrawing mechanism is reasonably fast.
+- **Cross-browser compatibility**: gotoв is intended to work on virtually all the browsers you may encounter. See browser current compatibility above in the *Installation* section.
 
-## Why use a javascript framework *at all*?
+### What does gotoв *not* care about?
 
-So glad you asked.
-
-Before we had webapps, we had web pages. A web page is something quite simple: an HTML file, with perhaps a bit of CSS to make it look better, plus a little bit of javascript to give it a couple of nifty edges. If the user clicks on a link on the page, another page is opened and the process is repeated again. If the user fills a form and submits it, when the server receives it, it redirects the user's browser to another page.
-
-All of this means two things: web pages need to 1) hold very little state; 2) once drawn, they don't change much (or at all).
-
-[With the advent of XMLHTTPRequest and ajax](https://www.youtube.com/watch?v=Fv9qT9joc0M&list=PL7664379246A246CB&index=4), everything changed. XMLHTTPRequest essentially allows a web browser to retrieve information from the server *without redirecting to another page*. This is where a web page crosses the boundary and becomes a webapp. Not redirecting the user to another page improves the user experience for two reasons:
-
-1. Performance: if a page is already loaded, it is faster to retrieve new data and update it on the page than to retrieve the entire page (with all the associated markup, style and scripts) from the server.
-
-2. Offline ability: if the network connection (or the server) is down, instead of losing all state, the page can hold its state, warn the user, and attempt to communicate with the server until the connection is restored. Also as important, the page can be saving state to the server constantly without the user having to submit data and waiting for a reload. The archetypic incarnation of this approach is Gmail's web interface.
-
-These two advantages have two drawbacks: 1) we need to manage the state of the webapp; and 2) we must redraw the page when a relevant part of the state changes.
-
-In my experience, this added complexity is not easy to solve with straightforward imperative code. If you are writing a non-trivial webapp and you do it without recourse to libraries that help you deal with these two problems, you will probably encounter issues. Don't take my word for it though; besides, attempting to do this can be a great learning experience.
-
-## Tutorial
-
-I'm working on it. If you want to turn up the heat, open [an issue](https://github.com/fpereiro/gotoB/issues) so I'll be compelled to finish it even sooner.
-
-Meanwhile, you can check out [the examples](https://github.com/fpereiro/gotoB/tree/master/examples)!
+- **Browsers without javascript**: gotoв is 100% reliant on client-side javascript - if you want to create webapps that don't require javascript, gotoв cannot possibly help you create them.
+- **Post-2009 javascript**: everything's written in a subset of ES5 javascript. This means no transpilation, no different syntaxes, and no type declarations. You can of course write your application in ES6 or above and gotoв will still work.
+- **Module loading**: gotoв and its dependencies happily and unavoidably bind to the global object. No CommonJS or AMD.
+- **Build/toolchain integration**: there's no integration with any standard tool for compiling HTML, CSS and js. gotoв itself is pre-built with a 70-line javascript file.
+- **Hot-reloading**: better get that refresh finger ready!
+- **Plugin system**: gotoв tries to give provide you all the essentials out of the box, without installation or configuration.
+- **Object-oriented programming**: gotoв uses objects mostly as namespaces. There's no inheritance and no use of `bind`. Classes are nowhere to be found.
+- **Pure functional programming**: in gotoв, [side-effects are expressed as events](https://github.com/fpereiro/recalc). The return values from event handlers are ignored, and every function has access to the global store. There's no immutability; the global state is modified through functions that update it in place.
 
 ## API reference
 
-Same.
+### Global variables
 
-## Implementation functions
+gotoв automatically loads its five dependencies on the following global variables:
 
-Lemme finish the other two first.
+- `dale`: [dale](http://github.com/fpereiro/dale)
+- `teishi`: [teishi](http://github.com/fpereiro/teishi)
+- `lith`: [lith](http://github.com/fpereiro/lith).
+- `R`: [recalc](http://github.com/fpereiro/recalc).
+- `c`: [cocholate](http://github.com/fpereiro/cocholate).
 
-## Comparison with React
+gotoв itself is loaded on the global variable `B`.
 
-- State is held globally.
-- Instead of a component, create a view. A view is a function that returns literals (and can do it nestedly through other functions).
-- Event handlers generate DOM event handlers that you can inspect.
-- Functional structures are optional. You can do it, but it's up to you. It's not imposed on you.
+`B.v` contains a string with the version of gotoв you're currently using. `B.t` contains a timestamp representing the moment when the library is loaded - which can be an useful reference point for performance measurements.
+
+### Production mode
+
+If you invoke `B.prod` with a `true` argument (`B.prod (true)`), you'll turn on *production mode*. When production mode is on, gotoв's functions will stop validating inputs. This will make your application faster, but if any of these functions is invoked with invalid arguments, you will either experience silent errors or your application will throw an exception. It is recommended that you only set this variable on a production environment once your application has been mostly debugged.
+
+### Saying events
+
+gotoв uses [recalc](http://github.com/fpereiro/recalc), which is an event system. Before we get into it, we need to understand why we use an event system at all.
+
+The need for an event system is best illustrated with an example. Let's imagine we're writing an application which will contain a header. This header contains information about the user that's logged in. It should also be visible only when the user is logged in and on the main view, but not when the user is logged out or outside of the main view. This means that the header will be updated when 1) the view changes; 2) the user is logged in/logged out; and 3) the user information changes.
+
+Without an event system, the code handling those three things (which could be in multiple places) has to update the header. Using an event system, however, allows us to avoid having to track what things should be updated when something changes. The core idea is as follows: we create *event listeners* that get executed when the view changes, the user logs in/out or the user information changes. Whenever any of these things happen, the function drawing the header is *notified* and the header is consequently updated. The important bit is that the code that triggers the changes only has to say an event, and not be concerned about who cares about that change. In other words, the function that updates user information doesn't need to know whether the header function has to be called; instead, the function that updates user information only needs to **saying an event saying that the user information changed**; those functions (event listeners) that care about that will be updated automatically.
+
+The two main operations of an event system are 1) saying an event; and 2) setting event listeners that get notified when certain events are said.
+
+To say an event, we use the function [`B.say`](https://github.com/fpereiro/recalc#rsay). This function takes the following arguments:
+
+- An [optional context object](https://github.com/fpereiro/recalc#tracking-event-chains) (`x`), to keep track of what previous events (if any) triggered this event. We'll see more about this object below.
+- A `verb`, which is a string. For example: `'add'`, `'set'` or `'someverb'`.
+- A `path`, which can be either a string, an integer, or an array with zero or more strings or integers. For example, `'hello'`, `1`, or `['hello', '1']`. If you pass a single string or integer, it will be interpreted as an array containing that element (for example, `'hello'` is considered to be `['hello']` and `0` is considered to be `[0]`).
+- You can pass unlimited additional arguments when you say an event. These arguments can be of any type.
+
+You might ask: why use a combination of `verb` and `path` instead of just having a single event name instead? The answer is: too often we see event names like `toggleFooter`, `updateUser`, `savePosition`. By splitting an event name into a verb and a path, we achieve more clarity and versatility; very often, actions like `toggle`, `update`, `save` can be generalized.
+
+In the process of writing applications with gotoв, you can (and most likely will) create your own `verbs`. You should also know that gotoв already defines with four data verbs (`add`, `rem`, `set` and `change`) that are used for data management. We will see these in a minute.
+
+### Managing data
+
+The starting point of gotoв is data because, without it, a webapp would merely be a webpage. Once we understand how data works, we will be ready to create views that are updated whenever the data changes, and which allow the user to modify the data.
+
+#### `B.store`
+
+gotoв uses a global store to hold all the information that is relevant to your frontend app. This store is a simple object, which you can find at `B.store`. Whenever we talk of *the store*, we will be referring to `B.store`.
+
+#### `B.get`
+
+`B.get` is a function for retrieving data from `B.store`. You can directly access data from `B.store` without it. However, `B.get` is useful to access properties in the store in case they haven't been defined yet.
+
+For example, if `B.store.user.username` is not defined, if you try to do something like `var username = B.store.user.username` and `B.store.user` is not present yet, your program will throw an error.
+
+If, instead, you write `var username = B.get ('user', 'username')`, if `B.store.user` is not present yet then `username` will be `undefined`.
+
+Using this function is completely optional - it is just provided for your convenience.
+
+`B.get` takes either a list of integers and strings or a single array containing integers and strings. These integers and strings represent the *path* to the part of the store you're trying to access. This `path` is the same `path` that `B.say` (the event saying function) takes as an argument.
+
+If you pass invalid arguments to `B.get`, it will return `undefined` and print an error to the console.
+
+If you pass an empty `path` to `B.get` (by passing either an empty array or no arguments), you'll get back `B.store` in its entirety.
+
+#### Data verbs
+
+As we mentioned earlier, gotoв uses events to modify the store. This means that instead of modifying the store directly, we modify the store through an event. This adds some extra typing, but it allows gotoв to know when (and which part of) the store has been changed. In this way, gotoв can update a view only when it's necessary to do so.
+
+To say events, we will use the function `B.say` which we saw above.
+
+##### `set`
+
+The first data *verb* we'll see is `set`. This verb sets data into a particular location inside `B.store`. It takes a `path` and a `value`. `path` can be an integer, a string, or an array containing integers and strings; `path` represents *where* we want to set the value inside `B.store`.
+
+Let's see now a set of examples. In each of these examples, I'll consider that we start with an empty `B.store` so that we don't carry data from one example to the other.
+
+```javascript
+B.say ('set', 'title', 'Hello!');
+
+// B.store is now {title: 'Hello!'}
+```
+
+As you can see, we pass `'set'` as the first argument; then we pass the `path` (`'title'`) and finally the value (`'Hello!'`). `set` also allows you to set nested properties:
+
+```javascript
+B.say ('set', ['user', 'username'], 'mono');
+
+// B.store is now {user: {username: 'mono'}}
+```
+
+Notice how `B.store.user` was initialized to an empty object. Because the second element of the path is a string (`username`), the `set` data verb knows that `B.store.user` must be initialized to an object. Contrast this to the following example:
+
+```javascript
+B.say ('set', ['users', 0], 'mono');
+
+// B.store is now {users: ['mono']}
+```
+
+In the example above, `B.store.users` is initialized to an array instead, since `0` is an integer and integers can only be the keys of arrays, not objects.
+
+If your `path` has length 1, you can use a single integer or object as `path`:
+
+```javascript
+B.say ('set', 'foo', 'bar');
+
+// B.store is now {foo: 'bar'}
+```
+
+If you pass an empty `path`, you will overwrite the entire `B.store`. In this case, `value` can only be an array or object, otherwise an error will be printed and no change will happen to `B.store`.
+
+```javascript
+B.say ('set', [], []);
+
+// B.store is now []
+
+B.say ('set', [], 'hello');
+
+// B.store still is [], the invocation above will print an error and do nothing else.
+
+B.say ('set', [], {});
+
+// B.store is now {}
+```
+
+`set` will overwrite whatever part of the existing store stands in its way. Let's see an example:
+
+```javascript
+B.say ('set', ['Data', 'items'], [0, 1, 2]);
+
+// B.store is now {Data: {items: [0, 1, 2]}}
+
+B.say ('set', ['Data', 'key'], 'val');
+
+// B.store is now {Data: {items: [0, 1, 2], key: 'val'}}
+
+B.say ('set', ['Data', 0], 1);
+
+// B.store is now {Data: [1]}
+```
+
+In the example above, when we set `['Data', 'key']`, `['Data', 'items']` is left untouched. However, when we set `['Data', 0]` to `1`, that assertion requires that `Data` be an array. Because it is an object, it will be overwritten completely and set to an array. This would also happen if `Data` were an array and a subsequent assertion required it being an object.
+
+In summary, `set` will preserve the existing keys on the store unless there is a type mismatch, in which case it will overwrite the required keys with the necessary arrays/objects.
+
+##### `add`
+
+The second data verb is `add`. This verb puts elements at the end of an array. It takes a `path`, plus zero or more elements that will be placed in the array. These elements can be of any type.
+
+```javascript
+B.say ('set', ['Data', 'items'], []);
+
+// B.store is now {Data: {items: []}}
+
+B.say ('add', ['Data', 'items'], 0, 1, 2);
+
+// B.store is now {Data: {items: [0, 1, 2]}}
+
+B.say ('add', ['Data', 'items']);
+
+// B.store is still {Data: {items: [0, 1, 2]}}
+```
+
+If `path` points to `undefined`, the array will be created automatically:
+
+```javascript
+// B.store is now {}
+
+B.say ('add', ['Data', 'items'], 0, 1, 2);
+
+// B.store is now {Data: {items: [0, 1, 2]}}
+```
+
+If no elements are passed to `add` but `path` points to an undefined value, the containing array will still be created.
+
+```javascript
+// B.store is now {}
+
+B.say ('add', ['Data', 'items']);
+
+// B.store is now {Data: {items: []}}
+```
+
+##### `rem`
+
+The third and final data verb is `rem`. This verb removes keys from either an array or an object within the store. Like the other data verbs, it receives a `path`, plus zero or more keys that will be removed.
+
+```javascript
+B.say ('add', ['Data', 'items'], 'a', 'b', 'c');
+
+// B.store is now {Data: {items: ['a', 'b', 'c']}}
+
+B.say ('rem', ['Data', 'items'], 1);
+
+// B.store is now {Data: {items: ['a', 'c']}}
+
+B.say ('rem', 'Data', 'items');
+
+// B.store is now {Data: {}}
+
+B.say ('rem', [], 'Data');
+
+// B.store is now {}
+```
+
+If `path` points to an array, the keys must all be integers. If `path` points to an object, the keys must instead be all strings. If `path` points to neither an array nor an object, `rem` will print an error and do nothing.
+
+```javascript
+B.say ('add', ['Data', 'items'], 'a', 'b', 'c');
+
+// B.store is now {Data: {items: ['a', 'b', 'c']}}
+
+B.say ('rem', ['Data', 'items'], 'a');
+
+// The last invocation will print an error and make no change on B.store
+
+B.say ('rem', 'Data', 0);
+
+// The last invocation will also print an error and make no change on B.store
+
+B.say ('rem', ['Data', 'items', 0], 'foo');
+
+// The last invocation will also print an error and make no change on B.store
+```
+
+If `path` points to `undefined`, `rem` will not produce any effect but no error will be printed.
+
+```javascript
+B.say ('rem', ['Data', 'foo'], 'bar');
+
+// Nothing will happen.
+```
+
+Nothing will happen also if you pass no keys to remove.
+
+```javascript
+B.say ('rem', ['Data', 'items']);
+
+// Nothing will happen.
+```
+
+Instead of passing the keys as arguments, you can also pass them all together as an array of keys.
+
+```javascript
+// These two invocations are equivalent:
+B.say ('rem', ['Data', 'items'], 'a');
+B.say ('rem', ['Data', 'items'], ['a']);
+
+// These two invocations are equivalent:
+B.say ('rem', [], 'Data', 'State');
+B.say ('rem', [], ['Data', 'State']);
+```
+
+#### The `change` event and calling the data functions directly
+
+When you call any of the data verbs through `B.say`, a `change` event with the same `path` will be fired. More precisely, a `change` event will be fired whenever you call a data verb with 1) valid arguments; and 2) when your invocation actually modifies the store. If the event is fired with incorrect arguments or it doesn't modify the store, no `change` event will be triggered.
+
+gotoв's function for creating views (`B.view`), which we'll see below, relies on the `change` event to know when it should redraw a view. `B.view` essentially creates a listener function on the `change` event on a given path. This means that views are redrawn when a `change` event is emitted.
+
+This is the reason for which you need to use events to modify the store. If you modified the store directly, the views depending on a part of the store would not be updated when the store changes!
+
+The three data events internally call the three respective data functions: `B.set`, `B.add` and `B.rem`. These functions receive a `path` as its first argument and then further arguments.
+
+If you want to modify the store but avoid redrawing the views that depend on that part of the store, you can invoke these functions directly. This might be useful when you have multiple updates on a very short amount of time. Once the updates happen, you can then trigger the view redraw by firing a `change` event on the desired `path`.
+
+### `B.ev`
+
+Since gotoв is built around events, we need certain user interactions to say events. For this purpose, we have `B.ev`, a function that creates a *stringified call to B.say* that we can put into the DOM element itself.
+
+Let's see an example: we want to say a certain event when the user clicks on a button; let's say that clicking on this button will say an event with verb `'submit'` and path `'data'`. Here's how we can write it:
+
+```javascript
+['button', {onclick: B.ev ('submit', 'data')}]
+```
+
+As you can see, to say a single event we pass the `verb` and the `path` to `B.ev`. `B.ev` then returns a string containing the necessary code to say this event when the user clicks on the button. Notice also that we place the output of `B.ev` on the `onclick` attribute of the element.
+
+You can pass extra arguments when saying an event. For example, if you want to pass an object of the shape `{update: true}` you can instead write:
+
+```javascript
+['button', {onclick: B.ev ('submit', 'data', {update: true})}]
+```
+
+You can pass all sorts of things as arguments:
+
+```javascript
+['button', {onclick: B.ev ('submit', 'data', null, NaN, Infinity, undefined, /a regular expression/)}]
+```
+
+If you want to say more than one event within the same user interaction, you can do it by wrapping the event arguments into an array, and then wrapping them into another array:
+
+```javascript
+['button', {onclick: B.ev (['submit', 'data'], ['clear', 'data'])}]
+```
+
+If you need to access properties that are within the event handler (like `event` or `this`), you can do so as follows:
+
+```javascript
+['button', {onclick: B.ev ('submit', 'data', {raw: 'this.value'})}]
+```
+
+In the example above, the event linstener will receive `this.value`, instead of the string `'this.value'`. You could also pass the event instead:
+
+```javascript
+['button', {onclick: B.ev ('submit', 'data', {raw: 'event'})}]
+```
+
+You can pass multiple raw arguments. For example, if you want to pass both `this.value` and `event` you can write this:
+
+```javascript
+['button', {onclick: B.ev ('submit', 'data', {raw: 'this.value'}, {raw: 'event'})}]
+```
+
+If an object has a key `raw` but its value is not a string, it will be considered as a literal argument instead:
+
+```javascript
+['button', {onclick: B.ev ('submit', 'data', {raw: 0})}]
+```
+
+The event listener above will receive `{raw: 0}` as its first argument.
+
+If you pass an object with a `raw` key that contains a string, other keys within that object will be ignored.
+
+```javascript
+['button', {onclick: B.ev ('submit', 'data', {raw: 'this.value', ignored: 'key'})}]
+```
+
+An implementation note: `B.ev` uses the function `B.str` to stringify its arguments.
+
+### `B.elem`
+
+TODO
+
+### Debugging
+
+TODO
+
+`B.debug` and the `error` event
+
+Autoactivation, show by default. If you find this annoying, forget it: B.forget ('error');
+
+From will be there for add|rem|set that you do within listener that you pass context. Also for redraw, since its triggered by change. Invocations to B.ev and B.view will have no context|from but you can do it by the arguments.
+
+Instead of logging to the console, emit events and then see them in B.debug! Very useful also for environments where there's no console, like mobile browsers.
+
+Two things in error reporting: visibility, and once you see it, identifiability, which means to track it quickly and certainly to which part of the code is making it. For the second, we put valuable info (including the `from` in some cases), but not more than necessary.
+
+### Change listeners
+
+Common patterns: check if matching is precise; and get value. Show function doing this and think about whether to include it.
+
+## Internals
 
 ## Source code
 
-The complete source code is contained in `gotoB.js`. gotoв itself is about 710 lines long; its dependencies are about 1280 lines; the whole thing is about 1990 lines.
+The complete source code is contained in `gotoB.js`. gotoв itself is about XXX lines long; its dependencies are about 1320 lines; the whole thing is about XXX lines.
 
-Annotated source code will be forthcoming when the library stabilizes.
+Below is the annotated source.
+
+```javascript
+/*
+gotoB - v2.0.0
+
+Written by Federico Pereiro (fpereiro@gmail.com) and released into the public domain.
+
+Please refer to readme.md to read the annotated source.
+```
+
+### Setup
+
+We wrap the entire file in a self-executing anonymous function. This practice is commonly named [the javascript module pattern](http://yuiblog.com/blog/2007/06/12/module-pattern/). The purpose of it is to wrap our code in a closure and hence avoid making the local variables we define here to be available outside of this module.
+
+```javascript
+(function () {
+```
+
+If we're in node.js, we print an error and return `undefined`.
+
+```javascript
+   if (typeof exports === 'object') return console.log ('gotoв only works in a browser!');
+```
+
+We require the five dependencies of the library (available at global variables) and assign them to local variables:
+
+- [dale](http://github.com/fpereiro/dale).
+- [teishi](http://github.com/fpereiro/teishi).
+- [lith](http://github.com/fpereiro/lith).
+- [recalc](http://github.com/fpereiro/recalc).
+- [cocholate](http://github.com/fpereiro/cocholate).
+
+In the case of recalc, we initialize a recalc object and store it in the variable `r` - in the four other cases, the local variables are no more than a reference to the main object exported by each library.
+
+```javascript
+   var dale = window.dale, teishi = window.teishi, lith = window.lith, r = window.R (), c = window.c;
+```
+
+We create an alias to `teishi.type`, the function for finding out the type of an element.
+
+```javascript
+   var type = teishi.type;
+```
+
+We define `B`, the main object of the library, which will contain all its functions. Note we also attach it to `window.B`, so that it is globally available to other scripts.
+
+This object has three keys that hold strings or numbers:
+
+- `v`, a string containing the current version of the library.
+- `B`, a one character string containing the [ve](https://en.wikipedia.org/wiki/Ve_(Cyrillic)) letter of the Cyrillic alphabet. This string is meant to be a handy reference to the letter, which will be used in some parts of the library.
+- `t`, an integer timestamp to mark the time when gotoв is loaded. This is useful as an "instant zero" timestamp for performance measurements.
+
+The remaining seven keys of the main object map to recalc entities. The first one, `r`, maps to the single instance of recalc used by gotoв. The other six map to the public objects and methods of the recalc instance:
+
+- `r.listeners`, an array which contains all event listeners.
+- `r.store`, an object which is the global state.
+- `r.log`, an array which contains all the events fired, used for debugging purposes.
+- `r.say`, the function for emitting events.
+- `r.listen`, the function for creating an event listener.
+- `r.forget`, the function for deleting an event listener.
+
+```javascript
+   var B = window.B = {v: '2.0.0', B: 'в', t: teishi.time (), r: r, listeners: r.listeners, store: r.store, log: r.log, say: r.say, listen: r.listen, forget: r.forget};
+```
+
+gotoв is essentially a set of functions built on top of recalc. The last six keys are meant as shorthands to the corresponding recalc objects for quicker debugging from the browser console. If it wasn't for these shorthands, instead of writing `B.say`, for example, we'd have to write `B.r.say`, which is longer and doesn't look as nice.
+
+### Error reporting
+
+We define a function `B.error`, which we'll use to report errors when a gotoв function is used with invalid inputs. We will also store this function in `r.error`, so that recalc also uses it to inform errors. This is necessary since we're directly exposing some recalc functions directly without writing gotoв wrappers for them.
+
+This function receives arguments which contain the contents of an error; it will emit an `error` event through `B.say` and return `false`.
+
+```javascript
+   r.error = B.error = function () {
+```
+
+If the first argument we receive is an object, we consider it to be a recalc execution context and store it in the local variable `x`.
+
+```javascript
+      var x = type (arguments [0]) === 'object' ? arguments [0] : undefined;
+```
+
+We collect all the arguments into a local variable `args`, taking care to ignore the context argument if it's present.
+
+```javascript
+      var args = dale.go (arguments, function (v) {return v}).slice (x ? 1 : 0);
+```
+
+We fire an event through `B.say`, passing either the provided context (if present) or an empty context, plus the verb `error`, and the rest of the arguments, of which the first one will function as a path.
+
+```javascript
+      B.say.apply (null, [x || {}, 'error'].concat (args));
+```
+
+We return `false` and close the function.
+
+```javascript
+      return false;
+   }
+```
+
+### Data functions
+
+In this section we define three functions for setting data and one for retrieving data from `B.store`. They are `add`, `rem`, `get` and `set`; the acronym *args* is a helpful mnemonic to remember them.
+
+We start with `B.get`. This function takes as input a `path` (which can be a number, a string, or an array with zero or more numbers or strings).
+
+```javascript
+   B.get = function () {
+```
+
+ The `path` can be passed to `B.get` in two ways: either as an array, or as a list of arguments. For example, the path `['items', 0]` can be retrieved by either `B.get (['items', 0])` or `B.get ('items', 0)`.
+
+If the first argument is an array, we will consider that array to be `path`. Otherwise, we will collect each of the arguments into an array and consider that array to be `path`.
+
+```javascript
+      var path = type (arguments [0]) === 'array' ? arguments [0] : dale.go (arguments, function (v) {return v});
+```
+
+If we're in production mode, we do not validate `path` to save execution time. We will see this pattern again in most of the functions of gotoв. If we're not in production mode, we invoke `r.isPath` to validate that `path` is a valid recalc `path` (that is, either an integer, a string, or an array made of strings and integers). If we validate `path` and it turns to be invalid, we notify the error through `B.error`.
+
+```javascript
+      if (! B.prod && ! r.isPath (path)) return B.error ('B.get', 'Invalid path:', path) || undefined;
+```
+
+We create a local variable `target` pointing to `B.store`.
+
+```javascript
+      var target = B.store;
+```
+
+We will iterate `path`. If any of the iterations returns `false`, the loop will be interrupted.
+
+```javascript
+      return dale.stop (path, false, function (v, k) {
+```
+
+If we're not iterating the last element of `path` and `target [v]` is neither an object nor an array then the requested `path` is unreachable. For example, if `B.store` is empty and the requested `path` is `['items', 0]`, `B.get` will find that `B.store.items` is neither an array nor an object, in which case there's no point in trying to access `B.store.items [0]`. We will then return `false` to interrupt the iteration.
+
+```javascript
+         if (k < path.length - 1 && teishi.simple (target [v])) return false;
+```
+
+Otherwise, we update `target` to point to the specific object we're looking for. Here we can see that the iteration of `path` works by making `target` to be incrementally closer to the object we're looking for.
+
+```javascript
+         target = target [v];
+```
+
+If the iteration returns `false`, the `path` is unreachable, in which case we return `undefined`. Otherwise, we return `target`, which will contain the value we want to return. We close the function.
+
+Notice that `target` may well be `undefined`, in which case `B.get` will also return `undefined`. This means that unreachable paths are by default considered to be `undefined` instead of throwing an error. This is the main reason for using `B.get` instead of accessing the properties of `B.store` directly.
+
+```javascript
+      }) === false ? undefined : target;
+   }
+```
+
+We now define `B.set`, a function for setting a value into a certain path of the store.
+
+This function will return `true` if successful and `false` if it encountered a validation error in its arguments.
+
+```javascript
+   B.set = function () {
+```
+
+This function takes two or three arguments:
+- An optional context argument.
+- `path`, the location in the store where `value` will be placed. If the context is present, this will be the second argument, otherwise it will be the first.
+- `value`, which can be of any type. If the context is present, this will be the third argument, otherwise it will be the second.
+
+```javascript
+      var x    = type (arguments [0]) === 'object' ? arguments [0] : undefined;
+      var path = arguments [x ? 1 : 0], value = arguments [x ? 2 : 1];
+```
+
+If we're not in production mode, we do not validate `path` to save execution time. Otherwise, we invoke `r.isPath` to validate that `path` is a valid recalc `path` (that is, either an integer, a string, or an array made of strings and integers). If we validate `path` and it turns to be invalid, we will notify the error through `B.error` and return `false`.
+
+```javascript
+      if (! B.prod && ! r.isPath (path)) return B.error (x || {}, 'B.set', 'Invalid path:', path);
+```
+
+If `path` is not an array (in which case it must be either an integer or a string), we wrap it into an array.
+
+```javascript
+      if (type (path) !== 'array') path = [path];
+```
+
+If `path` has length 0, we will overwrite `B.store`:
+
+```javascript
+      if (path.length === 0) {
+```
+
+If we're not in production mode, we check that `value` is either an array or an object. If it's neither, we print an error and return `false`.
+
+```javascript
+         if (! B.prod && teishi.simple (value)) return B.error (x || {}, 'B.set', 'Cannot set B.store to something that is not an array or object.');
+```
+
+We set `B.store` to `value` and return `true`. There's nothing to do for this case, so we close the block.
+
+```javascript
+         B.store = value;
+         return true;
+      }
+```
+
+We check what's the type of the first element of `path`, to make sure that `B.store` is of the right type.
+
+```javascript
+      var storeType = type (path [0]) === 'string' ? 'object' : 'array';
+```
+
+If the store is an object and the first element of `path` is an integer, or the store is an array and the first element of `path` is a string, we overwrite the entire store with either an array or an object, respectively.
+
+```javascript
+      if (type (B.store) !== storeType) B.store = storeType === 'object' ? {} : [];
+```
+
+We create a local variable `target` pointing to `B.store`.
+
+```javascript
+      var target = B.store;
+```
+
+We iterate the elements of `path`. The purpose of the loop is to update `target` until we find the place in `B.store` where we can set `value`. This loop will also create (or overwrite) the necessary arrays and objects required by `path`.
+
+```javascript
+      dale.go (path, function (v, k) {
+```
+
+If we're iterating the last element the path, we set `target [v]` to `value` and exit the loop.
+
+```javascript
+         if (k === path.length - 1) return target [v] = value;
+```
+
+We check the type of the *next* element of the path and store it on `targetType`. If it's a string, the new target should be an object, otherwise it should be an array.
+
+Notice that this check will happen for all elements of the path except the last (which we covered just above). Notice also that because we're looking ahead to the *next* value, we had to check the right type of `B.store` outside of the loop.
+
+```javascript
+         var targetType = type (path [k + 1]) === 'string' ? 'object' : 'array';
+```
+
+If `target [v]` is not of the right type, we overwrite it with either an empty object or array.
+
+```javascript
+         if (type (target [v]) !== targetType) target [v] = targetType === 'object' ? {} : [];
+```
+
+We set `target` to `target [v]`. There's nothing else within the loop, so we close it.
+
+```javascript
+         target = target [v];
+      });
+```
+
+We return `true` and close the function.
+
+```javascript
+      return true;
+   }
+```
+
+We now define `B.add`, which pushes elements onto an existing array. This function takes an optional context argument and a mandatory [recalc `path`](https://github.com/fpereiro/recalc#rsay), plus other optional arguments. These extra arguments are the elements that will be pushed onto the array located at `path`.
+
+```javascript
+   B.add = function () {
+```
+
+If the first argument is an object, we will consider it to represent a context argument. `path` will be either the first argument (if no context is present) or the second argument (if context is present).
+
+```javascript
+      var x    = type (arguments [0]) === 'object' ? arguments [0] : undefined;
+      var path = arguments [x ? 1 : 0];
+```
+
+If we're not in production mode, we invoke `r.isPath` to validate that `path` is a valid recalc `path` (that is, either an integer, a string, or an array made of strings and integers). If we validate `path` and it turns to be invalid, we notify the error through `B.error` and return `false`.
+
+```javascript
+      if (! B.prod && ! r.isPath (path)) return B.error (x || {}, 'B.add', 'Invalid path:', path);
+```
+
+We check the value of `path` using `B.get`. If `path` is still undefined, we set it to an empty array using `B.set`. For example, if `path` is `['items']` and `B.store` is empty, after this operation, `B.store.items` will be an empty array. If, instead, `path` is `['data', 'items']` and `B.store` is empty, after this operation `B.store.data` will be an object and `B.store.data.items` will be an empty array.
+
+```javascript
+      if (B.get (path) === undefined) B.set (path, []);
+```
+
+We define a local variable `target` where we will store a reference to the array where we want to push our items.
+
+```javascript
+      var target = B.get (path);
+```
+
+If we're not in production mode, we check whether `target` actually points to an array. If it doesn't, we notify the error and return `false`.
+
+```javascript
+      if (! B.prod && type (target) !== 'array') return B.error (x || {}, 'B.add', 'Cannot add to something that is not an array. Path:', path);
+```
+
+We iterate the arguments received by the function.
+
+```javascript
+      dale.go (arguments, function (v, k) {
+```
+
+If we're iterating an argument that's neither the context nor `path`, we push it onto `target`. Notice that if we pass no arguments, no elements will be pushed onto `target`.
+
+```javascript
+         if (k > (x ? 1 : 0)) target.push (v);
+      });
+```
+
+We return `true` and close the function.
+
+```javascript
+      return true;
+   }
+```
+
+We now define `B.rem`, the last data function. Besides an optional context argument, this function takes a `path` as its first mandatory argument, and then additional arguments. These additional arguments represent *keys* that will be removed from the object or array at `path`.
+
+```javascript
+   B.rem = function () {
+```
+
+If the first argument is an object, we will consider it to represent a context argument. `path` will be either the first argument (if no context is present) or the second argument (if context is present).
+
+```javascript
+      var x    = type (arguments [0]) === 'object' ? arguments [0] : undefined;
+      var path = arguments [x ? 1 : 0];
+```
+
+If we're not in production mode, we validate `path`. If it's invalid, we notify the error through `B.error` and return `false`.
+
+```javascript
+      if (! B.prod && ! r.isPath (path)) return B.error (x || {}, 'B.rem', 'Invalid path:', path);
+```
+
+We define two local variables: `target`, to hold the object or array we will remove keys from; and `targetType`, a variable to hold the type of `target`.
+
+```javascript
+      var target     = B.get (path);
+      var targetType = type (target);
+```
+
+We define `keys`, the list of keys to be removed from `target`. These can be provided in two ways: either as additional arguments, or with the argument coming after `path` being an array of keys. If the argument coming after `path` is an array, we will consider it to contain a list of keys; otherwise, we will collect all additional arguments into an array.
+
+```javascript
+      var keys       = type (arguments [x ? 2 : 1]) === 'array' ? arguments [x ? 2 : 1] : dale.go (arguments, function (v) {return v}).slice (x ? 2 : 1);
+```
+
+If we're not in production mode, we will perform further validations:
+
+```javascript
+      if (! B.prod && teishi.stop ('B.rem', [
+```
+
+`targetType` must be array, object or `undefined`. Why `undefined`? If we are trying to remove keys from a path that has nothing, we will consider this to be a [no-op](https://en.wikipedia.org/wiki/NOP_(code)), exactly like the case where no additional arguments are passed to `B.add`.
+
+```javascript
+         ['type of target', targetType, ['array', 'object', 'undefined'], 'oneOf', teishi.test.equal],
+```
+
+If `target` is an array, we check that each of `keys` are integers; and if `target` is an object, we check that each of `keys` are strings.
+
+```javascript
+         targetType === 'array'  ? ['keys of array target',  keys, 'integer', 'each'] : [],
+         targetType === 'object' ? ['keys of object target', keys, 'string',  'each'] : []
+```
+
+If any of these validations is not passed, we will notify the error through `B.error` and return `false`.
+
+```javascript
+      ], function (error) {
+         B.error (x || {}, 'B.rem', error, 'Path:', path);
+      })) return false;
+```
+
+If `targetType` is an object, we merely iterate `keys` and [`delete`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/delete) them from the `target`.
+
+```javascript
+      if (targetType === 'object') dale.go (keys, function (v) {delete target [v]});
+```
+
+If `targetType` is an array:
+
+```javascript
+      if (targetType === 'array') {
+```
+
+We copy `keys` (which, in this case, contains integers) and then sort it so that the greatest keys come first. We copy the array so that if a `keys` array was passed, we don't modify it as a side effect of executing `B.rem`.
+
+```javascript
+         keys = teishi.copy (keys);
+         keys.sort (function (a, b) {return b - a});
+```
+
+For each of the keys, we remove them from the array with splice - since we remove the keys from the end to the beginning, there's no possibility that the original indexes will be shifted. If we did this the other way around and (say) we removed the first element of the array, we would have to decrement all the `keys` by 1, otherwise we would be removing the wrong elements.
+
+```javascript
+         dale.go (keys, function (v) {target.splice (v, 1)})
+      }
+```
+
+There's nothing else to do, so we return `true` and close the function. Note that if `targetType` is `undefined`, the function does nothing except for returning `true`.
+
+```javascript
+      return true;
+   }
+```
+
+### Data listeners
+
+We're now ready to define the three data listeners. These functions are wrappers around the three data functions that modify the store: `add` for `B.add`, `rem` for `B.rem` and `set` for `B.set`.
+
+These listeners do the following: 1) invoke the underlying data function; 2) if the data function executed correctly (because its arguments were valid) *and* the store was modified, a `change` event will be triggered.
+
+We iterate the three verbs.
+
+```javascript
+   dale.go (['add', 'rem', 'set'], function (verb) {
+```
+
+For each of these verbs, we invoke `B.listen` to create an event listener. We set both its `id` and `verb` to the verb itself, and we set its path to an empty array. By setting the path to an empty array, this event will be triggered by any event that has the same verb, regardless of its path.
+
+```javascript
+      B.listen ({id: verb, verb: verb, path: []}, function (x) {
+```
+
+We create a reference to the existing value of `x.path` and store it on a local variable `previousValue`. If the operation is `add` or `rem`, we copy the value, because if the target is an array or object and we modify it through this operation, we will lose its original value and hence cannot know whether it will have changed. If the operation is `set`, we don't need to copy it since it will either be overwritten with a new object/array, or with the already existing one.
+
+```javascript
+         var previousValue = verb === 'set' ? B.get (x.path) : teishi.copy (B.get (x.path));
+```
+
+We invoke the corresponding data function with the context as the first argument, the `path` as its second argument and passing along further arguments (if they're there). If this function invocation returns `false`, the handler will stop executing.
+
+```javascript
+         if (B [x.verb].apply (null, [x, x.path].concat (dale.go (arguments, function (v) {return v}).slice (1))) === false) return;
+```
+
+If we're here, the corresponding data function was executed successfully. If the relevant part of the store changed, we trigger a `change` event on the path. There's nothing else, so we close the listener and the iterating function.
+
+```javascript
+         if (! teishi.eq (previousValue, B.get (x.path))) B.say (x, 'change', x.path);
+      });
+   });
+```
+
+### Core functions
+
+We start this section by defining `B.str`, a helper function only used by `B.ev`. This function has the purpose of stringifying its input so that it can be placed within a DOM event handler. This function takes a single argument of any type.
+
+```javascript
+   B.str = function (input) {
+```
+
+We note the type of `input`.
+
+```javascript
+      var inputType = type (input);
+```
+
+If `input` is neither an array nor an object, we're dealing with a single value. If it is a string, we stringify it and return it. Otherwise, we coerce it into a string and return it. By coercing non-strings into strings, we can obtain strings that represent javascript values that cannot be stringified, like `NaN`, `Infinity`, `undefined` or regular expressions.
+
+```javascript
+      if (inputType !== 'array' && inputType !== 'object') return inputType === 'string' ? teishi.str (input) : (input + '');
+```
+
+If `input` is an array, we recursively invoke `B.str` on all its elements, join the results by a comma and a space; we finally wrap the output with square brackets and return the resulting string.
+
+```javascript
+      if (inputType === 'array') return '[' + dale.go (input, B.str).join (', ') + ']';
+```
+
+If we're here, `input` is an object. We iterate the object; for each of its items, we stringify the key and append a colon, a space and the value of recursively invoking `B.str` on the value itself. We join these results by a comma and a space, and finally wrap the whole thing with curly brackets. We return the resulting string and close the function.
+
+```javascript
+      return '{' + dale.go (input, function (v, k) {
+         return teishi.str (k) + ': ' + B.str (v);
+      }).join (', ') + '}';
+   }
+```
+
+We define a helper function, `B.evh`, to retrieve the attributes of a given DOM element. This function will be used from the stringified event handlers created by `B.ev` below.
+
+```javascript
+   B.evh = function (element) {
+```
+
+We retrieve the attributes from the element using `c.get`, iterate them and create an object out of them, ignoring those attribute names that start with the prefix `on` (which are event handlers that we want to skip). We return this object and close the function.
+
+```javascript
+      return dale.obj (c.get (element), function (v, k) {
+         if (! k.match (/^on/)) return [k, v];
+      });
+   }
+```
+
+We now define `B.ev`, one of the core functions of gotoв. This function has the purpose of returning stringified event handlers that we can place into DOM elements.
+
+```javascript
+   B.ev = function () {
+```
+
+If `B.ev` receives an array as its first argument, we expect each of the events to be wrapped in an array. Otherwise, we expect all the arguments received by `B.ev` to represent a single event. Notice that if no arguments are received, we consider `B.ev` to receive no events at all. We collect all the events in an array named `evs`.
+
+```javascript
+      if (type (arguments [0]) === 'array') var evs = arguments;
+      else                                  var evs = arguments.length === 0 ? [] : [dale.go (arguments, function (v) {return v})];
+```
+
+If we're not in production mode, we make sure that each of the elements of `evs` is 1) an array, where 2) the first element is a string and 3) the second element is a valid path. If any of these conditions is not met, an error will be notified through `B.error` and `B.ev` will return `false`.
+
+```javascript
+      if (! B.prod && teishi.stop ('B.ev', dale.go (evs, function (ev) {
+         return [
+            ['ev', ev, 'array'],
+            function () {return [
+               ['ev.verb', ev [0], 'string'],
+               function () {
+                  return r.isPath (ev [1]) ? true : B.error ('B.ev', 'Invalid path:', ev [1], 'Events:', evs);
+               }
+            ]}
+         ];
+      }), function (error) {
+         B.error ('B.ev', error, 'Events:', evs);
+      })) return false;
+```
+
+We create `output`, a string that will contain the output of a function.
+
+We initialize `output` to the code needed to invoke `B.say` with the following arguments: `'ev'` as the verb, `event.type` (a string with the name of the event being fired) as the `path`; as its third argument, we pass the result of invoking `B.evh` with `this` (the DOM element which received the event) as its only argument. This third argument will contain an object with all attribute names and values, except for those that are event handlers and start with *on* (i.e.: `onclick`, `oninput`).
+
+Invoking `B.say` will generate an id. We store this id in a variable `id` that is local to the event handler.
+
+```javascript
+      var output = 'var id = B.say ("ev", event.type, B.evh (this));';
+```
+
+We iterate each of the events to be fired. For each of them, we will append to `output` an invocation to `B.say`.
+
+```javascript
+      dale.go (evs, function (ev) {
+```
+
+We invoke `B.say` passing as its first argument a context object with the `from` key set to `id` (so that this event can be tracked to the DOM event that generated it.
+
+After this, we iterate the elements of `ev` - notice that if this `ev` has only a verb and a path, we add a third argument `{raw: 'this.value'}`, which we'll cover in a minute.
+
+```javascript
+         output += ' B.say ({"from": id}, ' + dale.go (ev.length === 2 ? ev.concat ({raw: 'this.value'}) : ev, function (v, k) {
+```
+
+`B.ev` has a mechanism to allow you to pass raw arguments to `B.say`. A raw event is a string that is not stringified, and thus can be used to access the event properties directly. For example, if you want to access the value of an `input` field, you would need the raw argument `this.value`. To represent raw elements, `B.ev` expects an object with a key `raw` and a value that is a string.
+
+If we're iterating the third element of the `ev` onwards (which means that we've already covered `verb` and `path`) and the object has a `raw` key with a string as value, we merely return the value without stringifying it. Notice that if any other keys are present in the object, we ignore them.
+
+```javascript
+            if (k > 1 && type (v) === 'object' && type (v.raw) === 'string') return v.raw;
+```
+
+If the element doesn't represent a `raw` argument, we stringify it through `B.str` and return it.
+
+```javascript
+            return B.str (v);
+```
+
+We join the elements by a comma and a space; then append a closing parenthesis (to close the invocation to `B.say`) and a semicolon.
+
+```javascript
+         }).join (', ') + ');';
+```
+
+We close the iteration of each `ev`.
+
+```javascript
+      });
+```
+
+ We return `output` and close the function.
+
+```javascript
+      return output;
+   }
+```
 
 ## License
 

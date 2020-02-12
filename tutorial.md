@@ -158,7 +158,7 @@ We will start building the simplest possible web application - a counter! My hop
 
 ### Step 2-1: specifying a counter
 
-We are going to build a counter app with pure js (also called [vanilla js](http://vanilla-js.com/)). The only restriction we have is that we're doing everything from js, instead of adding elements to the HTML file we created on step 1-2.
+We are going to build a counter app with pure js (also called [vanilla js](http://vanilla-js.com/)). We won't use gotoв yet. The only restriction we have is that we're doing everything from js, instead of adding elements to the HTML file we created on step 1-2.
 
 Here's the specification for our counter:
 
@@ -414,3 +414,24 @@ var increment = function () {
    paragraph.innerHTML = 'Counter is ' + value;
 }
 ```
+
+If we were to abstract this to see the general pattern, we could put it like this:
+
+- Define an **initial state**: we set `value` to 0. Note we do this in js after what we learned in step 2-7.
+- Define an **initial view**: we create HTML for both the `paragraph` and the `button`. The button has an **event handler** which calls `increment`, a **listener** (see below).
+- **Draw** the initial view: we take the initial view and put it inside the page so that the user can see it.
+- Define a **listener to perform operations**: the function `increment` contains logic for both updating the **state** and updating the **view**. Notice that this listener is referenced by `button`.
+- When the user clicks on `button`, the listener is **executed** and both the **state** and the **view** are **updated**.
+
+This is a bunch, so let's break it down even more:
+
+- **State**: data that lives in js and is required to display accurate information.
+- **View**: all the HTML & CSS that is in the page and is seen by the user.
+- **Listener**: a function that updates both the state and the view.
+- **Event handler**: something that connects a user action on a certain element (like clicking or inputting text) with a listener.
+
+The above are the fantastic four! State, view, listener and event handler.
+
+In section 2-7 we saw that it is convenient to separate the state and the view, so that why we have two things instead of one. Think of these two things, state and view, as pure data. One is usually numbers and text. The other one is always HTML and CSS. That's it!
+
+As for the other two, they represent the dynamic aspect of the app. A listener is a function that changes the state and the view. Why both? If you only change the state, the view would be out of sync with the data! And if the view was changed but not the data, then the data would be out of sync with the view! State and view can change, but they must do so consistently. This consistency requirement is essential.

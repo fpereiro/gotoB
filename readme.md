@@ -30,7 +30,7 @@ gotoв is written in Javascript. You can use it in the browser by sourcing the p
 Or you can use this link to use the latest version - courtesy of [jsDelivr](https://jsdelivr.com).
 
 ```html
-<script src="https://cdn.jsdelivr.net/gh/fpereiro/gotob@/gotoB.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/fpereiro/gotob@c338b82ab66a780ae619aeb0095155de5647f8e9/gotoB.min.js"></script>
 ```
 
 gotoв is exclusively a client-side library. Still, you can find it in npm: `npm install gotob`

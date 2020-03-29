@@ -6,7 +6,7 @@ gotoв is a framework for making the frontend of a web application (henceforth w
 
 ## Current status of the project
 
-The current version of gotoв, v1.2.3, is considered to be *somewhat stable* and *mostly complete*. [Suggestions](https://github.com/fpereiro/gotoB/issues) and [patches](https://github.com/fpereiro/gotoB/pulls) are welcome. Besides bug fixes, these are the future changes planned:
+The current version of gotoв, v1.2.4, is considered to be *somewhat stable* and *mostly complete*. [Suggestions](https://github.com/fpereiro/gotoB/issues) and [patches](https://github.com/fpereiro/gotoB/pulls) are welcome. Besides bug fixes, these are the future changes planned:
 
 - Add missing documentation.
 - Extend cross-browser compatibility.
@@ -30,7 +30,7 @@ gotoв is written in Javascript. You can use it in the browser by sourcing the p
 Or you can use this link to use the latest version - courtesy of [jsDelivr](https://jsdelivr.com).
 
 ```html
-<script src="https://cdn.jsdelivr.net/gh/fpereiro/gotob@50d142497e0a169c831de13b61bb839cca036c41/gotoB.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/fpereiro/gotob@/gotoB.min.js"></script>
 ```
 
 gotoв is exclusively a client-side library. Still, you can find it in npm: `npm install gotob`
@@ -301,7 +301,7 @@ Lemme finish the other two first.
 
 ## Source code
 
-The complete source code is contained in `gotoB.js`. gotoв itself is about 710 lines long; its dependencies are about 1280 lines; the whole thing is about 1990 lines.
+The complete source code is contained in `gotoB.js`. gotoв itself is about 720 lines long; its dependencies are about 1290 lines; the whole thing is about 2000 lines.
 
 Annotated source code will be forthcoming when the library stabilizes.
 

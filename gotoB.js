@@ -1,5 +1,5 @@
 /*
-gotoB - v1.2.3
+gotoB - v1.2.4
 
 Written by Federico Pereiro (fpereiro@gmail.com) and released into the public domain.
 
@@ -17,7 +17,7 @@ Please refer to readme.md to read the annotated source (but not yet!).
    var type = teishi.t, log = teishi.l;
 
    var r = window.R ();
-   var B = window.B = {v: '1.2.3', B: 'в', r: r, routes: r.routes, store: r.store, do: r.do, listen: r.listen, forget: r.forget};
+   var B = window.B = {v: '1.2.4', B: 'в', r: r, routes: r.routes, store: r.store, do: r.do, listen: r.listen, forget: r.forget};
 
    // *** B.EVENTLOG ***
 
@@ -335,6 +335,7 @@ Please refer to readme.md to read the annotated source (but not yet!).
    B.trample      = 200;
    B.resolvequeue = [];
    B.resolving    = false;
+   B.perflogs     = false;
 
    B.resolve = function (x, id, newView, rec) {
 
@@ -356,7 +357,10 @@ Please refer to readme.md to read the annotated source (but not yet!).
          else B.resolving = false;
       }
 
+      if (B.perflogs) var perf = {start: teishi.time ()};
+
       var route = B.routes [id], newView = newView ();
+      if (B.perflogs) perf.draw = teishi.time () - perf.start;
 
       var rootElement = document.getElementById (id);
 
@@ -371,7 +375,9 @@ Please refer to readme.md to read the annotated source (but not yet!).
          return outro ();
       }
 
+      if (B.perflogs) var difft = teishi.time ();
       var diff = B.diff (B.prediff (route.view), B.prediff (newView [0]));
+      if (B.perflogs) perf.diff = teishi.time () - difft;
 
       dale.do (B.routes, function (route) {
          if (route.parent === id && route.id.match (/^в[0-9a-f]+$/)) B.forget (route.id, onforget);
@@ -406,7 +412,7 @@ Please refer to readme.md to read the annotated source (but not yet!).
                      diff: dale.obj (teishi.c (diff), function (v2, k2) {return [k2, v2]})
                   };
                   x.from.unshift ({ev: 'gotoB error', data: data});
-                  log ('BOOM! YOU FOUND A BUG IN gotoB! Please open a pull request at http://github.com/fpereiro/gotoB/issues and paste the text below:\n', JSON.stringify (data));
+                  log ('gotoB redraw error! This could be caused by two things: 1) invalid markup; 2) a gotoB redraw bug. To eliminate the possibility of #1, check that the view being redrawn returns lith that represents valid HTML, taking particular care to not nest elements incorrectly (for example, an <h1> cannot go inside an <h1>). If you need help debugging the error, please open a pull request at http://github.com/fpereiro/gotoB/issues and paste the text below:\n', JSON.stringify (data, null, '   '));
                   throw new Error ('gotoB redraw error!');
                }
                cur = cur.childNodes [v];
@@ -420,7 +426,7 @@ Please refer to readme.md to read the annotated source (but not yet!).
          };
 
          dale.do (diff, function (v, k) {
-            if (v [1].match (/^<</)) return;
+            if (v [1].match (/^<opaque/)) return;
             if (! v [1].match (/^>/)) diff [k] [2] = {el: find (dold, 'sequence', k), old: teishi.c (dold), New: teishi.c (dnew)};
             if (v [1].match (/^</)) {
                diff [k] [2].active = diff [k] [2].el === document.activeElement;
@@ -472,9 +478,13 @@ Please refer to readme.md to read the annotated source (but not yet!).
 
          dale.do (diff, function (v, k) {
             if (v [1].match (/^>/)) return;
-            if (v [1].match (/^<</)) {
-               if (v [0] !== 'rem') diff [k - 1] [2].el.innerHTML = v [1].slice (1);
-               return;
+            if (v [1].match (/^<opaque/)) {
+               if (v [0] === 'rem') return;
+               // previous might be n items behind if there are multiple `rem` operations
+               var previous = dale.stopNot (dale.times (k, k - 1, -1), undefined, function (k) {
+                  if (diff [k] [0] !== 'rem') return diff [k];
+               });
+               return previous [2].el.innerHTML = v [1].slice (7);
             }
             if (v [1] [0] !== '<' && v [0] !== 'rem' && v [2].New.length > 1) {
                var Parent = find (v [2].New.slice (0, -1));
@@ -585,6 +595,10 @@ Please refer to readme.md to read the annotated source (but not yet!).
 
       if (route.ondraw) route.ondraw (x);
 
+      if (B.perflogs) {
+         perf.total = teishi.time () - perf.start;
+         log ('gotoB redraw performance', id, B.routes [id].path, perf);
+      }
       outro ();
    }
 
@@ -611,7 +625,7 @@ Please refer to readme.md to read the annotated source (but not yet!).
          if (input [0] === 'style' && type (conts) === 'array') conts = lith.css.g (conts);
          if (attrs) {
             output [output.length - 1] += ' ' + JSON.stringify (attrs);
-            if (attrs.opaque) output.push ('<' + lith.g (conts, B.prod));
+            if (attrs.opaque) output.push ('<opaque' + lith.g (conts, B.prod));
             else if (attrs.id !== undefined && (attrs.id + '').match (/^в[0-9a-f]+$/g)) {
                conts = B.routes [attrs.id].view;
             }

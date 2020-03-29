@@ -36,6 +36,7 @@
             // *** PROD MODE ***
 
             B.prod = false;
+            B.perflogs = true;
 
             // *** ERRORS ***
 
@@ -1081,12 +1082,20 @@
 
                   return B.view (['State', 'ltable'], function (x, ltable) {
                      return B.view (['State'], function (x, State) {
-                        return ['table', dale.do (dale.times (ltable), function (v) {
-                           return ['tr', dale.do (dale.times (ltable), function (v2, k2) {
-                              if (k2 === 0) return ['td', {class: 'something ' + State.opaqueclass, opaque: true}, ['input']];
-                              else return ['td', k2];
-                           })];
-                        })];
+                        return [
+                           ['table', dale.do (dale.times (ltable), function (v) {
+                              return ['tr', dale.do (dale.times (ltable), function (v2, k2) {
+                                 if (k2 === 0) return ['td', {class: 'something ' + State.opaqueclass, opaque: true}, ['input']];
+                                 else return ['td', k2];
+                              })];
+                           })],
+                           ['div', {id: 'd1', opaque: true}],
+                           ['div', {id: 'd2', opaque: true}, ltable],
+                           ['div', {id: 'd3', opaque: true}, [
+                              ['span'],
+                              ['span'],
+                           ]],
+                        ];
                      });
                   });
                }
@@ -1125,6 +1134,10 @@
                   if (opaques.length !== 4) return 'Opaques were not updated 3.';
                   opaques = c ('.style input');
                   if (opaques.length !== 4) return 'Opaque contents were not updated 3.';
+
+                  if (c ('#d1').innerHTML !== '') return 'Opaque empty has invalid content after redraw.';
+                  if (c ('#d2').innerHTML !== '4') return 'Opaque text has invalid content after redraw.';
+                  if (c ('#d3').innerHTML !== '<span></span><span></span>') return 'Opaque multiple has invalid content after redraw.';
                });
 
                B.do (x, 'test', 'prediff');

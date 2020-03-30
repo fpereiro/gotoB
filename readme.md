@@ -33,6 +33,8 @@ Or you can use this link to use the latest version - courtesy of [jsDelivr](http
 <script src="https://cdn.jsdelivr.net/gh/fpereiro/gotob@c338b82ab66a780ae619aeb0095155de5647f8e9/gotoB.min.js"></script>
 ```
 
+Note: gotoв uses non-ASCII symbols, so please specify an [encoding](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/meta) (for example [UTF-8](https://en.wikipedia.org/wiki/UTF-8)) by placing a `<meta>` tag in the `<head>` of the document: `<meta charset="utf-8">`.
+
 gotoв is exclusively a client-side library. Still, you can find it in npm: `npm install gotob`
 
 gotoв is pure ES5 javascript. Browser compatibility is as follows:

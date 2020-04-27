@@ -50,7 +50,7 @@ The author wishes to thank [Browserstack](https://browserstack.com) for providin
 
 ## Tutorial
 
-An in-depth tutorial is available [here](tutorial.md). This document covers the general principles of building a webapp and introduces gotoв as a possible solution to the fundamental problems of building a frontend.
+An in-depth tutorial is available [here](tutorial/tutorial.md). This document covers the general principles of building a webapp and introduces gotoв as a possible solution to the fundamental problems of building a frontend.
 
 ## Index
 
@@ -64,6 +64,16 @@ An in-depth tutorial is available [here](tutorial.md). This document covers the 
 - [License](https://github.com/fpereiro/gotob#license)
 
 ## Examples
+
+### Hello world
+
+```javascript
+var helloWorld = function () {
+   return ['h1', 'Hello, world!'];
+}
+
+B.mount ('body', helloWorld);
+```
 
 ### Counter
 

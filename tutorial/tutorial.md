@@ -1,74 +1,136 @@
 # Tutorial
 
-This tutorial is conceived as a small book that gently explains how to develop the frontend of a web application using gotoв.
+TODO: Three parts: concepts, vanilla, gotoB
 
-This tutorial requires you to have some knowledge of HTML, CSS and js (Javascript), but only a little bit. It is written first and foremost for those just dipping their feet into developing web applications. Experienced frontend devs might get bored, especially in the first sections.
+This tutorial is conceived as a small book that gently explains how to develop the frontend of a web application (henceforth, *webapp*).
 
-This is the resource I wanted to find back when I started writing web applications; ten years later, I'm writing it for those who are today starting out.
+This tutorial requires you to have some knowledge of HTML, CSS and js (Javascript) - but only a little bit!
 
-## Introduction
+This will be most useful for those just dipping their feet into developing webapps. Experienced frontend devs might get bored, especially in the first sections.
 
-### Why develop web applications
+This is the resource I wanted to find back when I started writing webapps back in 2009; ten years later, I'm writing it for those of you who are today starting out.
+
+## Part 1: fundamentals
+
+### Why develop webapps
 
 You're probably familiar with three types of applications:
 
 - Native mobile applications, both the ones that come preinstalled on a phone or tablet, plus those you can install from either Google's Play Store or Apple's App Store.
 - Native desktop applications, such as Microsoft's Office suite.
-- Web applications, which run on web browsers on both mobile and desktop devices, without requiring installation.
+- Webapps, which run on web browsers on both mobile and desktop devices, without requiring installation.
 
-Web applications are different from native applications in a few respects:
+Webapps are different from native applications in a few ways:
 
 - **No installation required**: the user accesses the application directly from the browser, which is already installed.
-- **One application for all devices**: if properly written, a web application can be seamlessly used from both mobile and desktop devices.
-- **It is a service**: instead of storing most of its information on the users' device like native applications do, web applications retrieve and store information on a server that is accessible through an internet connection.
+- **One application for all devices**: if properly written, a webapp can be seamlessly used from both mobile and desktop devices.
+- **It is a service**: instead of storing most of its information on the users' device like native applications do, webapps retrieve and store information on a server that is accessible through an internet connection.
 
-By merely requiring a device with internet a web browser, and no installation, web applications allow you to reach billions of people with minimal friction. And by providing a service that stores information, web applications prevent users from losing data or being locked into a single device; web applications provide an ultimate level of access and mobility to their users.
+By merely requiring a device with internet a web browser, and no installation, webapps allow you to reach billions of people with minimal friction. And by providing a service that stores information, webapps prevent users from losing data or being locked into a single device; webapps provide an ultimate level of access and mobility to their users.
 
-### How does a web application work?
+### How does a webapp work?
 
-As we just saw, a web application is an application that runs in a web browser. When you click on a link (or write an address in the URL bar of a browser), a web page is loaded. This web page contains HTML, CSS and usually some js.
+As we just saw, a webapp is an application that runs in a web browser. When you click on a link (or write an address in the URL bar of a browser), a webpage is loaded. This webpage contains HTML, CSS and usually some js.
 
-The HTML and CSS represent the actual content on the page. HTML is what is shown on the page, while the CSS changes the way that the HTML looks. js is usually there to produce some changes on the HTML and CSS, but it is not strictly necessary and it is actually possible to write web applications without js.
+The HTML and CSS represent the actual content on the page. HTML is what is shown on the page, while the CSS changes the way that the HTML looks. js is usually there to produce some changes on the HTML and CSS, but it is not strictly necessary and it is actually possible to write webapps without js.
 
 HTML, CSS and js are text files, really. They have to conform to certain rules (very strict ones in the case of js), but they are humanly readable and can be opened on any text editor.
 
-When you load a web page, an HTML file (which is text that conforms to certain rules, nothing else) may contain further CSS or js inside of it. These CSS or js files are also text, also conforming to certain rules.
+When you load a webpage, an HTML file (which is text that conforms to certain rules, nothing else) may contain further CSS or js inside of it. These CSS or js files are also text, also conforming to certain rules.
 
 The browser, while receiving HTML, CSS and js, starts putting things on the screen - and that's what you see when the page is fully loaded.
 
-### What is the difference between a web page and a web application?
+### The two sides of a webapp
 
-A web page is static and doesn't change. In contrast, an application is a web page that is more than just a web page, because it has the potential to receive information from an user and then be updated. The distinctive feature of an application is that what the user sees on the screen is updated without the page being refreshed or a link being clicked.
+You might have heard the terms *frontend*, *backend*, *client* and *server* in the context of webapps. These terms are fundamentally important.
 
-### The two sides of a web application
+The terms *frontend* and *client* refer to the same thing: the HTML, CSS and js that gets loaded in the browser and is seen by your users. The client code is the program that a web browser runs.
 
-You might have heard the terms *frontend*, *backend*, *client* and *server* in the context of web applications. These terms are important.
+The terms *backend* and *server* refer to the same thing: a program that provides files (like HTML, CSS and js, plus images) to a web browser, and also handles other operations like storing user data. The backend code is a program run on a server connected to the internet (if you're starting out, it might also be good to know that a server is merely a computer running somewhere 24/7).
 
-The terms *frontend* and *client* refer to the same thing: the HTML, CSS and js that gets loaded in your browser and is seen by your users.
+The *frontend* and the *backend* - or the *client* and the *server*, if you prefer - interact with each other through the internet.
 
-The terms *backend* and *server* refer to the same thing: a program that provides files (like HTML, CSS and js, plus images) to a web browser, and also handles other operations like storing user data.
+**In essence, a webapp is two programs: one that runs in a web browser and another one that runs in a server**. Frontend and backend are the two sides of the coin of a webapp. To fully build a webapp, you need to do both.
 
-The *frontend* and the *backend* are connected through the internet.
+This tutorial only covers the frontend aspect of webapp development. We will however learn how to make requests to the backend so that when you get around to write your server, your frontend will be ready for it!
 
-Frontend and backend are the two sides of the coin of a web application. To fully build a web application, you need to do both.
+### Is it a webpage or is it a webapp?
 
-In a web application, frontend and backend interact constantly.
+At the beginning, app loads a webpage! But are we creating webpages or webapps? Let's see this historically, to understand it and also because it is fun!
 
-gotoв is a frontend library, so by itself it cannot allow you to create a complete web application. We will however create a small "mock server" that will allow our tutorial to look pretty much like the real thing, so that when you have your server, your frontend will be ready for it!
+webpage + user provided data = webapp.
 
-### js... what is it good for?
+The WWW is about documents. Christmas 1990. One format. Go ask the server. Browser shows it.
 
-js was meant originally to create small animations that would make HTML and CSS look a bit niftier. It was also there to help validating user-submitted forms. Over time it grew in importance and nowadays it is essential for the creation of web applications. It is important to understand why.
+- A website is a collection of webpages. The main distinction we need to grasp is that between a web*page* and a web*app*.
 
-Mere web pages are static and don't change after they are loaded in a browser. After a page is loaded, a user can click on a link and go to another page, which will also be loaded. It is possible to create applications by loading a new page after each user operation, but the experience was not comparable to those of existing native applications.
+A webpage is a document. One direction.
+
+User input! A form that sends an email. But that doesn't change anything! If you refresh the page, see empty form again.
+
+Application: send content and return it. Very simple app: put your name!
+
+viaweb, first app!
+
+requires login or local state (cookies).
+https://en.wikipedia.org/wiki/HTTP_cookie#History
+Magic cookies were already used in computing when computer programmer Lou Montulli had the idea of using them in web communications in June 1994.[8] At the time, he was an employee of Netscape Communications, which was developing an e-commerce application for MCI. Vint Cerf and John Klensin represented MCI in technical discussions with Netscape Communications. MCI did not want its servers to have to retain partial transaction states, which led them to ask Netscape to find a way to store that state in each user's computer instead. Cookies provided a solution to the problem of reliably implementing a virtual shopping cart.[9][10]
+
+apps mounted on top of pages.
+
+A webapp is an interface. Bidirectional.
+
+Diagrams!
+
+Then keep explaining.
+
+bidirectional? or having some data that modifies the page? a shopping cart doesn't transfer data to the server!
+
+Webpages are static and embody the original purpose of the web: to share documents. A webpage is some HTML and CSS that is the same for every browser that loads it. A webpage allows for limited user interactions, the main one being clicking on links to navigate to another page. But, as a general rule, webpages cannot be changed by those using them.
+
+Webapps are dynamic! While they use HTML and CSS (and perhaps js) to draw the page, they respond to user input. That is, the HTML and CSS served to each user is potentially different.
+
+What makes a webpage into a webapp is the possibility of a user providing information through the server, and that change being seen on the page! A shopping cart would be a great example!
+
+A webpage is static and doesn't change. In contrast, an application is a webpage that is more than just a webpage, because it has the potential to receive information from an user and then be updated. The distinctive feature of an application is that what the user sees on the screen is updated by user input.
+
+Main implementation breakthrough: background loading (ajax), without refreshing the page.
+
+### The birth of templates
+
+With documents, repeating parts or whatever it's just all there. A few documents there. A lot of websites perfectly happy to be done by hand.
+
+You have now user data, and put that within somewhere (you're not just sending the raw data).
+
+This structure is called template!
+
+Server code takes data (from the browser or stored on the database), fills the template and sends it to the user!
+
+template is a function! receives parameters/arguments.
+
+Types of replacement:
+- variable replacement.
+- conditionals.
+- iteration.
+- call another template.
+
+### The ascent of js
+
+js was meant originally to create small animations that would make HTML and CSS look a bit niftier. It was also there to help validating user-submitted forms. Over time it grew in importance and nowadays it is essential for the creation of webapps. It is important to understand why.
+
+Webpages are static and don't change after they are loaded in a browser. After the page is loaded, a user can click on a link and go to another page, which will also be loaded. It is possible to create applications by loading a new page after each user operation, but the experience was not comparable to those of existing native applications.
 
 Page refreshes affect user experience negatively in two ways: first, they slow down the user's interaction with the application. Second, they get rid of valuable state that is either lost or has to be painstakingly reproduced (for example, how far down a user has scrolled down a list).
 
-Around 2005, it became possible for js to retrieve information from the server and update the page without a *page refresh*. For many, including me, this marks the birth of true web applications, since the redrawing of the same page without triggering a full refresh completely changed the quality of the users' experience. This allowed web applications to compete with native applications.
+Around 2005, it became possible for js to retrieve information from the server and update the page without a *page refresh*. For many, including me, this marks the birth of true webapps, since the redrawing of the same page without triggering a full refresh completely changed the quality of the users' experience. This allowed webapps to compete with native applications.
 
 The role of js is essential: it both retrieves information from the server *in the background* (i.e.: without triggering a page refresh) and updates the HTML (and perhaps the CSS) in the page.
 
-Most web applications today are dependent on js for both retrieving information and updating the page. Some still rely on the server sending most of the HTML and CSS, only using js for visual effects.
+Small modifications like shopping cart get harder.
+
+Most webapps today are dependent on js for both retrieving information and updating the page. Some still rely on the server sending most of the HTML and CSS, only using js for visual effects.
+
+send templates & data to client, let the client draw it with js!
 
 gotoв takes a once radical, but today quite mainstream approach: it relies 100% on js to *create and update* all of the HTML and CSS. This means that gotoв is 100% reliant on js.
 
@@ -78,7 +140,7 @@ js is a powerful programming language. In it, you can define any logic you need 
 
 Markup languages tell you what's there - it is akin to a roll call: *A, then B, then C...*. Markup languages don't have the power of a programming language. A markup language cannot do things like *do something depending on a condition* (conditional), *repeat something a certain number of times* (iteration) or *replacing something with something else* (variables/interpolation).
 
-To write any non-trivial web application, you will need logic to modify the HTML on the screen. This is, in my view, the first central problem of web applications: *how to generate HTML (and perhaps some CSS) using a programming language*.
+To write any non-trivial webapp, you will need logic to modify the HTML on the screen. This is, in my view, the first central problem of webapps: *how to generate HTML (and perhaps some CSS) using a programming language*.
 
 The traditional solution to this problem is HTML templates. A template is a chunk of HTML where certain parts get updated. Historically, the code responsible to "fill in" the HTML templates was executed by the *server*, which then served the HTML page to the browser. Many apps are still built in this way.
 
@@ -86,11 +148,47 @@ Over time another approach emerged, which is to use js on the client (that is, o
 
 gotoв takes a further step on this direction: it generates (almost) all its HTML and CSS using js itself, on the client, and with no templates! We will see how very soon. Because gotoв uses js to generate its HTML and CSS, it is 100% reliant on js.
 
-A web application powered by gotoв only requests data from the server, but almost no HTML or CSS.
+A webapp powered by gotoв only requests data from the server, but almost no HTML or CSS.
 
-## Chapter 1 - into the code
+## The name of the game
 
-To make you lose fear of code - in case you have any - we're going to create together a web application from scratch! You only need the following:
+merge with the top
+Not design, implementation! This is core. Iteration, but not the same. We're concerned here with implementation.
+
+HTMC: html and perhaps some css. CSS also comes from external stylesheets.
+
+
+data + templates = the page!
+the two parts of the page.
+things that are related to how things are seen, and then things that go in!
+
+variable replacement.
+conditional (hide/show, for example, or different color).
+iteration.
+template replacement: call one template from the other to avoid repetition.
+
+The browser doesn't care: it's all HTMC to it!
+
+data continuum: more and less durable. Also a decision, usually not all durable, and you need durable.
+Why not in pages? No user input!
+
+User accesses & changes data. This perhaps defines the application! Rethink what I said above about no page refresh.
+
+changes in data must be reflected in the page.
+and elements in the page trigger changes in data. This is the eternal loop.
+
+Typical pattern: change data, refresh the page.
+Refresh partially, through browser mechanism.
+
+
+
+
+
+## Part 2: vanilla js apps
+
+on top of vanilla, we'll use gotoB!
+
+To make you lose fear of code - in case you have any - we're going to create together a webapp from scratch! You only need the following:
 
 - A computer.
 - A text editor.
@@ -102,7 +200,7 @@ You can call it `app` - put this folder somewhere where you can easily find it l
 
 ### Step 1-2: create a base HTML file
 
-Wait! Didn't we say that gotoв is pure js? Well, almost! Before starting to *draw* our application, we need to create a page that our browser will open to get things started. Remember that web browsers still open HTML pages - this is how all web applications (even the most sophisticated ones) get loaded.
+Wait! Didn't we say that gotoв is pure js? Well, almost! Before starting to *draw* our application, we need to create a page that our browser will open to get things started. Remember that web browsers still open HTML pages - this is how all webapps (even the most sophisticated ones) get loaded.
 
 Side note: what does the term *drawing* mean? It means 1) generating HTML; and 2) putting it on the page so that the user can see it.
 
@@ -152,9 +250,9 @@ After this is done, open the HTML file in your browser. You should see an empty 
 
 ## Chapter 2 - the counter app
 
-Rather than hurrying to show you how to build apps with gotoв, my goal in this tutorial is to explain the essential concepts that are needed to build the frontend of a web application.
+Rather than hurrying to show you how to build apps with gotoв, my goal in this tutorial is to explain the essential concepts that are needed to build the frontend of a webapp.
 
-We will start building the simplest possible web application - a counter! My hope is that by going slowly and surely, not only you will understand the library, but all the underlying concepts of any web application, so that you can then build them with clarity and utmost confidence.
+We will start building the simplest possible webapp - a counter! My hope is that by going slowly and surely, not only you will understand the library, but all the underlying concepts of any webapp, so that you can then build them with clarity and utmost confidence.
 
 ### Step 2-1: specifying a counter
 
@@ -435,3 +533,77 @@ The above are the fantastic four! State, view, listener and event handler.
 In section 2-7 we saw that it is convenient to separate the state and the view, so that why we have two things instead of one. Think of these two things, state and view, as pure data. One is usually numbers and text. The other one is always HTML and CSS. That's it!
 
 As for the other two, they represent the dynamic aspect of the app. A listener is a function that changes the state and the view. Why both? If you only change the state, the view would be out of sync with the data! And if the view was changed but not the data, then the data would be out of sync with the view! State and view can change, but they must do so consistently. This consistency requirement is essential.
+
+Move it to the front, start with the end in mind: HTML & CSS. Change it. That's the starting point!
+changes: by the user and by the server!! start with the end in mind!!
+
+The button (in HTML, with an event) calls `increment`. `increment` increases the value, then updates the HTML. That's the cycle!
+
+```
+
+
+
+              ┌──╌ HTML ╌────────────────────────────┐
+              │                                      │
+internet <────┼──paragraph
+
+──────e <──────> local filesystem  │
+(localhost)   │                   ┬ ┬                            │
+              │                   │ └────────> redis             │
+              │                   │                              │
+              │                   └──────────────────────────────┼───> AWS S3 & SES
+              └──────────────────────────────────────────────────┘
+
+```
+
+Note: string references increment. That's how the circle is closed! Text diagram here!
+
+- Using the same data in multiple places.
+- Having two different sources for the info.
+
+- Two way data binding: if something can be modified from more than one place.
+- Efficient long list updating: example of long list with scroll?
+- Make up unique names for update functions, or have them global?
+- Update functions need to know what depends on the view. with state, it's the other way around!
+- HTML generation & escaping it.
+- Having a boundary around the element. But wouldn't it be eough to write it in one place? You want disambiguated names anyway!
+
+
+
+
+
+
+
+
+```javascript
+var B = window.B;
+
+var view = function () {
+   return B.view ('counter', function (counter) {
+      if (counter === undefined) counter = 0;
+      return ['div', [
+         ['p', ['Counter is: ', counter]],
+         ['button', {onclick: B.ev ('set', 'counter', counter + 1)}, 'Increment counter']
+      ]];
+   });
+}
+
+B.mount ('body', view);
+```
+
+### Step 3: a shopping cart!
+
+Let's now do something more interesting:
+
+
+
+
+
+
+
+other events: still modify the store, or modify the server! perhaps some transitions, things not stored? the third are pure side effects :).
+
+
+
+pure functions: views! don't receive x and don't call events. why this? to not trigger redraws while we're in the middle of one! mechanism will still queue. what are the implications? depending on what you do, if it's dangling it will stop everything. gotoB non-prod will make sure it doesn't break anything. so it is conceptual.
+if it receives an x, it can say things.

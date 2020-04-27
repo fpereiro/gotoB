@@ -1668,8 +1668,6 @@ args mnemonic
 
 ### `B.view` internals
 
-
-
 ## License
 
 gotoв is written by Federico Pereiro (fpereiro@gmail.com) and released into the public domain.

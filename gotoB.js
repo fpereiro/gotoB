@@ -160,7 +160,7 @@ Please refer to readme.md to read the annotated source.
       return true;
    }
 
-   // *** CHANGE EVENT & FUNCTIONS ***
+   // *** CHANGE EVENT & B.CHANGELISTENER ***
 
    dale.go (['add', 'rem', 'set'], function (verb) {
       B.listen ({id: verb, verb: verb, path: [], match: function (ev, listener) {
@@ -168,31 +168,16 @@ Please refer to readme.md to read the annotated source.
       }}, function (x) {
          var previousValue = verb === 'set' ? B.get (x.path) : teishi.copy (B.get (x.path));
          if (B [x.verb].apply (null, [x, x.path].concat (dale.go (arguments, function (v) {return v}).slice (1))) === false) return;
-         if (! teishi.eq (previousValue, B.get (x.path))) B.say (x, 'change', x.path, previousValue);
+         if (! teishi.eq (previousValue, B.get (x.path))) B.say (x, 'change', x.path, B.get (x.path), previousValue);
       });
    });
 
-   B.changed = function (previousValue, eventPath, listenerPath) {
-      if (eventPath.length >= listenerPath.length) return true;
-      var value = previousValue;
-      dale.stop (listenerPath.slice (eventPath.length), false, function (v) {
-         if (teishi.simple (value)) {
-            value = undefined;
-            return false;
-         }
-         value = value [v];
-      });
-      return ! teishi.eq (value, B.get (listenerPath));
-   }
-
-   B.changeListener = function (ev, listener, previousValue) {
+   B.changeListener = function (ev, listener) {
       if (! r.compare (ev.verb, listener.verb)) return false;
-      if (ev.path.length === 0 || listener.path.length === 0 || dale.stop (dale.times (Math.min (ev.path.length, listener.path.length), 0), false, function (k) {
+      if (ev.path.length === 0 || listener.path.length === 0) return true;
+      return dale.stop (dale.times (Math.min (ev.path.length, listener.path.length), 0), false, function (k) {
          return r.compare (ev.path [k], listener.path [k]);
-      })) {
-         return B.changed (previousValue, ev.path, listener.path);
-      }
-      return false;
+      });
    }
 
    // *** B.EV ***
@@ -320,19 +305,11 @@ Please refer to readme.md to read the annotated source.
          return elem;
       }
 
-      B.listen ('change', [], {id: id, priority: -1, match: function (ev) {return ev.verb === 'change'}}, function (x, previousValue, force) {
-         var matchingPaths = dale.fil (paths, undefined, function (path) {
-            if (x.path.length === 0 || path.length === 0) return path;
-            if (dale.stop (dale.times (Math.min (x.path.length, path.length), 0), false, function (k) {
-               return r.compare (x.path [k], path [k]);
-            })) return path;
+      B.listen ('change', [], {id: id, priority: -1, match: function (ev) {
+         return dale.stop (paths, true, function (path) {
+            return B.changeListener (ev, {path: path});
          });
-         var changedPath = dale.stopNot (matchingPaths, undefined, function (path) {
-            if (force) return path;
-            if (B.changed (previousValue, x.path, path)) return path;
-         });
-         if (! changedPath) return;
-
+      }}, function (x) {
          var oldElement = B.listeners [id].elem, oldChildren = B.listeners [id].children;
          if (makeElement ()) B.redraw (x, id, oldElement, oldChildren);
       });

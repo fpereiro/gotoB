@@ -318,7 +318,7 @@
 
                   B.forget (listener);
 
-                  // *** B.CHANGELISTENER & B.CHANGED ***
+                  // *** B.CHANGELISTENER ***
 
                   var matches = [];
 
@@ -348,15 +348,24 @@
                   if (! teishi.eq (matches, [['foo', 'bar'], ['foo'], [], ['foo', 'bar', 'yip']])) return 'B.changeListener error #10';
                   B.say (x, 'change', ['foo', 'bar']);
                   if (! teishi.eq (matches, [['foo', 'bar'], ['foo'], [], ['foo', 'bar', 'yip'], ['foo', 'bar']])) return 'B.changeListener error #11';
-                  B.say (x, 'change', ['foo'], B.get ('foo'));
+                  B.say (x, 'change', ['foo']);
                   if (! teishi.eq (matches, [['foo', 'bar'], ['foo'], [], ['foo', 'bar', 'yip'], ['foo', 'bar'], ['foo']])) return 'B.changeListener error #12';
+                  B.say (x, 'change', ['foo', 'yip']);
+                  if (! teishi.eq (matches, [['foo', 'bar'], ['foo'], [], ['foo', 'bar', 'yip'], ['foo', 'bar'], ['foo']])) return 'B.changeListener error #13';
+                  B.say (x, 'change', ['yip']);
+                  if (! teishi.eq (matches, [['foo', 'bar'], ['foo'], [], ['foo', 'bar', 'yip'], ['foo', 'bar'], ['foo']])) return 'B.changeListener error #14';
+                  B.say (x, 'change', []);
+                  if (! teishi.eq (matches, [['foo', 'bar'], ['foo'], [], ['foo', 'bar', 'yip'], ['foo', 'bar'], ['foo'], []])) return 'B.changeListener error #15';
 
+                  var currentValues  = [];
                   var previousValues = [];
-                  B.listen ('change', ['esa', 'abuela'], function (x, previousValue) {
+                  B.listen ('change', ['esa', 'abuela'], function (x, currentValue, previousValue) {
+                     currentValues.push  (currentValue);
                      previousValues.push (previousValue);
                   });
                   B.say (x, 'set', ['esa', 'abuela'], 1);
                   B.say (x, 'set', ['esa', 'abuela'], 2);
+                  if (! teishi.eq (currentValues, [1, 2])) return 'change event not fired with currentValue.';
                   if (! teishi.eq (previousValues, [undefined, 1])) return 'change event not fired with previousValue.';
 
                });

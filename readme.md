@@ -1373,30 +1373,39 @@ There's nothing else to do, so we close the listener and the iterating function.
    });
 ```
 
-TODO
+We now define `B.changeListener`, a helper function meant to be passed as a `match` paramter to certain listeners on the `change` event.
+
+This function solves the following problem: if a certain reactive element depends on a path `a.b.c`, it shouldn't only be redrawn when `a.b.c` is changed; it should also be redrawn when `a.b`, `a` and even the root path changes. It should also be redrawn when any path starting with `a.b.c` is changed as well. This is what this function will do.
+
+This function is meant to be used as a `match` parameter passed to a listener. Those parameters are functions that receive two elements, an `event` and a `listener`.
 
 ```javascript
-   B.changed = function (previousValue, eventPath, listenerPath) {
-      if (eventPath.length >= listenerPath.length) return true;
-      var value = previousValue;
-      dale.stop (listenerPath.slice (eventPath.length), false, function (v) {
-         if (teishi.simple (value)) {
-            value = undefined;
-            return false;
-         }
-         value = value [v];
-      });
-      return ! teishi.eq (value, B.get (listenerPath));
-   }
+   B.changeListener = function (ev, listener) {
+```
 
-   B.changeListener = function (ev, listener, previousValue) {
+If the verb of both the event and the listener don't match, we return `false` to indicate there's no match. Notice we use `r.compare` to perform the comparisons, instead of a mere equality. `r.compare` contains logic to support wildcards and regexes.
+
+```javascript
       if (! r.compare (ev.verb, listener.verb)) return false;
-      if (ev.path.length === 0 || listener.path.length === 0 || dale.stop (dale.times (Math.min (ev.path.length, listener.path.length), 0), false, function (k) {
+```
+
+If either path is empty, there must be a match - following the logic we're implementing, an event with empty path affects all listeners with a matching verb, whereas a listener with an empty path is concerned with any event with a matching verb.
+
+```javascript
+      if (ev.path.length === 0 || listener.path.length === 0) return true;
+```
+
+We take whatever is shortest, the event's path or the listener's path, and we compare each of their elements. If all of them match, the function will return `true`, or `false` otherwise.
+
+```javascript
+      return dale.stop (dale.times (Math.min (ev.path.length, listener.path.length), 0), false, function (k) {
          return r.compare (ev.path [k], listener.path [k]);
-      })) {
-         return B.changed (previousValue, ev.path, listener.path);
-      }
-      return false;
+      });
+```
+
+We close the function.
+
+```javascript
    }
 ```
 
@@ -1449,6 +1458,8 @@ We retrieve the attributes from the element using `c.get`, iterate them and crea
       });
    }
 ```
+
+TODO
 
 We now define `B.ev`, one of the core functions of gotoв. This function has the purpose of returning stringified event handlers that we can place into DOM elements.
 

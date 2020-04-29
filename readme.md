@@ -336,11 +336,10 @@ gotoв stores a list of all the events fired into `B.log`. Since gotoв applicat
 
 The table presented by `B.eventlog` is ordered by time (so you can see what happened first and what later), it allows to track dependencies between events (if the context is passed in nested calls, see below) and it shows the time when the event was fired relative to the initial loading of the application (which allows for performance benchmarking).
 
+If one of gotoв's functions is invoked with invalid arguments, an `error` event will be emitted. There's an `error` event listener that will print an error message, plus an invocation to `B.eventlog`. The end result is that you'll see the error as the last row of the `eventlog` immediately after the error happens. Note that this won't happen if `B.prod` is enabled. If you wish to turn off this behavior, run this command at the top of your application: `B.forget ('error')`.
 
-If one of gotoв's function is invoked with invalid arguments, an `error` event will be emitted. There's an `error` event listener that will print an error message, plus an invocation to `B.eventlog`. The end result is that you'll see the error as the last row of the eventlog immediately after the error happens. Note that this won't happen if `B.prod` is enabled.
 
 If you wish to turn off logging of events, (what happens if error?)
-
 B.r.log, turn off if needed.
 
 listeners vs events
@@ -350,7 +349,19 @@ code: function definition vs function call
 interaction of events with the store. everything represented like this.
 store events.
 
-### Saying events
+### Representing HTML & CSS
+
+lith & lithbag
+
+Not loose, but in functions.
+
+### B.mount & B.unmount
+
+### B.elem
+
+### B.ev
+
+### The event system
 
 gotoв uses [recalc](http://github.com/fpereiro/recalc), which is an event system. Before we get into it, we need to understand why we use an event system at all.
 
@@ -587,7 +598,7 @@ B.say ('rem', [], ['Data', 'State']);
 
 When you call any of the data verbs through `B.say`, a `change` event with the same `path` will be fired. More precisely, a `change` event will be fired whenever you call a data verb with 1) valid arguments; and 2) when your invocation actually modifies the store. If the event is fired with incorrect arguments or it doesn't modify the store, no `change` event will be triggered.
 
-gotoв's function for creating views (`B.view`), which we'll see below, relies on the `change` event to know when it should redraw a view. `B.view` essentially creates a listener function on the `change` event on a given path. This means that views are redrawn when a `change` event is emitted.
+gotoв's function for creating views (`B.elem`), which we'll see below, relies on the `change` event to know when it should redraw a view. `B.elem` essentially creates a listener function on the `change` event on a given path. This means that views are redrawn when a `change` event is emitted.
 
 This is the reason for which you need to use events to modify the store. If you modified the store directly, the views depending on a part of the store would not be updated when the store changes!
 
@@ -672,7 +683,7 @@ redraw error: 1) modified something not-opaque; or 2) using tables in improper w
 
 Autoactivation, show by default. If you find this annoying, forget it: B.forget ('error');
 
-From will be there for add|rem|set that you do within listener that you pass context. Also for redraw, since its triggered by change. Invocations to B.ev and B.view will have no context|from but you can do it by the arguments.
+From will be there for add|rem|set that you do within listener that you pass context. Also for redraw, since its triggered by change. Invocations to B.ev and B.elem will have no context|from but you can do it by the arguments.
 
 Instead of logging to the console, emit events and then see them in B.debug! Very useful also for environments where there's no console, like mobile browsers.
 
@@ -834,7 +845,7 @@ This object has three keys that hold strings or numbers:
 
 - `v`, a string containing the current version of the library.
 - `B`, a one character string containing the [ve](https://en.wikipedia.org/wiki/Ve_(Cyrillic)) letter of the Cyrillic alphabet. This string is meant to be a handy reference to the letter, which will be used in some parts of the library.
-- `t`, an integer timestamp to mark the time when gotoв is loaded. This is useful as an "instant zero" timestamp for performance measurements.
+- `t`, an integer timestamp to mark the time when gotoв is loaded. This is useful as an "instant zero" timestamp that can serve as reference for performance measurements.
 
 The remaining seven keys of the main object map to recalc entities. The first one, `r`, maps to the single instance of recalc used by gotoв. The other six map to the public objects and methods of the recalc instance:
 
@@ -1321,7 +1332,7 @@ There's nothing else to do, so we return `true` and close the function. Note tha
    }
 ```
 
-### Change listeners & functions
+### Change listeners
 
 We're now ready to define the three data listeners. These functions are wrappers around the three data functions that modify the store: `add` for `B.add`, `rem` for `B.rem` and `set` for `B.set`.
 
@@ -1459,9 +1470,7 @@ We retrieve the attributes from the element using `c.get`, iterate them and crea
    }
 ```
 
-TODO
-
-We now define `B.ev`, one of the core functions of gotoв. This function has the purpose of returning stringified event handlers that we can place into DOM elements.
+We now define `B.ev`, one of the core functions of gotoв. This function has the purpose of creating stringified event handlers that we can place into DOM elements.
 
 ```javascript
    B.ev = function () {
@@ -1494,7 +1503,7 @@ If we're not in production mode, we make sure that each of the elements of `evs`
 
 We create `output`, a string that will contain the output of a function.
 
-We initialize `output` to the code needed to invoke `B.say` with the following arguments: `'ev'` as the verb, `event.type` (a string with the name of the event being fired) as the `path`; as its third argument, we pass the result of invoking `B.evh` with `this` (the DOM element which received the event) as its only argument. This third argument will contain an object with all attribute names and values, except for those that are event handlers and start with *on* (i.e.: `onclick`, `oninput`).
+We initialize `output` with the code needed to invoke `B.say` with the following arguments: `'ev'` as the verb, `event.type` (a string with the name of the event being fired) as the `path`; as its third argument, we pass the result of invoking `B.evh` with `this` (the DOM element which received the event) as its only argument. This third argument will contain an object with all attribute names and values, *except* for those that are event handlers and start with *on* (i.e.: `onclick`, `oninput`).
 
 Invoking `B.say` will generate an id. We store this id in a variable `id` that is local to the event handler.
 
@@ -1510,13 +1519,15 @@ We iterate each of the events to be fired. For each of them, we will append to `
 
 We invoke `B.say` passing as its first argument a context object with the `from` key set to `id` (so that this event can be tracked to the DOM event that generated it.
 
-After this, we iterate the elements of `ev` - notice that if this `ev` has only a verb and a path, we add a third argument `{raw: 'this.value'}`, which we'll cover in a minute.
+After this, we iterate the elements of `ev` - notice that if this `ev` has only a verb and a path, we add a third argument `{raw: 'this.value'}`, which we'll review in a minute.
 
 ```javascript
          output += ' B.say ({"from": id}, ' + dale.go (ev.length === 2 ? ev.concat ({raw: 'this.value'}) : ev, function (v, k) {
 ```
 
 `B.ev` has a mechanism to allow you to pass raw arguments to `B.say`. A raw event is a string that is not stringified, and thus can be used to access the event properties directly. For example, if you want to access the value of an `input` field, you would need the raw argument `this.value`. To represent raw elements, `B.ev` expects an object with a key `raw` and a value that is a string.
+
+Going back to the default value of `{raw: 'this.value'}`: when no arguments are passed, a very useful default is to return the value of the element - for example, for handlers with `<input>` or `<textarea>` elements.
 
 If we're iterating the third element of the `ev` onwards (which means that we've already covered `verb` and `path`) and the object has a `raw` key with a string as value, we merely return the value without stringifying it. Notice that if any other keys are present in the object, we ignore them.
 
@@ -1549,43 +1560,120 @@ We close the iteration of each `ev`.
    }
 ```
 
+### `B.mount` & `B.unmount`
+
+We now define `B.mount`, a function that will place liths onto a target element.
+
+```javascript
+   B.mount = function (target, fun) {
+```
+
+If we're not in production mode, we check that `target` is a string that identifies either the `body` or an `id` selector - otherwise, we print an error and return `false`.
+
+```javascript
+      if (! B.prod && type (target) !== 'string' || ! target.match (/^(body|[a-z0-9]*#[^\s\[>,:]+)$/)) return B.error ('B.mount', 'Target must be either \'body\' or an id selector, but instead is ' + target);
+```
+
+We find the `element` and store it in a local variable.
+
+```javascript
+      var element = target === 'body' ? document.body : document.getElementById (target.replace (/.*#/g, ''));
+```
+
+If `B.prod` is falsy, we make sure that `element` exists and that `fun` is a function.
+
+```javascript
+      if (! B.prod) {
+         if (! element)                 return B.error ('B.mount', 'Target not found:', target);
+         if (type (fun) !== 'function') return B.error ('B.mount', 'fun must be a function but instead is', fun);
+      }
+```
+
+`fun` is the function that will return an element (or multiple elements) in the shape of a lith. We invoke this function with no arguments and store the result in a variable `elem`.
+
+```javascript
+      var elem = fun ();
+```
+
+If we're not in production mode, we validate `result` through `B.validateLith`. `result` must be either a lith or a lithbag, otherwise an error will be reported and the function will return `false`.
+
+```javascript
+      if (! B.prod) {
+         var result = B.validateLith (elem);
+         if (result !== 'Lith' && result !== 'Lithbag') return B.error ('B.mount', 'function returned invalid lith or lithbag', result);
+      }
+```
+
+We generate HTML from `elem` using `lith.g` - note we pass `true` as a second argument to avoid `lith.g` validating its input again. We then place it at the top of the `target`, using `c.place`.
+
+```javascript
+      c.place (target, 'afterBegin', lith.g (elem, true));
+```
+
+We close the function.
+
+```javascript
+   }
+```
+
+We now define `B.mount`, a function that will clear a `target` (presumably already mounted by `B.mount`) and `forget` all the event listeners of the reactive views contained within `target`.
+
+```javascript
+   B.unmount = function (target) {
+```
+
+If we're not in production mode, we check that `target` is a string that identifies either the `body` or an `id` selector - otherwise, we print an error and return `false`.
+
+```javascript
+      if (! B.prod && type (target) !== 'string' || ! target.match (/^(body|[a-z0-9]*#[^\s\[>,:]+)$/)) return B.error ('B.unmount', 'Target must be either \'body\' or an id selector, but instead is ' + target);
+```
+
+We find the `element` and store it in a local variable.
+
+```javascript
+      var element = target === 'body' ? document.body : document.getElementById (target.replace (/.*#/g, ''));
+```
+
+If we're not in production mode, we make sure that `element` exists.
+
+```javascript
+      if (! B.prod && ! element) return B.error ('B.unmount', 'Target not found:', target);
+```
+
+We iterate all the elements within `element` - if their `id` has a `в` followed by a string of alphanumeric characters, it represents a reactive element. We then apply `B.forget` to it. Since some of these elements are nested, they might have been just deleted by their parent just being forgotten - for that reason, we check that they still exist before calling `B.forget`.
+
+```javascript
+      c ({selector: '*', from: element}, function (child) {
+         if (child.id && child.id.match (/^в[0-9a-f]+$/g) && B.listeners [child.id]) B.forget (child.id);
+      });
+```
+
+We overwrite the `innerHTML` of `element` with an empty string and close the function.
+
+```javascript
+      element.innerHTML = '';
+   }
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ### `B.elem`
 
-We now define the main function of the library, `B.elem`. This function returns DOM elements that are updated when a certain part of the store is updated.
-
-
-```javascript
-   B.view = function () {
-```
-
-`B.view` is a [variadic function](https://en.wikipedia.org/wiki/Variadic_function). We define a variable `argc`, which is a counter to keep track of the arguments already processed.
+We now define the main function of the library, `B.elem`. This function returns DOM elements that are updated when a certain part of the store is updated. The function takes two arguments: `paths` and `fun`.
 
 ```javascript
-      var argc    = 0;
-```
-
-If the first argument is an object, we consider it to be a context object. We then set it to the local variable `x` and increase `argc`. Otherwise, we initialize `x` to an empty object.
-
-```javascript
-      var x       = type (arguments [argc]) === 'object' ? arguments [argc++] : {};
-```
-
-The next argument (the first one if no context was passed, the second one if a context was passed) must be `paths`, a list of paths (or a single path) on which this view will depend.
-
-```javascript
-      var paths   = arguments [argc++];
-```
-
-If the next argument is an object, we consider it to be an `options` object - in which case we increment `argc`. Otherwise, we initialize `options` to an empty object.
-
-```javascript
-      var options = type (arguments [argc]) === 'object' ? arguments [argc++] : {};
-```
-
-The last argument must be a function that returns the desired view, which we assign to the variable `fun`.
-
-```javascript
-      var fun     = arguments [argc];
+   B.elem = function (paths, fun) {
 ```
 
 If `paths` is an array whose first element is not an array, then it must be a single path. If this is the case, we wrap it in an array so that `paths` represents a list of paths.
@@ -1597,97 +1685,37 @@ If `paths` is an array whose first element is not an array, then it must be a si
 If we're not in production mode, we perform validations on the input.
 
 ```javascript
-      if (! B.prod && teishi.stop ('B.view', [
+      if (! B.prod && teishi.stop ('B.elem', [
 ```
 
-We iterate `paths` and apply `r.isPath` to determine whether they are valid paths. If any of these validations fail, an error will be printed an `r.isPath` will return `false`.
+We iterate `paths` and apply `r.isPath` to determine whether they are valid paths. If any of these validations fail, an error will be notified.
 
 ```javascript
          dale.stopNot (paths, false, function (path) {
-            return r.isPath (path, 'B.view');
+            return r.isPath (path) ? true : B.error ('B.elem', 'Invalid path:', path, 'Arguments', {paths: paths, options: options, fun: fun});
          }),
 ```
 
-
-
-
-B.view why shallow? when doing deep validation of lith, don't do it twice. and errors from nested call are not shown? BUt yes, would be shown anyway because there's a false. Unless we return a div with an error in dev, and in prod nothing at all. But in prod you wouldn't know anyway. In prod, it will just blow up.
-
-why B.view only one listener instead of many, for multiple paths? Only one matched, and keep oneness (one HTML element, one id, one listener).
-
-
-
-
-
-
-### Debug function
-
-We define `B.debug`, a function that will show/hide a table with all the events fired so far, which are contained in `B.log`. This function takes no arguments. If the table is already present, it will be removed from the DOM and the old body will be restored.
+`fun` must be a function.
 
 ```javascript
-   B.debug = function () {
+         ['fun', fun, 'function']
 ```
 
-If there's already an element with its `id` equal to `deвug`, it means that the debug table is already being shown. We retrieve the HTML that was on the body before drawing this table (which is stored in `B.debug.oldView`) and place it in the body. There's nothing else to do in this case, so we return.
+If any of these conditions is not met, an error will be notified through `B.error` and `B.elem` will return `false`.
 
 ```javascript
-      if (c ('#deвug')) return document.body.innerHTML = B.debug.oldView;
+      }), function (error) {
+         B.error ('B.elem', error, {paths: paths});
+      })) return false;
 ```
 
-If we're here, we want to draw the table. We start by backing up the existing HTML inside the body into `B.debug.oldView`.
 
-```javascript
-      B.debug.oldView = document.body.innerHTML;
-```
 
-We define two objects: one is `idindex`, an object where each key is the id of each of the events within `B.log` and the value is the event's position inside `B.log`. The second one is a list of CSS colors that we will use to make it easier to distinguish different ids.
 
-```
-      var idindex = {}, colors = ['maroon', 'red', 'olive', 'green', 'purple', 'fuchsia', 'teal', 'blue', 'black', 'gray', 'salmon', 'darkcyan', 'darkviolet', 'indigo', 'limegreen', 'coral', 'orangered'];
-```
 
-We now generate the HTML for the debug table and set it to the body's `innerHTML` property. For generating the HTML, we use [lith.g](https://github.com/fpereiro/lith#usage).
 
-The table consists of a `<table>` element with id `deвug` (notice the Cyrillic *ve* in the name). We use `lith.style` to set the table's `font-family` and `font-size`.
 
-```javascript
-      document.body.innerHTML = lith.g (['table', lith.style ({id: 'deвug'}, {'font-family': 'monospace', 'font-size': 16}), [
-```
-
-We create a row with
-
-```
-         ['tr', dale.go (['ms', 'entry', 'from', 'id', 'verb', 'path', 'args'], function (header) {
-            return ['th', header];
-         })],
-```
-For generating the contents, we iterate the entries in `B.log`.
-
-For each log entry, we return the following columns:
-
-- Milliseconds after the first event fired (this will be 0 for the first event).
-- Event number prepended by `#`.
-- `from`, which is the id of the event that triggered this event. This can be absent for some events, and will definitely be absent for the first event.
-- `id` of the event.
-- `verb` of the event.
-- `path` of the event.
-- `args` of the event, which can be either `undefined` or an array with the extra arguments passed to the event.
-
-```javascript
-         return ['tr', [['td', entry.t - B.log [0].t], ['td', '#' + (k + 1)], ['td', entry.from], ['td', entry.id], ['td', lith.style ({color: 'red'}), entry.verb], ['td', entry.path.join (':')], ['td', JSON.stringify (entry.args)]]];
-      })], true);
-   }
-```
-
-List of colors always in same order, nice contrast between them, same color order even if ids change (as they are random) and same colors then in the same sequence executed n times.
-
-### Data functions
-
-args mnemonic
-
-### Core functions
-
-### `B.view` internals
 
 ## License
 

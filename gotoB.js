@@ -242,14 +242,14 @@ Please refer to readme.md to read the annotated source.
          if (type (fun) !== 'function') return B.error ('B.mount', 'fun must be a function but instead is', fun);
       }
 
-      var element = fun ();
+      var elem = fun ();
 
-      if (! B.prod && element !== undefined) {
-         var result = B.validateLith (element);
+      if (! B.prod) {
+         var result = B.validateLith (elem);
          if (result !== 'Lith' && result !== 'Lithbag') return B.error ('B.mount', 'function returned invalid lith or lithbag', result);
       }
 
-      if (element) c.place (target, 'afterBegin', lith.g (element, true));
+      c.place (target, 'afterBegin', lith.g (elem, true));
    }
 
    B.unmount = function (target) {
@@ -277,7 +277,9 @@ Please refer to readme.md to read the annotated source.
             return r.isPath (path) ? true : B.error ('B.elem', 'Invalid path:', path, 'Arguments', {paths: paths, options: options, fun: fun});
          }),
          ['fun', fun, 'function']
-      ])) return false;
+      ], function (error) {
+         B.error ('B.elem', error, {paths: paths});
+      })) return false;
 
       var id = B.B + B.internal.count++;
 

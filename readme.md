@@ -56,7 +56,6 @@ An in-depth tutorial is available [here](tutorial/tutorial.md). This document co
 
 - [Examples](https://github.com/fpereiro/gotob#examples)
 - [Fundamentals](https://github.com/fpereiro/gotob#fundamentals)
-- [How to write apps with gotoв](https://github.com/fpereiro/gotob#how-to-write-apps-with-gotoв)
 - [API reference](https://github.com/fpereiro/gotob#api-reference)
 - [Frequently Asked Questions](https://github.com/fpereiro/gotob#faq)
 - [Internals](https://github.com/fpereiro/gotob#internals)
@@ -287,83 +286,164 @@ And that, in a nutshell, is how gotoв works:
 
 That's it!
 
-## How to write apps with gotoв
-
-TODO
-
-A gotoв app is composed of two things:
-
-1. Event listeners.
-2. Elements.
-
-Who fires events? Both event listeners and elements, but the elements only on user interactions.
-
-
-Events, elements and the store!
-
-events as more general function defining vs calling: no match, one match or multiple matches. also match by verb and path, not just verb.
-first element: x.verb and x.path. or should it be ev.verb and ev.path?
-
-Event: say and listen.
-
-Elements: pure functions
-
-What connects events and elements is B.elem.
-
 ## API reference
 
-### Global variables
+### The gotoв object
 
-gotoв automatically loads its five dependencies on the following global variables:
-
-- `dale`: [dale](http://github.com/fpereiro/dale)
-- `teishi`: [teishi](http://github.com/fpereiro/teishi)
-- `lith`: [lith](http://github.com/fpereiro/lith).
-- `R`: [recalc](http://github.com/fpereiro/recalc).
-- `c`: [cocholate](http://github.com/fpereiro/cocholate).
-
-gotoв itself is loaded on the global variable `B`.
+gotoв is automatically loaded on the global variable `B`.
 
 `B.v` contains a string with the version of gotoв you're currently using. `B.t` contains a timestamp representing the moment when the library is loaded - which can be an useful reference point for performance measurements.
 
-### Production mode
+While the variables are global, I suggest assigning `B` to a local variable to make things clearer:
 
-If you set `B.prod` to `true`, you'll turn on *production mode*. When production mode is on, gotoв's functions will stop validating inputs. This will make your application faster, but if any of these functions is invoked with invalid arguments, you will either experience silent errors or your application will throw an exception. It is recommended that you only set this variable on a production environment once your application has been mostly debugged.
+```javascript
+var B = window.B;
+```
 
-### Debugging
+gotoв automatically loads its five dependencies on the following global variables:
 
-gotoв stores a list of all the events fired into `B.log`. Since gotoв applications are built around events, This can be extremely useful for debugging an app. Instead of inspecting `B.log` with the browser console, you can invoke `B.eventlog`, which will add an HTML table to the page where you can see all the information about the events.
+- `dale`: [dale](https://github.com/fpereiro/dale)
+- `teishi`: [teishi](https://github.com/fpereiro/teishi)
+- `lith`: [lith](https://github.com/fpereiro/lith).
+- `R`: [recalc](https://github.com/fpereiro/recalc).
+- `c`: [cocholate](https://github.com/fpereiro/cocholate).
 
-The table presented by `B.eventlog` is ordered by time (so you can see what happened first and what later), it allows to track dependencies between events (if the context is passed in nested calls, see below) and it shows the time when the event was fired relative to the initial loading of the application (which allows for performance benchmarking).
+You can use these libraries at your discretion. If you do so, I recommend also assigning local variables to them:
 
-If one of gotoв's functions is invoked with invalid arguments, an `error` event will be emitted. There's an `error` event listener that will print an error message, plus an invocation to `B.eventlog`. The end result is that you'll see the error as the last row of the `eventlog` immediately after the error happens. Note that this won't happen if `B.prod` is enabled. If you wish to turn off this behavior, run this command at the top of your application: `B.forget ('error')`.
+```javascript
+var dale = window.dale, teishi = window.teishi, lith = window.lith, c = window.c;
+```
+
+You may have noticed I omitted recalc in the line of code above. This is because you'll most likely use this recalc through gotoв's functions - in fact, gotoв is built on top of recalc.
+
+### Generating HTML
+
+gotoв generates HTML directly on the browser, using javascript. This HTML, when placed on the page, becomes the interface to the webapp.
+
+Our first stop is to understand how to write HTML using javascript. The way to do this in gotoв is through [lith](https://github.com/fpereiro/lith), a library that uses javascript object literals to represent HTML. Object literals are mere arrays (`[...]`) and objects (`{...}`), nothing more than that! We call these literals that represent HTML as `liths`. Let's see a few examples of some HTML and their corresponding liths:
+
+- `<p>Hello</p>`: `['p', 'Hello']`.
+- `<div class="nice">Cool</div>`: `['div', {class: 'nice'}, 'Cool']`.
+- `<div><p id="nested">Turtles</p></div>`: `['div', ['p', {id: 'nested'}, 'Turtles']]`.
+
+*Note for crazy people supporting very old browsers*: put quotes around `class` (`{'class': ...` instead of `{class: ...`) to make this work.
+
+In general, a lith is an array with one to three elements. The first element is a string representing the `tag`. There can be a second element for representing attributes, which is an object. Finally, you can add `contents` to the lith; these contents can be a string, a number or another lith.
+
+We also support a collection of liths, which is affectionally called *lithbag*. For example:
+
+- `<p></p><p></p>`: `[['p'], ['p']]`.
+
+A lithbag can also be a collection of text and number fragments. For example:
+
+- `i ama1337lithbag`: `['i am', 'a', 1337, 'lithbag']`.
+
+You can put a lithbag as the contents to another lith:
+
+- `<div>Some text</div>`: `['div', ['Some', ' ', 'text']]`.
+
+Rather than writing standalone liths or lithbags, gotoв expects you to write **functions that return liths or lithbags**. For example, this function returns HTML for a `hello world` page:
+
+```javascript
+var helloWorld = function () {
+   return ['h1', 'Hello, world!'];
+}
+```
+
+If you come from other frameworks, these functions are called *views*. Breaking with existing convention, we won't call them that, because that term is neither intuitive nor precise. We shall call them something more concrete, *bricks*. Why? Because they produce HTML, which is the most visible aspect of a webapp - after all, that's what the user sees. Bricks embody the outward form of any application.
+
+It is possible to generate CSS with gotoв (see the details [here](https://github.com/fpereiro/lith#litcs)), but let's better leave that for later.
+
+How do we go from a brick to seeing something on the screen? Enter `B.mount`.
+
+### `B.mount`
+
+To convert the output of our brick into HTML and place it somewhere on the page, use `B.mount`. This function takes two arguments: the `target` (the DOM element where the HTML will be placed) and a brick (the function that generates the liths that will be converted to HTML).
+
+```javascript
+var helloWorld = function () {
+   return ['h1', 'Hello, world!'];
+}
+
+B.mount ('body', helloWorld);
+```
 
 
-If you wish to turn off logging of events, (what happens if error?)
-B.r.log, turn off if needed.
+`B.unmount`.
 
-listeners vs events
-server: routes vs requests
-code: function definition vs function call
+### Events, teaser
 
-interaction of events with the store. everything represented like this.
-store events.
+`B.do ('set', 'counter', 1)`
 
-### Representing HTML & CSS
+### `B.elem`
 
-lith & lithbag
+### `B.ev`
 
-Not loose, but in functions.
+Since gotoв is built around events, we need certain user interactions to say events. For this purpose, we have `B.ev`, a function that creates a *stringified call to B.say* that we can put into the DOM element itself.
 
-### B.mount & B.unmount
+Let's see an example: we want to say a certain event when the user clicks on a button; let's say that clicking on this button will say an event with verb `'submit'` and path `'data'`. Here's how we can write it:
 
-### B.elem
+```javascript
+['button', {onclick: B.ev ('submit', 'data')}]
+```
 
-### B.ev
+As you can see, to say a single event we pass the `verb` and the `path` to `B.ev`. `B.ev` then returns a string containing the necessary code to say this event when the user clicks on the button. Notice also that we place the output of `B.ev` on the `onclick` attribute of the element.
+
+You can pass extra arguments when saying an event. For example, if you want to pass an object of the shape `{update: true}` you can instead write:
+
+```javascript
+['button', {onclick: B.ev ('submit', 'data', {update: true})}]
+```
+
+You can pass all sorts of things as arguments:
+
+```javascript
+['button', {onclick: B.ev ('submit', 'data', null, NaN, Infinity, undefined, /a regular expression/)}]
+```
+
+If you want to say more than one event within the same user interaction, you can do it by wrapping the event arguments into an array, and then wrapping them into another array:
+
+```javascript
+['button', {onclick: B.ev (['submit', 'data'], ['clear', 'data'])}]
+```
+
+If you need to access properties that are within the event handler (like `event` or `this`), you can do so as follows:
+
+```javascript
+['button', {onclick: B.ev ('submit', 'data', {raw: 'this.value'})}]
+```
+
+In the example above, the event linstener will receive `this.value`, instead of the string `'this.value'`. You could also pass the event instead:
+
+```javascript
+['button', {onclick: B.ev ('submit', 'data', {raw: 'event'})}]
+```
+
+You can pass multiple raw arguments. For example, if you want to pass both `this.value` and `event` you can write this:
+
+```javascript
+['button', {onclick: B.ev ('submit', 'data', {raw: 'this.value'}, {raw: 'event'})}]
+```
+
+If an object has a key `raw` but its value is not a string, it will be considered as a literal argument instead:
+
+```javascript
+['button', {onclick: B.ev ('submit', 'data', {raw: 0})}]
+```
+
+The event listener above will receive `{raw: 0}` as its first argument.
+
+If you pass an object with a `raw` key that contains a string, other keys within that object will be ignored.
+
+```javascript
+['button', {onclick: B.ev ('submit', 'data', {raw: 'this.value', ignored: 'key'})}]
+```
+
+An implementation note: `B.ev` uses the function `B.str` to stringify its arguments.
 
 ### The event system
 
-gotoв uses [recalc](http://github.com/fpereiro/recalc), which is an event system. Before we get into it, we need to understand why we use an event system at all.
+gotoв uses [recalc](https://github.com/fpereiro/recalc), which is an event system. Before we get into it, we need to understand why we use an event system at all.
 
 The need for an event system is best illustrated with an example. Let's imagine we're writing an application which will contain a header. This header contains information about the user that's logged in. It should also be visible only when the user is logged in and on the main view, but not when the user is logged out or outside of the main view. This means that the header will be updated when 1) the view changes; 2) the user is logged in/logged out; and 3) the user information changes.
 
@@ -382,7 +462,7 @@ You might ask: why use a combination of `verb` and `path` instead of just having
 
 In the process of writing applications with gotoв, you can (and most likely will) create your own `verbs`. You should also know that gotoв already defines with four data verbs (`add`, `rem`, `set` and `change`) that are used for data management. We will see these in a minute.
 
-### Managing data
+### Data events
 
 The starting point of gotoв is data because, without it, a webapp would merely be a webpage. Once we understand how data works, we will be ready to create views that are updated whenever the data changes, and which allow the user to modify the data.
 
@@ -406,7 +486,7 @@ If you pass invalid arguments to `B.get`, it will return `undefined` and print a
 
 If you pass an empty `path` to `B.get` (by passing either an empty array or no arguments), you'll get back `B.store` in its entirety.
 
-#### Data verbs
+### Data verbs
 
 As we mentioned earlier, gotoв uses events to modify the store. This means that instead of modifying the store directly, we modify the store through an event. This adds some extra typing, but it allows gotoв to know when (and which part of) the store has been changed. In this way, gotoв can update a view only when it's necessary to do so.
 
@@ -594,7 +674,7 @@ B.say ('rem', [], 'Data', 'State');
 B.say ('rem', [], ['Data', 'State']);
 ```
 
-#### The `change` event and calling the data functions directly
+### The `change` event and calling the data functions directly
 
 When you call any of the data verbs through `B.say`, a `change` event with the same `path` will be fired. More precisely, a `change` event will be fired whenever you call a data verb with 1) valid arguments; and 2) when your invocation actually modifies the store. If the event is fired with incorrect arguments or it doesn't modify the store, no `change` event will be triggered.
 
@@ -606,98 +686,43 @@ The three data events internally call the three respective data functions: `B.se
 
 If you want to modify the store but avoid redrawing the views that depend on that part of the store, you can invoke these functions directly. This might be useful when you have multiple updates on a very short amount of time. Once the updates happen, you can then trigger the view redraw by firing a `change` event on the desired `path`.
 
-### `B.ev`
+Change listeners: common patterns: check if matching is precise; and get value. Show function doing this and think about whether to include it. `B.changeListener`
 
-Since gotoв is built around events, we need certain user interactions to say events. For this purpose, we have `B.ev`, a function that creates a *stringified call to B.say* that we can put into the DOM element itself.
+### Production mode
 
-Let's see an example: we want to say a certain event when the user clicks on a button; let's say that clicking on this button will say an event with verb `'submit'` and path `'data'`. Here's how we can write it:
-
-```javascript
-['button', {onclick: B.ev ('submit', 'data')}]
-```
-
-As you can see, to say a single event we pass the `verb` and the `path` to `B.ev`. `B.ev` then returns a string containing the necessary code to say this event when the user clicks on the button. Notice also that we place the output of `B.ev` on the `onclick` attribute of the element.
-
-You can pass extra arguments when saying an event. For example, if you want to pass an object of the shape `{update: true}` you can instead write:
-
-```javascript
-['button', {onclick: B.ev ('submit', 'data', {update: true})}]
-```
-
-You can pass all sorts of things as arguments:
-
-```javascript
-['button', {onclick: B.ev ('submit', 'data', null, NaN, Infinity, undefined, /a regular expression/)}]
-```
-
-If you want to say more than one event within the same user interaction, you can do it by wrapping the event arguments into an array, and then wrapping them into another array:
-
-```javascript
-['button', {onclick: B.ev (['submit', 'data'], ['clear', 'data'])}]
-```
-
-If you need to access properties that are within the event handler (like `event` or `this`), you can do so as follows:
-
-```javascript
-['button', {onclick: B.ev ('submit', 'data', {raw: 'this.value'})}]
-```
-
-In the example above, the event linstener will receive `this.value`, instead of the string `'this.value'`. You could also pass the event instead:
-
-```javascript
-['button', {onclick: B.ev ('submit', 'data', {raw: 'event'})}]
-```
-
-You can pass multiple raw arguments. For example, if you want to pass both `this.value` and `event` you can write this:
-
-```javascript
-['button', {onclick: B.ev ('submit', 'data', {raw: 'this.value'}, {raw: 'event'})}]
-```
-
-If an object has a key `raw` but its value is not a string, it will be considered as a literal argument instead:
-
-```javascript
-['button', {onclick: B.ev ('submit', 'data', {raw: 0})}]
-```
-
-The event listener above will receive `{raw: 0}` as its first argument.
-
-If you pass an object with a `raw` key that contains a string, other keys within that object will be ignored.
-
-```javascript
-['button', {onclick: B.ev ('submit', 'data', {raw: 'this.value', ignored: 'key'})}]
-```
-
-An implementation note: `B.ev` uses the function `B.str` to stringify its arguments.
-
-### `B.elem`
-
-TODO
+If you set `B.prod` to `true`, you'll turn on *production mode*. When production mode is on, gotoв's functions will stop validating inputs. This will make your application faster, but if any of these functions is invoked with invalid arguments, you will either experience silent errors or your application will throw an exception. It is recommended that you only set this variable on a production environment once your application has been mostly debugged.
 
 ### Debugging
 
-TODO
-redraw error: 1) modified something not-opaque; or 2) using tables in improper ways.
+gotoв stores a list of all the events fired into `B.log`. Since gotoв applications are built around events, This can be extremely useful for debugging an app. Instead of inspecting `B.log` with the browser console, you can invoke `B.eventlog`, which will add an HTML table to the page where you can see all the information about the events.
 
-`B.debug` and the `error` event
+The table presented by `B.eventlog` is ordered by time (so you can see what happened first and what later), it allows to track dependencies between events (if the context is passed in nested calls, see below) and it shows the time when the event was fired relative to the initial loading of the application (which allows for performance benchmarking).
 
-Autoactivation, show by default. If you find this annoying, forget it: B.forget ('error');
+If one of gotoв's functions is invoked with invalid arguments, an `error` event will be emitted. There's an `error` event listener that will print an error message, plus an invocation to `B.eventlog`. The end result is that you'll see the error as the last row of the `eventlog` immediately after the error happens. Note that this won't happen if `B.prod` is enabled. If you wish to turn off this behavior, run this command at the top of your application: `B.forget ('error')`.
 
-From will be there for add|rem|set that you do within listener that you pass context. Also for redraw, since its triggered by change. Invocations to B.ev and B.elem will have no context|from but you can do it by the arguments.
+If you wish to turn off logging of events, (what happens if error?)
+B.r.log, turn off if needed.
+
+redraw error: 1) modified something not-opaque; or 2) invalid markup. Or 3) actual gotoв bug.
+
+if you put values on inputs without gotoв, then you should clear them out if you don't want them popping up elsewhere.
+
+### Custom events
+
+listeners vs events
+server: routes vs requests
+code: function definition vs function call
+
+interaction of events with the store. everything represented like this.
+store events.
 
 Instead of logging to the console, emit events and then see them in B.debug! Very useful also for environments where there's no console, like mobile browsers.
 
 Two things in error reporting: visibility, and once you see it, identifiability, which means to track it quickly and certainly to which part of the code is making it. For the second, we put valuable info (including the `from` in some cases), but not more than necessary.
 
-      - two loads if you put the ajax call on the ondraw, but no redraw the last time assuming it's the same. workarounds, if it bothers you: debounce with timer, only load if no value, load before drawing (but then, how do you update?).
-      - Event lifecycle: a view that modifies both an input and a trigger. If inputting with onchange and then you click, the onchange removes the button (or repurposes and deletes its onclick) before the onclick triggers. Two solutions: put button outside of that view (if it doesn't strictly depend on the thing modified); or 2) use oninput, so thing is redrawn, but then when you click on the button, there's no redraw because value didn't change and view wasn't redrawn.
-      - gotoX redraw errors: check that your HTML is correct, particularly with tables. Missing <tr>s, in particular. Also opaques/literals.
-      - if you put values on inputs without gotoX, then you should clear them out if you don't want them popping up elsewhere.
-      - bubbling of events when recycling. If inner gets the click and outer is recycled and receives an onclick, then that onclick will be triggered!
+`B.mlisten`.
 
-### Change listeners
-
-Common patterns: check if matching is precise; and get value. Show function doing this and think about whether to include it.
+Instead of lifecycle hooks: events with very negative priority.
 
 ## FAQ
 
@@ -821,11 +846,11 @@ If we're in node.js, we print an error and return `undefined`.
 
 We require the five dependencies of the library (available at global variables) and assign them to local variables:
 
-- [dale](http://github.com/fpereiro/dale).
-- [teishi](http://github.com/fpereiro/teishi).
-- [lith](http://github.com/fpereiro/lith).
-- [recalc](http://github.com/fpereiro/recalc).
-- [cocholate](http://github.com/fpereiro/cocholate).
+- [dale](https://github.com/fpereiro/dale).
+- [teishi](https://github.com/fpereiro/teishi).
+- [lith](https://github.com/fpereiro/lith).
+- [recalc](https://github.com/fpereiro/recalc).
+- [cocholate](https://github.com/fpereiro/cocholate).
 
 In the case of recalc, we initialize a recalc object and store it in the variable `r` - in the four other cases, the local variables are no more than a reference to the main object exported by each library.
 

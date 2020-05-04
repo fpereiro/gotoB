@@ -470,6 +470,89 @@
 
             B.listen ('test', 'B.mount|unmount', {burn: true}, function (x) {
 
+               Test ('B.validateLith', function () {
+                  var error;
+                  error = dale.stopNot ([
+                     /a/,
+                     ['p', 222, 222],
+                     ['p', {}, 2, 3],
+                     ['p', {'class': NaN}],
+                     ['p', NaN],
+                     [NaN],
+                     ['style', ['not', 'a', 'litc']],
+                     ['div', [
+                        ['style', [2]],
+                        ['p', 'something']
+                     ]]
+                  ], undefined, function (v) {
+                     var validation = B.validateLith (v);
+                     if (validation === 'Lith' || validation === 'Lithbag') return 'B.validateLith error with invalid input: ' + JSON.stringify (v) + ' ' + validation;
+                  });
+                  if (error) return error;
+
+                  error = dale.stopNot ([
+                     [true, ['br']],
+                     [true, ['p', {id: 'p3', 'class': 'remark'}, 'This is a remark']],
+                     [true, ['p', ['something']]],
+                     [true, ['div', {id: 'container'}, ['p', {'class': 'remark'}, 'This is a remark']]],
+                     [true, ['table', dale.go ([['A1', 'B1'], ['A2', 'B2']], function (v, k) {
+                        return ['tr', {id: 'row' + (k + 1)}, dale.go (v, function (v2) {
+                           return ['td', v2];
+                        })];
+                     })]],
+                     [true, ['div', [
+                        ['p'], ['p']
+                     ]]],
+                     [true, ['p', [
+                        'Hola!', ['br']
+                     ]]],
+                     [false, [
+                        ['p'], ['div']
+                     ]],
+                     [false, [
+                        ['p'], [
+                           ['div']
+                        ]
+                     ]],
+                     [true, (function () {
+                        var dataset = [{id: 1, name: 'a'}, {id: 2, name: 'b'}];
+
+                        function createRows (data) {
+                           var output = [];
+                           dale.go (data, function (v) {
+                              output.push (['tr', [
+                                 ['td', v.id],
+                                 ['td', v.name],
+                              ]]);
+                           });
+                           return output;
+                        }
+
+                        var table = ['table', [
+                           ['tr', [
+                              ['th', 'Id'],
+                              ['th', 'Name']
+                           ]],
+                           createRows (dataset)
+                        ]];
+
+                        return table;
+                     }) ()],
+                     [true, ['div', [
+                        ['p', 'Hi'],
+                        ['LITERAL', '<p>Hello!</p>']
+                     ]]],
+                     [true, ['script', {src: 'scripts.js', charset: 'utf-8'}]],
+                     [true, ['style', ['span.action', {color: 'blue'}]]],
+                     [true, ['style', lith.css.g (['span.action', {color: 'blue'}])]],
+                  ], undefined, function (v) {
+                     var validation = B.validateLith (v [1]);
+                     if (v [0]   && validation !== 'Lith')    return 'B.validateLith error with valid input: ' + JSON.stringify (v [1]) + ' ' + validation;
+                     if (! v [0] && validation !== 'Lithbag') return 'B.validateLith error with valid input: ' + JSON.stringify (v [1]) + ' ' + validation;
+                  });
+                  if (error) return error;
+               });
+
                var f = function (a) {
                   return function () {return a}
                }
@@ -541,7 +624,7 @@
                });
 
                // TODO uncomment to proceed
-               //B.say (x, 'test', 'B.elem');
+               B.say (x, 'test', 'B.elem');
             });
 
 
@@ -555,15 +638,15 @@
             // *** B.ELEM ***
 
             B.listen ('test', 'B.elem', {burn: true}, function (x) {
-               return;
 
                B.mount ('body', function () {
                   return B.elem (['Data', 'sabe'], function (sabe) {
-                     return ['p', 'ya tu sabe:' + sabe];
+                     clog ('debug redrawing', arguments);
+                     return ['p', ['ya tu sabe:', sabe]];
                   });
                });
                B.say (x, 'set', ['Data', 'sabe'], 'anxious');
-               B.say (x, 'set', ['Data', 'sabe'], 'anxious');
+               //B.say (x, 'set', ['Data', 'sabe'], 'anxious');
 
                // Turn on again error handler
                // B.listeners.error.disabled = false;
@@ -1214,8 +1297,8 @@
                   return B.view (['State', 'ltable'], function (x, ltable) {
                      return B.view (['State'], function (x, State) {
                         return [
-                           ['table', dale.do (dale.times (ltable), function (v) {
-                              return ['tr', dale.do (dale.times (ltable), function (v2, k2) {
+                           ['table', dale.go (dale.times (ltable), function (v) {
+                              return ['tr', dale.go (dale.times (ltable), function (v2, k2) {
                                  if (k2 === 0) return ['td', {class: 'something ' + State.opaqueclass, opaque: true}, ['input']];
                                  else return ['td', k2];
                               })];

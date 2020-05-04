@@ -309,7 +309,7 @@ Please refer to readme.md to read the annotated source.
 
       B.listen ('change', [], {id: id, priority: -1, match: function (ev) {
          return dale.stop (paths, true, function (path) {
-            return B.changeListener (ev, {path: path});
+            return B.changeListener (ev, {verb: 'change', path: path});
          });
       }}, function (x) {
          var oldElement = B.listeners [id].elem, oldChildren = B.listeners [id].children;
@@ -327,13 +327,17 @@ Please refer to readme.md to read the annotated source.
    B.validateLith = function (input) {
       var v = lith.v (input, true);
       if (v !== 'Lith' && v !== 'Lithbag') return v;
-      if (v === 'Lith') return type (teishi.last (input)) === 'array' ? B.validateLith (teishi.last (input)) : 'Lith';
+      if (v === 'Lith') {
+         if (type (teishi.last (input)) !== 'array') return v;
+         var result = input [0] === 'style' ? lith.css.v (teishi.last (input), true) : B.validateLith (teishi.last (input));
+         return (result === 'Lith' || result === 'Lithbag' || result === true) ? 'Lith' : result;
+      }
       var error = dale.stopNot (input, undefined, function (v) {
          if (type (v) !== 'array') return;
          var result = B.validateLith (v);
-         if (result !== 'Lith' || result !== 'Lithbag') return result;
+         if (result !== 'Lith' && result !== 'Lithbag') return result;
       });
-      return error || 'Lithbag';
+      return error || v;
    }
 
    B.redraw = function (x, id, oldElement, oldChildren, rec) {
@@ -365,7 +369,7 @@ Please refer to readme.md to read the annotated source.
       // we delete the old children after we do the prediff, to know what's actually there on the DOM! oldELement's nested reactive children might not be accurate if they were redrawn after the parent was redrawn.
       dale.go (oldChildren, function (id) {B.forget (id)});
 
-      if (diff) B.applyDiff (element, diff);
+      if (diff) B.applyDiff (x, listener, element, diff);
       else {
          if (! B.prod) B.say (x, 'trample', {timeout: B.internal.timeout, listener: listener});
          document.getElementById (id).innerHTML = lith.g (listener.elem);
@@ -374,7 +378,7 @@ Please refer to readme.md to read the annotated source.
       done ();
    }
 
-   B.applyDiff = function (element, diff) {
+   B.applyDiff = function (x, id, element, diff) {
       var insert = function (el, where, position) {
          var p = find (where, 'insert1', position);
          if (p) p.parentNode.insertBefore (el, p);
@@ -387,6 +391,7 @@ Please refer to readme.md to read the annotated source.
             if (cur) return cur = cur.childNodes [v];
 
             if (! B.prod) B.error (x, 'redraw', {
+               // TODO
                action: action,
                position: position,
                diffitem: diff [position].slice (0, 2).join (' '),
@@ -394,10 +399,12 @@ Please refer to readme.md to read the annotated source.
                where: where,
                k: k,
                innerHTML: element.innerHTML,
+               /*
                expectedHTML: lith.g (view, lith.g (view)),
                oldElement: listener.elem,
                newElement: view,
                diff: dale.obj (teishi.copy (diff), function (v2, k2) {return [k2, v2]})
+               */
             });
             throw new Error ('gotoB redraw error!');
             // log ('gotoB redraw error! This could be caused by two things: 1) invalid markup; 2) a gotoB redraw bug. To eliminate the possibility of #1, check that the view being redrawn returns lith that represents valid HTML, taking particular care to not nest elements incorrectly (for example, an <h1> cannot go inside an <h1>). If you need help debugging the error, please open a pull request at http://github.com/fpereiro/gotoB/issues and paste the text below:\n', JSON.stringify (data, null, '   '));
@@ -405,8 +412,12 @@ Please refer to readme.md to read the annotated source.
          return cur;
       }
 
+      var initialPosition = dale.stopNot (element.parentNode, undefined, function (el, k) {
+         if (el === element) return k;
+      });
+
       //var dold = [0], dnew = [0], match = {
-      var dold = [], dnew = [], match = {
+      var dold = [initialPosition], dnew = [initialPosition], match = {
          add: {tag: null, index: null},
          rem: {tag: null, index: null}
       };

@@ -81,7 +81,9 @@ var counter = function () {
    return B.elem ('counter', function (counter) {
       return ['div', [
          ['h3', ['Counter is: ', counter || 0]],
-         ['button', {onclick: B.ev ('set', 'counter', (counter || 0) + 1)}, 'Increment counter']
+         ['button', {
+            onclick: B.ev ('set', 'counter', (counter || 0) + 1)
+         }, 'Increment counter']
       ]];
    });
 }
@@ -230,21 +232,21 @@ It is important to notice that events can be used for things other than updating
 ```javascript
 var counter = function () {
    return B.elem ('counter', function (counter) {
-      return ['h1', 'The counter is ' + counter];
+      return ['h2', 'The counter is ' + counter];
    });
 }
 ```
 
-`counter` returns a reactive element. Whenever `B.store.counter` is updated, the `h1` reactive element will be automatically updated.
+`counter` returns a reactive element. Whenever `B.store.counter` is updated, the `h2` reactive element will be automatically updated.
 
 ```javascript
 B.say ('set', 'counter', 1);
 
-// <h1>The counter is 1</h1>
+// <h2>The counter is 1</h2>
 
 B.say ('set', 'counter', 2);
 
-// <h1>The counter is 2</h1>
+// <h2>The counter is 2</h2>
 ```
 
 You might be wondering: how can we trigger events from the DOM itself? One way of doing it would be the following:
@@ -253,7 +255,7 @@ You might be wondering: how can we trigger events from the DOM itself? One way o
 var counter = function () {
    return B.elem ('counter', function (counter) {
       return ['div', [
-         ['h1', 'The counter is ' + counter],
+         ['h2', 'The counter is ' + counter],
          ['button', {
             onclick: "B.say ('set', 'counter', " + (counter + 1) + ")"
          }, 'Increment counter']
@@ -262,13 +264,13 @@ var counter = function () {
 }
 ```
 
-But it is muc better to use `B.ev`, which will create a stringified call to `B.say` that we can put within the `onclick` attribute directly.
+But it is much better to use `B.ev`, which will create a stringified call to `B.say` that we can put within the `onclick` attribute directly.
 
 ```javascript
 var counter = function () {
    return B.elem ('counter', function (counter) {
       return ['div', [
-         ['h1', 'The counter is ' + counter],
+         ['h2', 'The counter is ' + counter],
          ['button', {
             onclick: B.ev ('set', 'counter', counter + 1)
          }, 'Increment counter']
@@ -283,8 +285,6 @@ And that, in a nutshell, is how gotoв works:
 2. The global store takes care of our state & data.
 3. Events perform all actions, including updating the global store.
 4. Reactive elements are functions that return object literals and are automatically executed when a relevant part of the store changes.
-
-That's it!
 
 ## API reference
 
@@ -350,7 +350,7 @@ var helloWorld = function () {
 }
 ```
 
-If you come from other frameworks, these functions are called *views*. Breaking with existing convention, we won't call them that, because that term is neither intuitive nor precise. We shall call them something more concrete, *bricks*. Why? Because they produce HTML, which is the most visible aspect of a webapp - after all, that's what the user sees. Bricks embody the outward form of any application.
+If you come from other frameworks, these functions are called *views*. Breaking with existing convention, we won't call them that, because that term is neither intuitive nor precise. We shall call them something more concrete, *bricks*. Why? Because they produce HTML, which then gets transformed by the browser into visible elements on the screen. Bricks are the visible part of the application.
 
 It is possible to generate CSS with gotoв (see the details [here](https://github.com/fpereiro/lith#litcs)), but let's better leave that for later.
 
@@ -358,7 +358,7 @@ How do we go from a brick to seeing something on the screen? Enter `B.mount`.
 
 ### `B.mount`
 
-To convert the output of our brick into HTML and place it somewhere on the page, use `B.mount`. This function takes two arguments: the `target` (the DOM element where the HTML will be placed) and a brick (the function that generates the liths that will be converted to HTML).
+To convert the output of our brick into HTML and place it somewhere on the page, use `B.mount`. This function takes two arguments: the `target` (the DOM element where the HTML will be placed) and a brick (the function that generates the liths that will be converted to HTML). For example:
 
 ```javascript
 var helloWorld = function () {
@@ -368,14 +368,99 @@ var helloWorld = function () {
 B.mount ('body', helloWorld);
 ```
 
+`target` must always be a string. It can be either `'body'` or a string of the form `'#ID'`, where `ID` is the id of a DOM element that is already in the document. If `target` is not present in the document, the function will notify an error and will return `false`.
 
-`B.unmount`.
+The brick function must be a function. `B.mount` will execute this function passing no parameters to it. This function must return either a lith or a lithbag. If the function doesn't return a valid lith or lithbag, `B.mount` will notify an error and return `false`.
 
-### Events, teaser
+The HTML generated will be placed at the *top* of the target. In the example above, the `<body>` will look like this:
 
-`B.do ('set', 'counter', 1)`
+```html
+<body>
+   <h1>Hello, world!</h1>
+</body>
+```
+
+Optionally, the `target` string can have the form `TAG#ID`. For example, if you have an element `<div id="container"></div>` already inside the `<body>`, you can use either `'#container'` or `'div#container'` as the `target`.
+
+```javascript
+// Assuming there's an element with id `container`
+B.mount ('#container', function () {
+   return ['p', 'Hello'];
+});
+```
+
+`B.unmount` is a function to undo what was done by `B.mount`. It receives a `target` which is just like the `target` passed to `B.mount`. It will remove *all* of the HTML contained inside `target`. If an invalid or non-existing `target` is passed to `B.unmount`, the function will notify an error and return `false`.
+
+```javascript
+B.unmount ('body');
+
+// `document.body.innerHTML` will now be an empty string.
+```
+
+`B.mount` nor `B.unmount` will both return `undefined` if the operation is successful.
+
+### Introduction to the event system
+
+The hard thing about programming interfaces is figuring out which parts of the interface should be updated. Even in simple interfaces, different components influence and affect each other in subtle ways. This is the main reason, in my view, for the existence of frontend frameworks.
+
+gotoв tackles this problem by 1) using a global object (called the *store*) to store all the information about the app; and 2) using an event system to update both the store and the relevant parts of the interface.
+
+The *store* is a plain object on which you can put arbitrary data. What matters is that all the information that affects the interface should be placed there. From the perspective of the entire frontend, the *store* is the single source of truth.
+
+By having all the information centralized in one place, we avoid having to retrieve information from multiple places (like DOM elements or loose variables) and instead retrieve it from the store directly. Even more importantly, by updating the store through events, we can elegantly solve the problem of when to update a certain part of the interface. Let's see how with an example.
+
+Let's consider an application with three components (C1, C2 and C3). These components depend on different parts of the state:
+- C1 depends on S1.
+- C2 depends on S1 and S3.
+- C3 depends on S1, S2 and S3.
+
+To make matters more complicated, these components also modify parts of the state:
+- C1 can modify S1, S2 and S3.
+- C3 can modify S1 and S2.
+
+In a straightforward implementation, every time we modify S1, S2 and S3, we would have to keep track of which components depend on them, and update them. So we'd need functions to modify every part of the state and make sure we call them from the components that can modify those parts of the state.
+
+Real life applications (even simple ones), can easily have a dozen components and twice as much pieces of information on which they depend. Things can get entangled very, very quickly.
+
+An event system is a way out of this pickle. Instead of having dedicated functions to update the store and then certain components, we simply fire an event when modifying a part of the store. Then, all the components that rely on that part of the store *listen* to that event and automatically update themselves.
+
+When a component (or an action coming from a different place, perhaps a timer or a notification from the server) wants to update the state, it does it through an event. Once this is done, all concerned parties are notified automatically and they operate in consequence. This is the equivalent of going from a sit-down restaurant to a buffet: in the first one, you need to take orders and fulfill them. In the second one, you just bring the food to the places where it can be found, and patrons get up and get it themselves.
+
+Before going deeper into the event system, it's better to see the rest of gotoв's functions. For now, let's just fire an event to update the store. We'll set the `counter` property to `1` and jump to our first brick that is automatically updated.
+
+By the way, the store is located at `B.store`.
+
+```javascript
+// Initially, `B.store` is an empty object.
+
+B.do ('set', 'counter', 0)
+
+// Now, `B.store` is `{counter: 0}`
+```
 
 ### `B.elem`
+
+```javascript
+var counter = function () {
+   return B.elem ('counter', function (counter) {
+      return ['div', [
+         ['h2', 'The counter is ' + counter],
+         ['button', {
+            onclick: B.ev ('set', 'counter', counter + 1)
+         }, 'Increment counter']
+      ]];
+   });
+}
+
+var app = function () {
+   return [
+      ['h1', 'Counter app'],
+      counter ()
+   ];
+}
+
+B.mount ('body', app);
+```
 
 ### `B.ev`
 

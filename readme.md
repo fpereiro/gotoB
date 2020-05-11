@@ -58,7 +58,6 @@ An in-depth tutorial is available [here](tutorial/tutorial.md). This document co
 - [Fundamentals](https://github.com/fpereiro/gotob#fundamentals)
 - [API reference](https://github.com/fpereiro/gotob#api-reference)
 - [Frequently Asked Questions](https://github.com/fpereiro/gotob#faq)
-- [Internals](https://github.com/fpereiro/gotob#internals)
 - [Annotated source code](https://github.com/fpereiro/gotob#source-code)
 - [License](https://github.com/fpereiro/gotob#license)
 
@@ -320,13 +319,13 @@ You may have noticed I omitted recalc in the line of code above. This is because
 
 gotoв generates HTML directly on the browser, using javascript. This HTML, when placed on the page, becomes the interface to the webapp.
 
-Our first stop is to understand how to write HTML using javascript. The way to do this in gotoв is through [lith](https://github.com/fpereiro/lith), a library that uses javascript object literals to represent HTML. Object literals are mere arrays (`[...]`) and objects (`{...}`), nothing more than that! We call these literals that represent HTML as `liths`. Let's see a few examples of some HTML and their corresponding liths:
+Our first stop is to understand how to write HTML using javascript. The way to do this in gotoв is through [lith](https://github.com/fpereiro/lith), a library that uses javascript object literals to represent HTML. Object literals are mere arrays (`[...]`) and objects (`{...}`), nothing more than that! We call these literals that represent HTML as `liths`. Let's see a few examples of some liths and their corresponding HTML:
 
-- `<p>Hello</p>`: `['p', 'Hello']`.
-- `<div class="nice">Cool</div>`: `['div', {class: 'nice'}, 'Cool']`.
-- `<div><p id="nested">Turtles</p></div>`: `['div', ['p', {id: 'nested'}, 'Turtles']]`.
+- `['p', 'Hello'] -> <p>Hello</p>`
+- `['div', {class: 'nice'}, 'Cool'] -> <div class="nice">Cool</div>`.
+- `['div', ['p', {id: 'nested'}, 'Turtles']] -> <div><p id="nested">Turtles</p></div>`.
 
-*Note for crazy people supporting very old browsers*: put quotes around `class` (`{'class': ...` instead of `{class: ...`) to make this work.
+*Note for crazy people supporting very old browsers*: put quotes around `class` (`{'class': ...` instead of `{class: ...`) to make the second example work.
 
 In general, a lith is an array with one to three elements. The first element is a string representing the `tag`. There can be a second element for representing attributes, which is an object. Finally, you can add `contents` to the lith; these contents can be a string, a number or another lith.
 
@@ -350,9 +349,11 @@ var helloWorld = function () {
 }
 ```
 
-If you come from other frameworks, these functions are called *views*. Breaking with existing convention, we won't call them that, because that term is neither intuitive nor precise. We shall call them something more concrete, *bricks*. Why? Because they produce HTML, which then gets transformed by the browser into visible elements on the screen. Bricks are the visible part of the application.
+If you come from other frameworks, these functions are called *views*. Breaking with existing convention, we won't call them that, because that term is neither intuitive nor precise. We shall call them something more concrete: *bricks*. Why? Because they produce HTML, which then gets transformed by the browser into visible elements on the screen. Bricks are the visible part of the application.
 
-It is possible to generate CSS with gotoв (see the details [here](https://github.com/fpereiro/lith#litcs)), but let's better leave that for later.
+From now on, a `brick` will be a function that returns either liths or lithbags.
+
+It is possible (but not mandatory) to generate CSS with gotoв (see the details [here](https://github.com/fpereiro/lith#litcs)), but let's better leave that for later.
 
 How do we go from a brick to seeing something on the screen? Enter `B.mount`.
 
@@ -370,7 +371,7 @@ B.mount ('body', helloWorld);
 
 `target` must always be a string. It can be either `'body'` or a string of the form `'#ID'`, where `ID` is the id of a DOM element that is already in the document. If `target` is not present in the document, the function will notify an error and will return `false`.
 
-The brick function must be a function. `B.mount` will execute this function passing no parameters to it. This function must return either a lith or a lithbag. If the function doesn't return a valid lith or lithbag, `B.mount` will notify an error and return `false`.
+The brick must be, as we defined it above, a function. `B.mount` will execute this function passing no parameters to it. This function must return either a lith or a lithbag. If the function doesn't return a valid lith or lithbag, `B.mount` will notify an error and return `false`.
 
 The HTML generated will be placed at the *top* of the target. In the example above, the `<body>` will look like this:
 
@@ -401,11 +402,11 @@ B.unmount ('body');
 
 ### Introduction to the event system
 
-The hard thing about programming interfaces is figuring out which parts of the interface should be updated. Even in simple interfaces, different components influence and affect each other in subtle ways. This is the main reason, in my view, for the existence of frontend frameworks.
+The hard thing about programming interfaces is figuring out which parts of the interface should be updated when the data changes. Even in simple interfaces, different components influence and affect each other in subtle ways. This is the main reason, in my view, for the existence of frontend frameworks.
 
-gotoв tackles this problem by 1) using a global object (called the *store*) to store all the information about the app; and 2) using an event system to update both the store and the relevant parts of the interface.
+gotoв tackles this problem by 1) centralizing all the application data on a single object (called the *store*) and 2) using an event system to update both the store and the relevant parts of the interface.
 
-The *store* is a plain object on which you can put arbitrary data. What matters is that all the information that affects the interface should be placed there. From the perspective of the entire frontend, the *store* is the single source of truth.
+The *store* is a plain object on which you can put arbitrary data. What matters is that all the information that affects the interface should be placed there. From the perspective of the entire frontend, the *store* is the [single source of truth](https://en.wikipedia.org/wiki/Single_source_of_truth).
 
 By having all the information centralized in one place, we avoid having to retrieve information from multiple places (like DOM elements or loose variables) and instead retrieve it from the store directly. Even more importantly, by updating the store through events, we can elegantly solve the problem of when to update a certain part of the interface. Let's see how with an example.
 
@@ -420,25 +421,111 @@ To make matters more complicated, these components also modify parts of the stat
 
 In a straightforward implementation, every time we modify S1, S2 and S3, we would have to keep track of which components depend on them, and update them. So we'd need functions to modify every part of the state and make sure we call them from the components that can modify those parts of the state.
 
-Real life applications (even simple ones), can easily have a dozen components and twice as much pieces of information on which they depend. Things can get entangled very, very quickly.
+Real life applications (even very simple ones), can easily have a dozen components and two dozen pieces of information on which they depend. Things can get entangled very, very quickly.
 
-An event system is a way out of this pickle. Instead of having dedicated functions to update the store and then certain components, we simply fire an event when modifying a part of the store. Then, all the components that rely on that part of the store *listen* to that event and automatically update themselves.
+An event system is a way out of this pickle. Instead of having dedicated functions to update the store and then certain components, we simply trigger an event when modifying a part of the store. Then, all the components that rely on that part of the store *listen* to that event and automatically update themselves.
 
-When a component (or an action coming from a different place, perhaps a timer or a notification from the server) wants to update the state, it does it through an event. Once this is done, all concerned parties are notified automatically and they operate in consequence. This is the equivalent of going from a sit-down restaurant to a buffet: in the first one, you need to take orders and fulfill them. In the second one, you just bring the food to the places where it can be found, and patrons get up and get it themselves.
+When a component (or an action coming from a different place, perhaps a timer or a notification from the server) wants to update the state, it does it through an event. Once this is done, all concerned parties are notified automatically and they operate in consequence. The difference in effort is the same between staffing a sit-down restaurant vs a buffet: in the sit-down restaurant, you need to take orders and fulfill them for each of the persons sitting down. In the buffet, you just bring the food to the common areas with hot plates and trays, and the patrons get up and get it themselves.
 
-Before going deeper into the event system, it's better to see the rest of gotoв's functions. For now, let's just fire an event to update the store. We'll set the `counter` property to `1` and jump to our first brick that is automatically updated.
+The store where we keep all the data is an object located at `B.store`. The function for triggering events is `B.say`. This function takes a `verb`, a `path` and optional arguments. Why do we call this function `B.say` and not `B.trigger` or `B.fire`? To emphasize the key point: an event system is about *communication* between parts of a program. The event system is a channel of communcation, where some functions *say events* and some functions *listen to them*.
 
-By the way, the store is located at `B.store`.
+Before going deeper into the event system, let's see how we can create bricks that will be automatically updated when the state changes. For now, let's just fire an event to update the store. We'll set the `counter` property to `1` and jump to our first brick that is automatically updated.
 
 ```javascript
 // Initially, `B.store` is an empty object.
 
-B.do ('set', 'counter', 0)
+B.say ('set', 'counter', 0)
 
 // Now, `B.store` is `{counter: 0}`
 ```
 
 ### `B.elem`
+
+Let's create our first *reactive* brick. What does *reactive* mean? It means that it automatically updates itself when the information on which it depends has changed - in other words, it *reacts* to changes on the store that affect it.
+
+So far, we have set `B.store.counter` to `0`. Let's create a brick that shows us the counter:
+
+```javascript
+var counter = function () {
+   return ['div', [
+      ['h2', 'The counter is ' + counter],
+   ]];
+}
+
+B.mount ('body', counter);
+```
+
+The problem with the brick above is that it will never change on its own, no matter what we do with `counter`. To create bricks that react to changes in the store, we use the function `B.elem`:
+
+```javascript
+var counter = function () {
+   return B.elem ('counter', function (counter) {
+      return ['div', [
+         ['h2', 'The counter is ' + counter],
+      ]];
+   });
+}
+
+B.mount ('body', counter);
+```
+
+If you enter the following command on the developer console to update the store: `B.say ('set', 'counter', 1)`, you will notice that the brick gets automatically updated!
+
+If you, however, try to update `B.store.counter` directly by entering `B.store.counter = 2`, you'll notice that... nothing happens! This is because you changed the store directly instead of using an event. Most of the time, you'll change the store through events - though by the end of this guide, we'll cover some cases where you can sidestep the event system to update the store.
+
+`B.elem` takes a `path` and a `brick` as arguments. The `path` can be any of the following:
+- A string: `counter`.
+- An array of strings and integers: `['Data', 'counter']`.
+- An array of arrays of strings and integers: `[['Data', 'counter'], ['State', 'page']]`.
+
+If the `path` is counter, then the brick will be updated when `B.store.counter` changes. If the path is instead `['Data', 'counter']`, then the brick will be updated when `B.store.Data.counter` changes.
+
+If the `path` is a list of `paths`, as `[['Data', 'counter'], ['State', 'page']]`, then the brick will be updated when *either* `Data.counter` or `State.page` change.
+
+We'll explore `paths` a bit later. For now, let's go with the simpler example:
+
+```javascript
+var counter = function () {
+   return B.elem ('counter', function (counter) {
+      return ['div', [
+         ['h2', 'The counter is ' + counter],
+      ]];
+   });
+}
+
+B.mount ('body', counter);
+```
+
+Notice that the value of `counter` is directly passed to the brick as its first argument.
+
+By the way, if you passed `['counter']` instead of `'counter'` as the path, the result would be the same: `B.elem ('counter', ...` is the same as `B.elem (['counter'], ...`.
+
+This brick not very useful, unless you expect your user to update the app through the developer console. To complete the counter, let's add a button that when clicked, will execute a function that updates the counter.
+
+```javascript
+var counter = function () {
+   return B.elem ('counter', function (counter) {
+      return ['div', [
+         ['h2', 'The counter is ' + counter],
+         ['button', {
+            onclick: 'incrementCounter ()'
+         }, 'Increment counter'],
+      ]];
+   });
+}
+
+window.incrementCounter = function () {
+   B.do ('set', B.store.counter, B.store.counter + 1);
+}
+
+B.mount ('body', counter);
+```
+
+This will work, but it's a bit ugly because it involves creating a global function for that particular purpose. Let's see how to do this better through another function, `B.ev`. We'll be back to `B.elem` soon, to cover more aspects.
+
+### `B.ev`
+
+`B.ev` creates stringified event handlers that we can pass to DOM elements, in order to trigger events from them. Let's go back to our previous example:
 
 ```javascript
 var counter = function () {
@@ -447,22 +534,30 @@ var counter = function () {
          ['h2', 'The counter is ' + counter],
          ['button', {
             onclick: B.ev ('set', 'counter', counter + 1)
-         }, 'Increment counter']
+         }, 'Increment counter'],
       ]];
    });
 }
 
-var app = function () {
-   return [
-      ['h1', 'Counter app'],
-      counter ()
-   ];
-}
-
-B.mount ('body', app);
+B.mount ('body', counter);
 ```
 
-### `B.ev`
+We got rid of `window.incrementCounter`; instead, we placed a call to `B.ev`: `B.ev ('set', 'counter', counter + 1)`.
+
+`B.ev` takes as arguments a `verb`, a `path`, and optional further arguments. In fact, it takes the same arguments as `B.say`! This is not a coincidence, since `B.ev` generates a string that, when executed by a javascript event, will perform a call to `B.say` with the same arguments.
+
+When `counter` is 0, the call to `B.ev` will generate a string that looks like this: `"B.say ('set', 'counter', 1)"`.
+
+If the user clicks on the button, `counter` will be updated, the brick function will be updated, and then the button's event handler will look like this: `"B.say ('set', 'counter', 2)"`.
+
+### `B.elem` in detail
+
+
+TODO
+- return liths, not lithbags
+- don't reference if outer is redrawn
+
+### `B.ev` in detail
 
 Since gotoв is built around events, we need certain user interactions to say events. For this purpose, we have `B.ev`, a function that creates a *stringified call to B.say* that we can put into the DOM element itself.
 
@@ -809,6 +904,10 @@ Two things in error reporting: visibility, and once you see it, identifiability,
 
 Instead of lifecycle hooks: events with very negative priority.
 
+### Internals
+
+- debugging: `node build dev`
+
 ## FAQ
 
 ### Why did you write another javascript framework?!?
@@ -861,7 +960,7 @@ It is my contention that frontend frameworks exist mainly to solve these two int
 
 - You have freedom to decide the technology you use.
 - Complexity is a massive turn-off for you.
-- You like ES5 javascript.
+B.ev ('set', 'counter', counter + 1)- You like ES5 javascript.
 - You miss not having to compile your javascript.
 - You enjoy understanding the internals of a tool, so that you can then use it with precision and confidence.
 - You like technology that's a bit strange.
@@ -895,10 +994,6 @@ It is my contention that frontend frameworks exist mainly to solve these two int
 - **Plugin system**: gotoв tries to give provide you all the essentials out of the box, without installation or configuration.
 - **Object-oriented programming**: gotoв uses objects mostly as namespaces. There's no inheritance and no use of `bind`. Classes are nowhere to be found.
 - **Pure functional programming**: in gotoв, [side-effects are expressed as events](https://github.com/fpereiro/recalc). The return values from event handlers are ignored, and every function has access to the global store. There's no immutability; the global state is modified through functions that update it in place.
-
-## Internals
-
-TODO
 
 ## Source code
 

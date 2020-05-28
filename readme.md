@@ -6,7 +6,7 @@ gotoв is a framework for making the frontend of a web application (henceforth *
 
 ## Current status of the project
 
-The current version of gotoв, v2.0.0, is considered to be *mostly stable* and *complete*. [Suggestions](https://github.com/fpereiro/gotoB/issues) and [patches](https://github.com/fpereiro/gotoB/pulls) are welcome. Besides bug fixes, there are no changes planned.
+The current version of gotoв, v2.0.0, is considered to be *somewhat stable* and *mostly complete*. [Suggestions](https://github.com/fpereiro/gotoB/issues) and [patches](https://github.com/fpereiro/gotoB/pulls) are welcome. Besides bug fixes, there are no changes planned.
 
 gotoв is part of the [ustack](https://github.com/fpereiro/ustack), a set of libraries to build webapps which aims to be fully understandable by those who use it.
 
@@ -18,7 +18,7 @@ In my experience, understanding leads to short and beautiful code that can last 
 
 ## Installation
 
-gotoв is written in Javascript. You can use it in the browser by sourcing the pre-built file, `gotoB.min.js`.
+gotoв is written in Javascript. You can use it in the browser by loading the pre-built file, `gotoB.min.js`, in a `<script>` tag at the top of the `<body>`:
 
 ```html
 <script src="gotoB.min.js"></script>
@@ -27,10 +27,10 @@ gotoв is written in Javascript. You can use it in the browser by sourcing the p
 Or you can use this link to use the latest version - courtesy of [jsDelivr](https://jsdelivr.com).
 
 ```html
-<script src="https://cdn.jsdelivr.net/gh/fpereiro/gotob@/gotoB.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/fpereiro/gotob@.../gotoB.min.js"></script>
 ```
 
-Note: gotoв uses non-ASCII symbols, so please specify an [encoding](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/meta) (for example [UTF-8](https://en.wikipedia.org/wiki/UTF-8)) by placing a `<meta>` tag in the `<head>` of the document: `<meta charset="utf-8">`.
+gotoв uses non-ASCII symbols, so you also must specify an [encoding](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/meta) for your document (for example [UTF-8](https://en.wikipedia.org/wiki/UTF-8)) by placing a `<meta>` tag in the `<head>` of the document: `<meta charset="utf-8">`.
 
 gotoв is exclusively a client-side library. Still, you can find it in npm: `npm install gotob`
 
@@ -50,13 +50,14 @@ The author wishes to thank [Browserstack](https://browserstack.com) for providin
 
 ## Tutorial
 
-An in-depth tutorial is available [here](tutorial/tutorial.md). This document covers the general principles of building a webapp and introduces gotoв as a possible solution to the fundamental problems of building a frontend.
+An in-depth tutorial is available [here](tutorial/tutorial.md). The tutorial covers the general principles of building a webapp and introduces gotoв as a possible solution to the fundamental problems of building a frontend. It requires only basic knowledge of HTML, javascript and programming, so if you're learning how to build webapps, it might be a good place to start.
 
 ## Index
 
 - [Examples](https://github.com/fpereiro/gotob#examples)
-- [Fundamentals](https://github.com/fpereiro/gotob#fundamentals)
+- [A conceptual explanation of gotoв](https://github.com/fpereiro/gotob#a-conceptual-explanation-of-gotoв)
 - [API reference](https://github.com/fpereiro/gotob#api-reference)
+- [Internals](https://github.com/fpereiro/gotob#internals)
 - [Frequently Asked Questions](https://github.com/fpereiro/gotob#faq)
 - [Annotated source code](https://github.com/fpereiro/gotob#source-code)
 - [License](https://github.com/fpereiro/gotob#license)
@@ -94,8 +95,8 @@ B.mount ('body', counter);
 
 ```javascript
 B.listen ('create', 'todo', function (x) {
-   var todo = prompt ('What\'s the new todo?');
-   if (todo) B.do (x, 'add', 'todos', todo);
+   var todo = prompt ('What\'s one to do?');
+   if (todo) B.say (x, 'add', 'todos', todo);
 });
 
 var todoList = function () {
@@ -106,7 +107,7 @@ var todoList = function () {
       ['h3', 'Todos'],
       B.elem ('todos', function (todos) {
          return ['ul', dale.go (todos, function (todo, index) {
-            return ['li', [todo, ['span', {onclick: B.ev ('rem', 'todos', index)}, 'Remove']]];
+            return ['li', [todo, ['span', {class: 'action', onclick: B.ev ('rem', 'todos', index)}, 'Remove']]];
          })];
       }),
       ['input', {onclick: B.ev ('create', 'todo')}, 'Create todo']
@@ -118,22 +119,145 @@ B.mount ('body', todoList);
 
 You can find more examples [here](https://github.com/fpereiro/examples/list.md).
 
+## A map of the front(end)
+
+gotoв exists to facilitate writing the frontend of a webapp. The best way to understand gotoв is to understand the problems it solves; when the problems become clear, then the solution follows. Also, by understanding the problems, you can better judge the solutions to them instead of taking them at face value. My hope is that this conceptual introduction to gotoв will also help you to better understand other frameworks and webapps in general. A map of the frontend, so to speak, and *a* way (not necessarily *the* way) to traverse it.
+
+In this section, we'll go over the main problems and design decisions of a frontend. To make concepts clearer, a very down-to-earth example will accompany us along our conceptual journey: a shopping cart! Not only it is concrete; it is also extremely practical and as such quite fertile - in fact, an essential piece of web technology (HTTP cookies) [owes its existence](https://en.wikipedia.org/wiki/HTTP_cookie#Background) to it.
+
+The first step in our conceptual journey is to understand **the difference between a website and a webapp**. Websites started existing in the Christmas of 1990 when the World Wide Web was launched. A website is 1) a document composed of HTML; 2) that is identified by an Uniform Resource Locator (URL). A web browser, when visiting a given URL, will load and then display the document.
+
+The web was revolutionary because - ruthlessly summarizing - 1) HTML could be interpreted by different browsers to fit different screen sizes; and 2) there was a single information space (the web) on which every document could live, accessible under its own URL. A third crucial feature of the web are links. Links allow connecting one webpage to another. By doing so, the web space can be traversed in different ways, allowing all sorts of possibilities. As natural as the web seems to us in 2020, these were real innovations were not obvious in the least. They are the bedrock on which webapps are built.
+
+Webpages are stored as files on a server, and are served as-is to a web browser that requested them. Webpages, thus, are *static*. The same URL yields the same HTML. If a webpage is updated, then the HTML will change, but it will change for everyone that requests the page since the update.
+
+To the best of my knowledge, the first webapp followed the creation of the web by about [five years](https://en.wikipedia.org/wiki/Viaweb). Webapps leverage the web (HTML, URLs and the HTTP protocol to communicate between the browser and the server) to provide functionality hitherto provided by native apps. Instead of distributing software programs that users should install on their computers, webapps allow users to use the app *through their web browser, without installing any additional software*. This proved to be perhaps as revolutionary as the web itself.
+
+In my view, the boundary between a webpage and a webapp is the following: at a given moment in time, an URL pointing to a webpage will return identical HTML documents; whereas an URL pointing to a webapp will return distinct HTML documents, depending on the previous interactions of the user with the server. A webapp is *dynamic*, in that it doesn't show the same content with a given URL. To make things more concrete, let's introduce our example, the shopping cart.
+
+Let's say that I own an online store. The URL for the shopping cart is at http://myshop.com/cart. Is this a webpage or a webapp? According to the definition just provided, it is a webapp, because if user A added Gummi Bears to his cart, and user B added pencils to her cart, then the same URL will show a different HTML document, at the same moment in time.
+
+Why do webapps show different things to different users? Because webapps reflect all the previous interactions of a user with the app. Webapps (and apps, in general) are *stateful*, whereas webpages are *stateless*. Webpages always start fresh; all you can do with them is load them, read them, then click on another link to repeat the process on another webpage. Webapps, however, remember your previous interactions, and don't start from scratch.
+
+(Incidentally, I believe that dynamic webpages and webapps are the same thing; both show different things to different users with the same URL. There might be a couple of exceptions you could think of that I'd agree with, but for the most part, this point is valid).
+
+To summarize: webapps are stateful, thus show different documents for the same URL. This implies that *the HTML has to be generated according to the stored state of the webapp for a given user*. Webpages can be stored as HTML files on a disk and served directly, whereas webpages need to be created with some logic, according to the state. In other words: a webpage is a *constant*, while a webapp is a *function of the state*. To summarize:
+
+- Webpage: one URL, always the same document, stateless, static, a constant.
+- Webapp (actually, a *page* of a webapp): one URL, the document changes according to the state, stateful, dynamic, a function of the state.
+
+Even shorter:
+
+- Webpage: URL -> HTML
+- Webapp: URL + state -> HTML
+
+A small but important note: a webapp is a collection of URLs that serve dynamic HTML documents. A more precise comparison would be between websites and webapps, but I didn't to complicate things too much at the beginning. We can still talk about a webapp having different pages, one per URL.
+
+Going back to our example: users A and B have different products on their respective shopping carts (the products being stored on their respective cookies). When they request the shopping cart page (which is available at the same URL, `http://myshop.com/cart`), the server will generate different HTML files, depending on the *state of the application* for each of the users. One HTML document will have some HTML to display 8 Gummi Bear bags; the other will have some HTML to display 3 books.
+
+As we just saw, every page of a webapp is a function of the state. Some parts, though, are always the same. For example, in the shopping cart, a lot of things (like the header and the footer of the document and its CSS) are the same for every user. Dynamic pages are implemented as *templates*, or functions that receive an input (*the state*) and produce HTML, some of it the same, some of it changing according to the state. We'll come back to templating soon.
+
+Early webapps generated all their HTML on the server and served a fully finished HTML document. The state would usually be stored in the cookie (which is a piece of text send by the browser to the server on every interaction) and often also on a database accessible to the web server. Wih each request coming from a web browser, the web server created a fresh HTML document and served it to the browser. The user would then interact with this HTML by clicking on links (which took them to another page of the webapp) or by submitting forms. In any case, every user interaction *generated a page refresh*, either because the user went to a new page or because the form submitted by the user updated the state of the app, hence the server had to generate fresh HTML to update the page displayed to the user.
+
+Around 1999, Microsoft had won the [first browser war](https://en.wikipedia.org/wiki/Browser_wars). Almost inadvertently, it introduced a feature that revolutionized webapps: [the ability for the browser to send and receive information with the server without triggering a page refresh](https://en.wikipedia.org/wiki/XMLHttpRequest#History). This is the second step in our journey: to understand the implications of the browser communicating with the server without a page refresh - henceforth, we'll use the acronym *CWAPR* to refer to *communication without a page refresh*.
+
+Thanks to CWAPR, webapps could now offer a much better experience to users, even rivaling that of native applications. Before CWAPR, every user interaction that either retrieved data or sent it required a page refresh. This represented three drawbacks:
+
+1. **Performance**: it took some time to retrieve the full page from the server (the internet was also much slower back then), and then some more time to re-render the page in the browser.
+
+2. **Abrupt transitions**: page transitions blanked the browser, especially if the connection was slow. Users had to wait for a while and hope that the webapp would come back after the page refresh.
+
+3. **Generic error page if the connection was lost**: if the connection was lost during a page refresh, the browser would show a generic error page. If the page refresh was triggered by data sent by the user, this data would be lost. In other words, the webapp was completely gone if the connection had an issue.
+
+CWAPR allowed to minimize all these drawbacks:
+
+1. **Performance**: if a page is already loaded, it is faster to retrieve new data and update it on the page than to retrieve the entire page (with all the associated markup, style and scripts) from the server.
+
+2. **Seamlessness of transitions**: page changes can be much smoother visually if only parts of the page change.
+
+3. **Offline ability**: if the network connection (or the server) is down, instead of losing all state, the page can hold its state, warn the user, and attempt to communicate with the server until the connection is restored. Also as important, the page can be saving state to the server constantly without the user having to submit data and waiting for a reload.
+
+Going back to the shopping cart, let's do a before-and-after comparison:
+- When you add a product:
+   - Without CWAPR: the browser goes blank, takes some time, then shows you the updated cart.
+   - With CWAPR: the app is always visible and is updated after a shorter frame of time, without blanking the page.
+- When you lose the connection with the server and you add a product:
+   - Without CWAPR: you get a browser error.
+   - With CWAPR: you get a message within the app saying that there's an issue with the connection. If the connection comes back, the app can submit your request and update the cart.
+
+CWAPR is done exclusively through Javascript (js, henceforth), the browser's scripting language. While js was used before CWAPR for purposes like animations or browser-side validations, it now became the main communication channel between the browser and the server - hence, it became *essential* for the creation of webapps. What started happening is the following:
+
+1. Modifications to the state by the client start to be handled through js instead of HTML forms. So js starts collecting certain parts of the state of the app and sends them to the server.
+2. HTML comes from the server and is handed to js, so that js can place it in the right place of the page.
+
+This means that js started having a growing role in the two central operations of a webapp:
+
+1. Manage the state of the app.
+2. Redrawing the page in consequence to changes to the state.
+
+Not surprisingly, frontend frameworks started emerging to solve these two problems that the first generation of webapps didn't have to face.
+
+Let's go back to our example to understand these two problems:
+
+TODO -- below only are rough notes
+
+- state: products in cart, billing information
+- updates: show products in cart, show billing information (if validated)
+
+- extract state from DOM - potentially put it there too
+
+Now that the browser had both the need (and the ability) to both manage the state and redraw the page, the question emerged: how much of either should it do?
+Spa (gotoB can be not that, but geared towards it).
+
+State: Dom vs js. Centralized
+State management, who to update, invert control
+Events! Many listeners. Incidentally, server! Ordered, one at a time.
+Events also for doing other things. Go beyond just touching the state. In the end, state gets modified.
+Log states and chains, to see what happens.
+Your app: events, listeners and bricks
+Events as fun executions
+No lifecycle hooks, use change
+Negative priorities as nestedness
+Opaque and literal
+Trample and perflogs
+(Perhaps drop ev in "ev listener")
+
+
+API ref
+Please start at conceptual
+Errors first
+Events: basic, data, your own, logic in the listeners, context, order and async (,ref to recakc)
+Bricks: b.elem connected to events, brick rules, no reuse, literals, all of it.
+B.ev to fire events from within. Bev before belem.
+Design principles and comparisons with other frameworks
+Self contained in func
+Some libraries are used directly, some are conveniences (and also used internally)
+No compilation
+All global
+No components and no classes. Instead, namespace in events and in store
+Lightweight, see through in Dom and in global object
+
+Internals
+Change event
+Elem stashing things and redraw, use shallow of the stashed only
+Flatten and reference
+Diff
+Apply diff but give up
+
 ## Fundamentals
 
-gotoв is built on four fundamentals. You need to understand them in order to use the framework.
+gotoв is built on four fundamental ideas:
 
-1. Object literals to represent HTML & CSS.
-2. A global store to hold all state and data.
-3. An event system that is used to update the store.
-4. Reactive DOM elements are functions that return object literals (see #1), use the global store as input (see #2) and are triggered by events (see #3).
+1. Use of object literals to generate HTML & CSS.
+2. All the state and data of the application are stored on a global store object.
+3. The store is updated by an event system.
+4. Reactive DOM elements are functions that return object literals (#1), use the global store as input (#2) and are triggered by events (#3).
 
-Let's see them in turn.
+Let's go through them in more detail.
 
-### #1: object literals to represent HTML & CSS
+### #1: Use of object literals to generate HTML & CSS
 
-By its very nature, a webapp needs to redraw parts of the page; gotoв does this through generating HTML with client-side javascript.
-
-gotoв uses object literals to represent HTML and CSS. Object literals are merely arrays and plain objects. These literals are then transformed into HTML and CSS.
+Modern webapps redraw parts of the page without a page refresh. This requires them to generate HTML directly on the browser, using javascript. There are many ways to do this. gotoв chooses to use object literals in order to generate HTML. Object literals are merely [arrays and objects](https://github.com/fpereiro/lith). These arrays and objects are then transformed into HTML.
 
 For example, to generate the following HTML:
 
@@ -144,7 +268,7 @@ For example, to generate the following HTML:
 </div>
 ```
 
-You can write the following:
+You write the following object literals:
 
 ```javascript
 ['div', {id: 'header', class: 'left'}, [
@@ -153,9 +277,13 @@ You can write the following:
 ]]
 ```
 
-The rules for representing HTML with object literals are quite simple:
+Object literals have the following advantages:
+- They *are* javascript: there's no separate syntax for them.
+- They can be easily parsed by javascript.
 
-- To represent a tag `<whatever>`, use an array of the form `['whatever', ...]`.
+The rules for writing HTML with object literals are straightforward:
+
+- To generate a tag `<whatever>`, use an array of the form `['whatever', ...]`.
 - To add attributes to a tag, use an object with keys and values as its second element: `['whatever', {attribute1: value1, attribute2: value2}]`.
 - To add contents to a tag, place them as the *last* element to it. In the example above, `<h1>` and `<p>` have a single string as their content; while the `<div>` contains an array with two other tags.
 
@@ -163,9 +291,11 @@ CSS can be also generated with the same type of straightforward mapping. You can
 
 **Takeaway: all HTML (and perhaps some CSS) is written as object literals, which are then converted into HTML & CSS.**
 
-### #2: a global store to hold all state & data
+### #2: All the state and data of the application are stored on a global store object
 
-We employ `B.store`, which is a plain object, to hold all state and data relevant to the webapp. For example:
+In webapps, information can be in many places, such as inside DOM elements or anywhere in the javascript code.
+
+gotoв centralizes all the information of the webapp on a single javascript object, `B.store`. This object has all the information and can be considered the [single source of truth](https://en.wikipedia.org/wiki/Single_source_of_truth). The following are examples of what can be contained on the store:
 
 - Data brought from the server.
 - Name of the page that is currently being displayed.
@@ -173,9 +303,9 @@ We employ `B.store`, which is a plain object, to hold all state and data relevan
 
 **Takeaway: if it affects what's displayed on the screen or what is submitted to the server, it belongs in `B.store`.**
 
-### #3: an event system to update the store.
+### #3: Events perform all actions, including updating the global store
 
-To update `B.store`, we use gotoв's event system, instead of modifying `B.store` directly.
+gotoв structures all operations through events. All actions to be performed on the webapp can be modeled as events. This includes updating `B.store`, which is updated by gotoв's event system instead of being modified directly.
 
 The function for **triggering** events is `B.say`. It receives as arguments a `verb`, a `path` and optional extra `arguments`.
 
@@ -220,11 +350,11 @@ B.say ('rem', ['Data', 'items'], 0);
 // Now, B.store is {State: {}, Data: {items: ['bar', 'boo']}}
 ```
 
-It is important to notice that events can be used for things other than updating `B.store`, as we will see later.
+It is important to note that events can be used for things other than updating `B.store`, as we will see later.
 
 **Takeaway: modify `B.store` by triggering events with `B.say`.**
 
-### #4: Reactive elements are event listeners that use `B.store` and return object literals
+### #4: Reactive elements are event listeners that take information from `B.store` and return object literals
 
 `B.elem` is the gotoв function for creating HTML elements that are updated when the relevant part of the store changes. That's why they're called *reactive*, because they *react to a (relevant) change by updating themselves*. Let's see an example:
 
@@ -280,10 +410,10 @@ var counter = function () {
 
 And that, in a nutshell, is how gotoв works:
 
-1. Object literals take care of representing HTML and CSS.
+1. Object literals generate HTML and CSS.
 2. The global store takes care of our state & data.
 3. Events perform all actions, including updating the global store.
-4. Reactive elements are functions that return object literals and are automatically executed when a relevant part of the store changes.
+4. Reactive elements are event listeners that return object literals and are automatically updated when a relevant part of the store changes.
 
 ## API reference
 
@@ -291,9 +421,9 @@ And that, in a nutshell, is how gotoв works:
 
 gotoв is automatically loaded on the global variable `B`.
 
-`B.v` contains a string with the version of gotoв you're currently using. `B.t` contains a timestamp representing the moment when the library is loaded - which can be an useful reference point for performance measurements.
+`B.v` contains a string with the version of gotoв you're currently using. `B.t` contains a timestamp indicating the moment when the library is loaded - which can be an useful reference point for performance measurements.
 
-While the variables are global, I suggest assigning `B` to a local variable to make things clearer:
+While `B` is a global variable, I suggest assigning `B` to a local variable to make your code clearer:
 
 ```javascript
 var B = window.B;
@@ -313,23 +443,23 @@ You can use these libraries at your discretion. If you do so, I recommend also a
 var dale = window.dale, teishi = window.teishi, lith = window.lith, c = window.c;
 ```
 
-You may have noticed I omitted recalc in the line of code above. This is because you'll most likely use this recalc through gotoв's functions - in fact, gotoв is built on top of recalc.
+You may have noticed I omitted recalc in the line of code above. This is because you'll most likely use this recalc through gotoв's functions instead of using it directly.
 
 ### Generating HTML
 
 gotoв generates HTML directly on the browser, using javascript. This HTML, when placed on the page, becomes the interface to the webapp.
 
-Our first stop is to understand how to write HTML using javascript. The way to do this in gotoв is through [lith](https://github.com/fpereiro/lith), a library that uses javascript object literals to represent HTML. Object literals are mere arrays (`[...]`) and objects (`{...}`), nothing more than that! We call these literals that represent HTML as `liths`. Let's see a few examples of some liths and their corresponding HTML:
+Our first stop is to understand how to write HTML using javascript. gotoв does this through [lith](https://github.com/fpereiro/lith), a library that uses javascript object literals to generate HTML. Object literals are mere arrays (`[...]`) and objects (`{...}`), nothing more than that! We call these literals that generate HTML as `liths`. Let's see a few examples of some liths and their corresponding HTML:
 
 - `['p', 'Hello'] -> <p>Hello</p>`
 - `['div', {class: 'nice'}, 'Cool'] -> <div class="nice">Cool</div>`.
 - `['div', ['p', {id: 'nested'}, 'Turtles']] -> <div><p id="nested">Turtles</p></div>`.
 
-*Note for crazy people supporting very old browsers*: put quotes around `class` (`{'class': ...` instead of `{class: ...`) to make the second example work.
+*Note for crazy people supporting very old browsers like Firefox 3 and Internet Explorer 8*: put quotes around `class` (`{'class': ...` instead of `{class: ...`) to make the second example work.
 
-In general, a lith is an array with one to three elements. The first element is a string representing the `tag`. There can be a second element for representing attributes, which is an object. Finally, you can add `contents` to the lith; these contents can be a string, a number or another lith.
+In general, a lith is an array with one to three elements. The first element is a string indicating the `tag`. There can be a second element for specifying attributes, which is an object. Finally, you can add `contents` to the lith; these contents can be a string, a number or another lith.
 
-We also support a collection of liths, which is affectionally called *lithbag*. For example:
+Besides liths, we also can write an array containing multiple liths, which is affectionally called *lithbag*. For example:
 
 - `<p></p><p></p>`: `[['p'], ['p']]`.
 
@@ -349,17 +479,17 @@ var helloWorld = function () {
 }
 ```
 
-If you come from other frameworks, these functions are called *views*. Breaking with existing convention, we won't call them that, because that term is neither intuitive nor precise. We shall call them something more concrete: *bricks*. Why? Because they produce HTML, which then gets transformed by the browser into visible elements on the screen. Bricks are the visible part of the application.
+If you come from other frontend frameworks, these functions are called *views*. Breaking with existing convention, we won't call them that, because that term is neither intuitive nor accurate. We shall call them something rather more concrete: *bricks*. Why? Because they produce HTML, which then gets transformed by the browser into visible elements on the screen. Bricks are the visible part of the application.
 
 From now on, a `brick` will be a function that returns either liths or lithbags.
 
-It is possible (but not mandatory) to generate CSS with gotoв (see the details [here](https://github.com/fpereiro/lith#litcs)), but let's better leave that for later.
+It is possible and even handy (but not mandatory) to generate CSS with gotoв (see the details [here](https://github.com/fpereiro/lith#litcs)), but we can leave that for later.
 
-How do we go from a brick to seeing something on the screen? Enter `B.mount`.
+How do we go from a brick to putting something on the screen? Enter `B.mount`.
 
 ### `B.mount`
 
-To convert the output of our brick into HTML and place it somewhere on the page, use `B.mount`. This function takes two arguments: the `target` (the DOM element where the HTML will be placed) and a brick (the function that generates the liths that will be converted to HTML). For example:
+To convert the output of our brick into HTML and place it somewhere on the page, gotoв provides `B.mount`. This function takes two arguments: the `target` (the DOM element where the HTML will be placed) and a brick (the function that generates the liths that will be converted to HTML). For example:
 
 ```javascript
 var helloWorld = function () {
@@ -384,7 +514,9 @@ The HTML generated will be placed at the *top* of the target. In the example abo
 Optionally, the `target` string can have the form `TAG#ID`. For example, if you have an element `<div id="container"></div>` already inside the `<body>`, you can use either `'#container'` or `'div#container'` as the `target`.
 
 ```javascript
-// Assuming there's an element with id `container`
+// Create first a `div` with `id` `container`
+document.body.innerHTML += '<div id="container"></div>';
+
 B.mount ('#container', function () {
    return ['p', 'Hello'];
 });
@@ -393,7 +525,7 @@ B.mount ('#container', function () {
 `B.unmount` is a function to undo what was done by `B.mount`. It receives a `target` which is just like the `target` passed to `B.mount`. It will remove *all* of the HTML contained inside `target`. If an invalid or non-existing `target` is passed to `B.unmount`, the function will notify an error and return `false`.
 
 ```javascript
-B.unmount ('body');
+B.unmount ('#container');
 
 // `document.body.innerHTML` will now be an empty string.
 ```
@@ -402,7 +534,14 @@ B.unmount ('body');
 
 ### Introduction to the event system
 
-The hard thing about programming interfaces is figuring out which parts of the interface should be updated when the data changes. Even in simple interfaces, different components influence and affect each other in subtle ways. This is the main reason, in my view, for the existence of frontend frameworks.
+- store
+- perform
+- listen
+
+gotoв uses an event system to structure all the *actions* that happen in your webapp. Events are how things happen in a gotoв application.
+
+
+The hard part of programming frontends is figuring out which parts should be updated when the data changes. The reason is the following: even in very simple webapps, different components influence and affect each other in subtle ways. This is the main reason, in my view, for the existence of frontend frameworks - otherwise, we'd just write straightforward code and be done with it!
 
 gotoв tackles this problem by 1) centralizing all the application data on a single object (called the *store*) and 2) using an event system to update both the store and the relevant parts of the interface.
 
@@ -415,7 +554,7 @@ Let's consider an application with three components (C1, C2 and C3). These compo
 - C2 depends on S1 and S3.
 - C3 depends on S1, S2 and S3.
 
-To make matters more complicated, these components also modify parts of the state:
+These components also modify parts of the state:
 - C1 can modify S1, S2 and S3.
 - C3 can modify S1 and S2.
 
@@ -425,11 +564,13 @@ Real life applications (even very simple ones), can easily have a dozen componen
 
 An event system is a way out of this pickle. Instead of having dedicated functions to update the store and then certain components, we simply trigger an event when modifying a part of the store. Then, all the components that rely on that part of the store *listen* to that event and automatically update themselves.
 
-When a component (or an action coming from a different place, perhaps a timer or a notification from the server) wants to update the state, it does it through an event. Once this is done, all concerned parties are notified automatically and they operate in consequence. The difference in effort is the same between staffing a sit-down restaurant vs a buffet: in the sit-down restaurant, you need to take orders and fulfill them for each of the persons sitting down. In the buffet, you just bring the food to the common areas with hot plates and trays, and the patrons get up and get it themselves.
+When a component (or an action coming from a different place, perhaps a timer or a notification from the server) wants to update the state, it does it **through an event**. What's so special about performing actions through an event? Glad you asked: when an operation is done through an event, all the concerned parties are notified automatically and they react in consequence. If your code uses events, there can be functions that get automatically notified/updated when a certain type of event is triggered. The difference in effort is the same between staffing a sit-down restaurant vs a buffet: in the sit-down restaurant, you need to take orders and fulfill them for each of the persons sitting down. In the buffet, you just bring the food to the common areas with hot plates and trays, and the patrons get up and get it themselves.
 
 The store where we keep all the data is an object located at `B.store`. The function for triggering events is `B.say`. This function takes a `verb`, a `path` and optional arguments. Why do we call this function `B.say` and not `B.trigger` or `B.fire`? To emphasize the key point: an event system is about *communication* between parts of a program. The event system is a channel of communcation, where some functions *say events* and some functions *listen to them*.
 
-Before going deeper into the event system, let's see how we can create bricks that will be automatically updated when the state changes. For now, let's just fire an event to update the store. We'll set the `counter` property to `1` and jump to our first brick that is automatically updated.
+Before going deeper into the event system, let's see how we can create bricks that will be automatically updated when the state changes. Events are quite abstract, so having something as concrete as a brick can help us see it more clearly.
+
+To get started, let's just fire an event to update the store. We'll set the `counter` property to `1` and jump to our first brick that is automatically updated.
 
 ```javascript
 // Initially, `B.store` is an empty object.
@@ -439,9 +580,9 @@ B.say ('set', 'counter', 0)
 // Now, `B.store` is `{counter: 0}`
 ```
 
-### `B.elem`
+### Introduction to `B.elem`
 
-Let's create our first *reactive* brick. What does *reactive* mean? It means that it automatically updates itself when the information on which it depends has changed - in other words, it *reacts* to changes on the store that affect it.
+Let's create our first *reactive* brick. What does *reactive* mean? It means that it automatically updates itself when the information on which it depends has changed - in other words, it *reacts* to relevant changes on the store.
 
 So far, we have set `B.store.counter` to `0`. Let's create a brick that shows us the counter:
 
@@ -478,11 +619,11 @@ If you, however, try to update `B.store.counter` directly by entering `B.store.c
 - An array of strings and integers: `['Data', 'counter']`.
 - An array of arrays of strings and integers: `[['Data', 'counter'], ['State', 'page']]`.
 
-If the `path` is counter, then the brick will be updated when `B.store.counter` changes. If the path is instead `['Data', 'counter']`, then the brick will be updated when `B.store.Data.counter` changes.
+If the `path` is `counter`, then the brick will be updated when `B.store.counter` changes. If the path is instead `['Data', 'counter']`, then the brick will be updated when `B.store.Data.counter` changes.
 
 If the `path` is a list of `paths`, as `[['Data', 'counter'], ['State', 'page']]`, then the brick will be updated when *either* `Data.counter` or `State.page` change.
 
-We'll explore `paths` a bit later. For now, let's go with the simpler example:
+We'll explore mutiple `paths` soon. For now, let's go with the simpler example:
 
 ```javascript
 var counter = function () {
@@ -515,17 +656,36 @@ var counter = function () {
 }
 
 window.incrementCounter = function () {
-   B.do ('set', B.store.counter, B.store.counter + 1);
+   B.say ('set', 'counter', B.store.counter + 1);
 }
 
 B.mount ('body', counter);
 ```
 
-This will work, but it's a bit ugly because it involves creating a global function for that particular purpose. Let's see how to do this better through another function, `B.ev`. We'll be back to `B.elem` soon, to cover more aspects.
+This will work, but it's not a good solution because it requires creating a global function for that particular purpose. This function is doing no more than firing an event through `B.say` to update `B.store.counter`. We could just pass the call to `B.say` within the event handler for `onclick`:
+
+```javascript
+var counter = function () {
+   return B.elem ('counter', function (counter) {
+      return ['div', [
+         ['h2', 'The counter is ' + counter],
+         ['button', {
+            onclick: 'B.ev ("set", "counter", ' + (counter + 1) + ')'
+         }, 'Increment counter'],
+      ]];
+   });
+}
+
+B.mount ('body', counter);
+```
+
+This is better, but still error prone, because you need to quote and unquote things properly. If we had to pass multiple arguments or arrays or objects, it would be even trickier.
+
+For this reason, gotoв provides `B.ev`, a function to stringify calls to `B.say` so we can put them in the DOM.
 
 ### `B.ev`
 
-`B.ev` creates stringified event handlers that we can pass to DOM elements, in order to trigger events from them. Let's go back to our previous example:
+As we just said, `B.ev` creates stringified event handlers that we can pass to DOM elements, in order to trigger events from them. Let's go back to our previous example:
 
 ```javascript
 var counter = function () {
@@ -542,32 +702,17 @@ var counter = function () {
 B.mount ('body', counter);
 ```
 
-We got rid of `window.incrementCounter`; instead, we placed a call to `B.ev`: `B.ev ('set', 'counter', counter + 1)`.
-
 `B.ev` takes as arguments a `verb`, a `path`, and optional further arguments. In fact, it takes the same arguments as `B.say`! This is not a coincidence, since `B.ev` generates a string that, when executed by a javascript event, will perform a call to `B.say` with the same arguments.
 
 When `counter` is 0, the call to `B.ev` will generate a string that looks like this: `"B.say ('set', 'counter', 1)"`.
 
 If the user clicks on the button, `counter` will be updated, the brick function will be updated, and then the button's event handler will look like this: `"B.say ('set', 'counter', 2)"`.
 
-### `B.elem` in detail
-
-
-TODO
-- return liths, not lithbags
-- don't reference if outer is redrawn
-
-### `B.ev` in detail
-
-Since gotoв is built around events, we need certain user interactions to say events. For this purpose, we have `B.ev`, a function that creates a *stringified call to B.say* that we can put into the DOM element itself.
-
-Let's see an example: we want to say a certain event when the user clicks on a button; let's say that clicking on this button will say an event with verb `'submit'` and path `'data'`. Here's how we can write it:
+Let's now see another example, to illustrate other aspects of `B.ev`: we'll create a button that, when clicked, will say an event with verb `submit` and path `data`.
 
 ```javascript
 ['button', {onclick: B.ev ('submit', 'data')}]
 ```
-
-As you can see, to say a single event we pass the `verb` and the `path` to `B.ev`. `B.ev` then returns a string containing the necessary code to say this event when the user clicks on the button. Notice also that we place the output of `B.ev` on the `onclick` attribute of the element.
 
 You can pass extra arguments when saying an event. For example, if you want to pass an object of the shape `{update: true}` you can instead write:
 
@@ -592,6 +737,8 @@ If you need to access properties that are within the event handler (like `event`
 ```javascript
 ['button', {onclick: B.ev ('submit', 'data', {raw: 'this.value'})}]
 ```
+
+These are called `raw` arguments, because they are passed as they are, without stringifying them.
 
 In the example above, the event linstener will receive `this.value`, instead of the string `'this.value'`. You could also pass the event instead:
 
@@ -619,15 +766,13 @@ If you pass an object with a `raw` key that contains a string, other keys within
 ['button', {onclick: B.ev ('submit', 'data', {raw: 'this.value', ignored: 'key'})}]
 ```
 
-An implementation note: `B.ev` uses the function `B.str` to stringify its arguments.
+If invalid inputs are passed to `B.ev`, the function will report an error and return `false`.
 
-### The event system
+Now that we have covered the main elements of gotoв, let's go back to see the event system in detail.
 
-gotoв uses [recalc](https://github.com/fpereiro/recalc), which is an event system. Before we get into it, we need to understand why we use an event system at all.
+### The event system in detail
 
-The need for an event system is best illustrated with an example. Let's imagine we're writing an application which will contain a header. This header contains information about the user that's logged in. It should also be visible only when the user is logged in and on the main view, but not when the user is logged out or outside of the main view. This means that the header will be updated when 1) the view changes; 2) the user is logged in/logged out; and 3) the user information changes.
-
-Without an event system, the code handling those three things (which could be in multiple places) has to update the header. Using an event system, however, allows us to avoid having to track what things should be updated when something changes. The core idea is as follows: we create *event listeners* that get executed when the view changes, the user logs in/out or the user information changes. Whenever any of these things happen, the function drawing the header is *notified* and the header is consequently updated. The important bit is that the code that triggers the changes only has to say an event, and not be concerned about who cares about that change. In other words, the function that updates user information doesn't need to know whether the header function has to be called; instead, the function that updates user information only needs to **saying an event saying that the user information changed**; those functions (event listeners) that care about that will be updated automatically.
+gotoв's event sytem is provided by [recalc](https://github.com/fpereiro/recalc), a library that implements the basic functions of the event system. We won't, however, be using recalc's functions directly - rather, we'll use event functions provided by gotoв.
 
 The two main operations of an event system are 1) saying an event; and 2) setting event listeners that get notified when certain events are said.
 
@@ -638,43 +783,22 @@ To say an event, we use the function [`B.say`](https://github.com/fpereiro/recal
 - A `path`, which can be either a string, an integer, or an array with zero or more strings or integers. For example, `'hello'`, `1`, or `['hello', '1']`. If you pass a single string or integer, it will be interpreted as an array containing that element (for example, `'hello'` is considered to be `['hello']` and `0` is considered to be `[0]`).
 - You can pass unlimited additional arguments when you say an event. These arguments can be of any type.
 
-You might ask: why use a combination of `verb` and `path` instead of just having a single event name instead? The answer is: too often we see event names like `toggleFooter`, `updateUser`, `savePosition`. By splitting an event name into a verb and a path, we achieve more clarity and versatility; very often, actions like `toggle`, `update`, `save` can be generalized.
-
-In the process of writing applications with gotoв, you can (and most likely will) create your own `verbs`. You should also know that gotoв already defines with four data verbs (`add`, `rem`, `set` and `change`) that are used for data management. We will see these in a minute.
-
-### Data events
-
-The starting point of gotoв is data because, without it, a webapp would merely be a webpage. Once we understand how data works, we will be ready to create views that are updated whenever the data changes, and which allow the user to modify the data.
-
-#### `B.store`
-
-gotoв uses a global store to hold all the information that is relevant to your frontend app. This store is a simple object, which you can find at `B.store`. Whenever we talk of *the store*, we will be referring to `B.store`.
-
-#### `B.get`
-
-`B.get` is a function for retrieving data from `B.store`. You can directly access data from `B.store` without it. However, `B.get` is useful to access properties in the store in case they haven't been defined yet.
-
-For example, if `B.store.user.username` is not defined, if you try to do something like `var username = B.store.user.username` and `B.store.user` is not present yet, your program will throw an error.
-
-If, instead, you write `var username = B.get ('user', 'username')`, if `B.store.user` is not present yet then `username` will be `undefined`.
-
-Using this function is completely optional - it is just provided for your convenience.
-
-`B.get` takes either a list of integers and strings or a single array containing integers and strings. These integers and strings represent the *path* to the part of the store you're trying to access. This `path` is the same `path` that `B.say` (the event saying function) takes as an argument.
-
-If you pass invalid arguments to `B.get`, it will return `undefined` and print an error to the console.
-
-If you pass an empty `path` to `B.get` (by passing either an empty array or no arguments), you'll get back `B.store` in its entirety.
+You might ask: why use a combination of `verb` and `path` instead of just having a single event name instead? The answer is: too often we see event names like `toggleFooter`, `updateUser`, `savePosition`. By splitting an event name into a verb and a path, we achieve more clarity and versatility; very often, actions like `toggle`, `update`, `save` can be generalized. A great example of this are *data verbs*, which we already saw in the examples above and we'll describe now.
 
 ### Data verbs
 
-As we mentioned earlier, gotoв uses events to modify the store. This means that instead of modifying the store directly, we modify the store through an event. This adds some extra typing, but it allows gotoв to know when (and which part of) the store has been changed. In this way, gotoв can update a view only when it's necessary to do so.
+gotoв sets event listeners for three data verbs: `add`, `rem` and `set`. Whenever an event is said that has one of these three verbs, these listeners will be executed and they will do two things:
 
-To say events, we will use the function `B.say` which we saw above.
+1. Update the store.
+2. Say a `change` event.
 
-##### `set`
+`change` events are very important, because these are the ones that update the page! In fact, `B.elem`, the function for creating reactive elements, creates event listeners that are executed when `change` events are said.
 
-The first data *verb* we'll see is `set`. This verb sets data into a particular location inside `B.store`. It takes a `path` and a `value`. `path` can be an integer, a string, or an array containing integers and strings; `path` represents *where* we want to set the value inside `B.store`.
+Let's see now how each of these events operate:
+
+#### `set`
+
+The first data *verb* is `set`. This verb sets data into a particular location inside `B.store`. It takes a `path` and a `value`. `path` can be an integer, a string, or an array containing integers and strings; `path` represents *where* we want to set the value inside `B.store`.
 
 Let's see now a set of examples. In each of these examples, I'll consider that we start with an empty `B.store` so that we don't carry data from one example to the other.
 
@@ -719,7 +843,7 @@ B.say ('set', [], []);
 
 B.say ('set', [], 'hello');
 
-// B.store still is [], the invocation above will print an error and do nothing else.
+// B.store still is [], the invocation above will report an error and do nothing else.
 
 B.say ('set', [], {});
 
@@ -746,7 +870,7 @@ In the example above, when we set `['Data', 'key']`, `['Data', 'items']` is left
 
 In summary, `set` will preserve the existing keys on the store unless there is a type mismatch, in which case it will overwrite the required keys with the necessary arrays/objects.
 
-##### `add`
+#### `add`
 
 The second data verb is `add`. This verb puts elements at the end of an array. It takes a `path`, plus zero or more elements that will be placed in the array. These elements can be of any type.
 
@@ -784,7 +908,7 @@ B.say ('add', ['Data', 'items']);
 // B.store is now {Data: {items: []}}
 ```
 
-##### `rem`
+#### `rem`
 
 The third and final data verb is `rem`. This verb removes keys from either an array or an object within the store. Like the other data verbs, it receives a `path`, plus zero or more keys that will be removed.
 
@@ -806,7 +930,7 @@ B.say ('rem', [], 'Data');
 // B.store is now {}
 ```
 
-If `path` points to an array, the keys must all be integers. If `path` points to an object, the keys must instead be all strings. If `path` points to neither an array nor an object, `rem` will print an error and do nothing.
+If `path` points to an array, the keys must all be integers. If `path` points to an object, the keys must instead be all strings. If `path` points to neither an array nor an object, `rem` will report an error and do nothing.
 
 ```javascript
 B.say ('add', ['Data', 'items'], 'a', 'b', 'c');
@@ -815,15 +939,15 @@ B.say ('add', ['Data', 'items'], 'a', 'b', 'c');
 
 B.say ('rem', ['Data', 'items'], 'a');
 
-// The last invocation will print an error and make no change on B.store
+// The last invocation will report an error and make no change on B.store
 
 B.say ('rem', 'Data', 0);
 
-// The last invocation will also print an error and make no change on B.store
+// The last invocation will also report an error and make no change on B.store
 
 B.say ('rem', ['Data', 'items', 0], 'foo');
 
-// The last invocation will also print an error and make no change on B.store
+// The last invocation will also report an error and make no change on B.store
 ```
 
 If `path` points to `undefined`, `rem` will not produce any effect but no error will be printed.
@@ -854,40 +978,60 @@ B.say ('rem', [], 'Data', 'State');
 B.say ('rem', [], ['Data', 'State']);
 ```
 
-### The `change` event and calling the data functions directly
+#### The `change` event and calling the data functions directly
 
 When you call any of the data verbs through `B.say`, a `change` event with the same `path` will be fired. More precisely, a `change` event will be fired whenever you call a data verb with 1) valid arguments; and 2) when your invocation actually modifies the store. If the event is fired with incorrect arguments or it doesn't modify the store, no `change` event will be triggered.
 
-gotoв's function for creating views (`B.elem`), which we'll see below, relies on the `change` event to know when it should redraw a view. `B.elem` essentially creates a listener function on the `change` event on a given path. This means that views are redrawn when a `change` event is emitted.
+gotoв's function for creating reactive elements (`B.elem`), relies on the `change` event to know when it should redraw a view. `B.elem` essentially creates a listener function on the `change` event on a given path. This means that views are redrawn when a `change` event is emitted.
 
 This is the reason for which you need to use events to modify the store. If you modified the store directly, the views depending on a part of the store would not be updated when the store changes!
 
-The three data events internally call the three respective data functions: `B.set`, `B.add` and `B.rem`. These functions receive a `path` as its first argument and then further arguments.
+The three data events internally call three respective data functions: `B.set`, `B.add` and `B.rem`. These functions receive a `path` as its first argument and then further arguments.
 
-If you want to modify the store but avoid redrawing the views that depend on that part of the store, you can invoke these functions directly. This might be useful when you have multiple updates on a very short amount of time. Once the updates happen, you can then trigger the view redraw by firing a `change` event on the desired `path`.
+If you want to modify the store but avoid redrawing the views that depend on that part of the store, you can invoke these functions directly. This might be useful when you have multiple updates on a very short amount of time. Once the updates happen, you can then trigger the view redraw by firing a `change` event on the desired `path`. Let's see an example:
+
+```javascript
+B.elem ('items', function (items) {
+   return ['ul', items.map (function (item) {
+      return ['li', ['Item is', item]];
+   })];
+});
+
+var updateItems = function (items) {
+   items.map (function (item, index) {
+      var updatedItem = ...;
+      // We modify the items on the store directly.
+      B.set (['items', index], updatedItem);
+   });
+   // When we're done updating the store, we say a `change` event
+   B.say ('change', 'items');
+}
+```
+
+Most of the time, this will not be necessary (the example above, in fact, is a bit artificial: you could perfectly create a new `items` array and then `set` it as one operation). A good approach is to not update the store directly unless a particular situation calls for it on the grounds of performance.
+
+#### `B.store` & `B.get`
+
+As we saw earlier, gotoв uses a global store to hold all the information that is relevant to your frontend app. This store is a simple object, which you can find at `B.store`.
+
+`B.get` is a function for retrieving data from `B.store`. You can directly access data from `B.store` without it. However, `B.get` is useful to access properties in the store in case they haven't been defined yet.
+
+For example, if `B.store.user.username` is not defined, if you try to do something like `var username = B.store.user.username` and `B.store.user` is not present yet, your program will throw an error.
+
+If, instead, you write `var username = B.get ('user', 'username')`, if `B.store.user` is not present yet then `username` will be `undefined`.
+
+Using this function is completely optional - it is just provided for your convenience.
+
+`B.get` takes either a list of integers and strings or a single array containing integers and strings. These integers and strings represent the *path* to the part of the store you're trying to access. This `path` is the same `path` that `B.say` (the event saying function) takes as an argument.
+
+If you pass invalid arguments to `B.get`, it will return `undefined` and report an error to the console.
+
+If you pass an empty `path` to `B.get` (by passing either an empty array or no arguments), you'll get back `B.store` in its entirety.
+
+#### Writing your own event listeners
 
 Change listeners: common patterns: check if matching is precise; and get value. Show function doing this and think about whether to include it. `B.changeListener`
-
-### Production mode
-
-If you set `B.prod` to `true`, you'll turn on *production mode*. When production mode is on, gotoв's functions will stop validating inputs. This will make your application faster, but if any of these functions is invoked with invalid arguments, you will either experience silent errors or your application will throw an exception. It is recommended that you only set this variable on a production environment once your application has been mostly debugged.
-
-### Debugging
-
-gotoв stores a list of all the events fired into `B.log`. Since gotoв applications are built around events, This can be extremely useful for debugging an app. Instead of inspecting `B.log` with the browser console, you can invoke `B.eventlog`, which will add an HTML table to the page where you can see all the information about the events.
-
-The table presented by `B.eventlog` is ordered by time (so you can see what happened first and what later), it allows to track dependencies between events (if the context is passed in nested calls, see below) and it shows the time when the event was fired relative to the initial loading of the application (which allows for performance benchmarking).
-
-If one of gotoв's functions is invoked with invalid arguments, an `error` event will be emitted. There's an `error` event listener that will print an error message, plus an invocation to `B.eventlog`. The end result is that you'll see the error as the last row of the `eventlog` immediately after the error happens. Note that this won't happen if `B.prod` is enabled. If you wish to turn off this behavior, run this command at the top of your application: `B.forget ('error')`.
-
-If you wish to turn off logging of events, (what happens if error?)
-B.r.log, turn off if needed.
-
-redraw error: 1) modified something not-opaque; or 2) invalid markup. Or 3) actual gotoв bug.
-
-if you put values on inputs without gotoв, then you should clear them out if you don't want them popping up elsewhere.
-
-### Custom events
+lifecycle hooks
 
 listeners vs events
 server: routes vs requests
@@ -903,6 +1047,93 @@ Two things in error reporting: visibility, and once you see it, identifiability,
 `B.mlisten`.
 
 Instead of lifecycle hooks: events with very negative priority.
+
+### `B.elem` in detail
+
+As we said above, `B.elem` takes two elements: a `path` (or `paths`) and a brick function.
+
+If you pass multiple `paths` to `B.elem`, the brick will be updated when any of the corresponding store elements change:
+
+```javascript
+var dashboard = function () {
+   return B.elem ([['stockPrice'], ['username']], function (stockPrice, username) {
+      return ['div', [
+         ['h3', ['Hi ', username]],
+         ['h4', ['The current stock price is: ', stockPrice, 'EUR']]
+      ]];
+   });
+}
+
+B.mount ('body', dashboard);
+
+// Here, the dashboard will have neither a name nor a stock price.
+
+B.say ('set', 'username', 'Oom Dagobert');
+
+// The dashboard now will display an username printed, but no stock price.
+
+B.say ('set', 'stockPrice', 140);
+
+// Now the dashboard will print both an username and a stock price.
+```
+
+Bricks must return a single lith, not a lithbag. For example:
+
+```javascript
+var validBrick1 = function () {
+   return ['h1', 'Hello'];
+}
+
+var validBrick2 = function () {
+   return ['div', [
+      ['h2'],
+      ['h3']
+   ]];
+}
+
+// This brick is invalid because it returns a lithbag.
+var invalidBrick1 = function () {
+   return [
+      ['h2'],
+      ['h3']
+   ];
+}
+
+// The brick is invalid because it returns `undefined`.
+var invalidBrick2 = function () {
+   return;
+}
+```
+
+By requiring every brick to return a lith, there's a 1:1 relationship between a brick and a DOM element. This makes both debugging and the implementation of the library simpler. (Why is the simplicity of the implementation important? Because gotoв is also meant to be understood, not just used. Simple implementations are easier to understand).
+
+`B.elem` will generate two outputs:
+- A lith structure with a DOM element.
+- Set up an event listener that .
+
+TODO
+- cannot pass id, will be overwritten.
+- to debug, use paths attribute.
+- don't reference if outer is redrawn
+
+### Production mode
+
+If you set `B.prod` to `true`, you'll turn on *production mode*. When production mode is on, gotoв's functions will stop validating inputs. This will make your application faster, but if any of these functions is invoked with invalid arguments, you will either experience silent errors or your application will throw an exception. It is recommended that you only set this variable on a production environment once your application has been mostly debugged.
+
+### Debugging
+
+gotoв stores a list of all the events fired into `B.log`. Since gotoв applications are built around events, This can be extremely useful for debugging an app. Instead of inspecting `B.log` with the browser console, you can invoke `B.eventlog`, which will add an HTML table to the page where you can see all the information about the events.
+
+The table presented by `B.eventlog` is ordered by time (so you can see what happened first and what later), it allows to track dependencies between events (if the context is passed in nested calls, see below) and it shows the time when the event was fired relative to the initial loading of the application (which allows for performance benchmarking).
+
+If one of gotoв's functions is invoked with invalid arguments, an `error` event will be emitted. There's an `error` event listener that will report an error message, plus an invocation to `B.eventlog`. The end result is that you'll see the error as the last row of the `eventlog` immediately after the error happens. Note that this won't happen if `B.prod` is enabled. If you wish to turn off this behavior, run this command at the top of your application: `B.forget ('error')`.
+
+If you wish to turn off logging of events, (what happens if error?)
+B.r.log, turn off if needed.
+
+redraw error: 1) modified something not-opaque; or 2) invalid markup. Or 3) actual gotoв bug.
+
+if you put values on inputs without gotoв, then you should clear them out if you don't want them popping up elsewhere.
 
 ### Internals
 
@@ -926,41 +1157,13 @@ Rather than submit to this grind or reject it altogether (and missing out the po
 
 And, of course, gotoв must be very useful for building a real webapp.
 
-### Why use a javascript framework *at all*?
-
-So glad you asked.
-
-Before we had webapps, we had webpages. A webpage is something quite simple: an HTML file, with perhaps a bit of CSS to make it look better, plus a little bit of javascript to give it some dynamism. If the user clicks on a link on the page, another page is opened and the process is repeated again. If the user fills a form and submits it, when the server receives it, it redirects the user's browser to another page.
-
-Webpages are static content and represent the original purpose of the web: to share documents. Static content 1) holds no state, and 2) once drawn, it doesn't change.
-
-In the mid-90s, the [first webapp emerged](https://en.wikipedia.org/wiki/Viaweb): an application accessible through a web browser, requiring no installation and storing all user data on a server! This app (and the ones that followed) used HTML forms embedded in webpages to allow users to submit data; in turn the server created customized pages that were shown to each user, depending on their individual information. The server then created HTML pages *dynamically*, based on user data. If you would navigate to a certain page within the app, the actual HTML displayed to you would be different from the HTML displayed to another user.
-
-In my opinion, the boundary separating a webpage from a webapp is the following: the same page (as identified by its URL) might show different things to different users, based on the data they provided in the past to the server.
-
-Early webapps suffered from a strict limitation: every time the user submitted data to the server, a page refresh happened. This required the server to painstakingly reconstruct the page after each refresh, since the browser had no "memory" of what should be displayed. The page refresh also made things slower and a bit choppier for users. And, of course, if the connection was severed between the browser and the server (as it happened so often back then), any interaction could lead to an error page, with potential lost of the last data sent.
-
-[With the advent of XMLHTTPRequest and ajax in the early 2000s](https://www.youtube.com/watch?v=Fv9qT9joc0M&list=PL7664379246A246CB&index=4), everything changed. XMLHTTPRequest allows a web browser to retrieve information from the server *without redirecting to another page*, which means it can communicate with the server *without a page refresh*. This enabled, for the first time, to create webapps with a user experience comparable to that of native apps, without losing the advantage of webapps. Changing the interface without refreshing the page improved the user experience for three reasons:
-
-1. **Performance**: if a page is already loaded, it is faster to retrieve new data and update it on the page than to retrieve the entire page (with all the associated markup, style and scripts) from the server.
-
-2. **Seamlessness of transitions**: page changes can be much smoother visually.
-
-3. **Offline ability**: if the network connection (or the server) is down, instead of losing all state, the page can hold its state, warn the user, and attempt to communicate with the server until the connection is restored. Also as important, the page can be saving state to the server constantly without the user having to submit data and waiting for a reload. The archetypic incarnation of this approach is Gmail's web interface.
-
-This approach also allows for simplifying the server logic, which can now avoid keeping track of small but important details of the state of the page for each user.
-
-All these advantages have two drawbacks: 1) we need to manage the state of the webapp from within the client; and 2) we must redraw the page when a relevant part of the state changes.
-
-It is my contention that frontend frameworks exist mainly to solve these two intertwined problems: manage the state of the interface and keep the page in sync with the state.
-
 ### Is gotoв for me?
 
 **gotoв is for you if:**
 
 - You have freedom to decide the technology you use.
 - Complexity is a massive turn-off for you.
-B.ev ('set', 'counter', counter + 1)- You like ES5 javascript.
+- You like ES5 javascript.
 - You miss not having to compile your javascript.
 - You enjoy understanding the internals of a tool, so that you can then use it with precision and confidence.
 - You like technology that's a bit strange.
@@ -1018,7 +1221,7 @@ We wrap the entire file in a self-executing anonymous function. This practice is
 (function () {
 ```
 
-If we're in node.js, we print an error and return `undefined`.
+If we're in node.js, we report an error and return `undefined`.
 
 ```javascript
    if (typeof exports === 'object') return console.log ('gotoв only works in a browser!');
@@ -1316,7 +1519,7 @@ If `path` has length 0, we will overwrite `B.store`:
       if (path.length === 0) {
 ```
 
-If we're not in production mode, we check that `value` is either an array or an object. If it's neither, we print an error and return `false`.
+If we're not in production mode, we check that `value` is either an array or an object. If it's neither, we report an error and return `false`.
 
 ```javascript
          if (! B.prod && teishi.simple (value)) return B.error (x || {}, 'B.set', 'Cannot set B.store to something that is not an array or object.');
@@ -1773,7 +1976,7 @@ We now define `B.mount`, a function that will place liths onto a target element.
    B.mount = function (target, fun) {
 ```
 
-If we're not in production mode, we check that `target` is a string that identifies either the `body` or an `id` selector - otherwise, we print an error and return `false`.
+If we're not in production mode, we check that `target` is a string that identifies either the `body` or an `id` selector - otherwise, we report an error and return `false`.
 
 ```javascript
       if (! B.prod && type (target) !== 'string' || ! target.match (/^(body|[a-z0-9]*#[^\s\[>,:]+)$/)) return B.error ('B.mount', 'Target must be either \'body\' or an id selector, but instead is ' + target);
@@ -1827,7 +2030,7 @@ We now define `B.mount`, a function that will clear a `target` (presumably alrea
    B.unmount = function (target) {
 ```
 
-If we're not in production mode, we check that `target` is a string that identifies either the `body` or an `id` selector - otherwise, we print an error and return `false`.
+If we're not in production mode, we check that `target` is a string that identifies either the `body` or an `id` selector - otherwise, we report an error and return `false`.
 
 ```javascript
       if (! B.prod && type (target) !== 'string' || ! target.match (/^(body|[a-z0-9]*#[^\s\[>,:]+)$/)) return B.error ('B.unmount', 'Target must be either \'body\' or an id selector, but instead is ' + target);

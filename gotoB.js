@@ -286,6 +286,7 @@ Please refer to readme.md to read the annotated source.
       var makeElement = function () {
          var count = B.internal.count, children = [];
          var elem = fun.apply (null, dale.go (paths, B.get));
+         // TODO: don't allow undefined, we always need a placeholder!
          if (elem !== undefined) {
             if (! B.prod && B.validateLith (elem) !== 'Lith') return B.error ('B.elem', 'Function must return a lith element but instead is:', elem, 'Arguments:', {paths: paths, fun: fun});
 

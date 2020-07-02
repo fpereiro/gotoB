@@ -10,8 +10,7 @@
       <script>
          var Time = {zero: new Date ().getTime ()};
       </script>
-      <!-- TODO: change to CDN link -->
-      <!--<script src="/json2.min.js"></script>-->
+      <script src="https://cdn.jsdelivr.net/gh/douglascrockford/JSON-js@aef828bfcd7d5efaa41270f831f8d27d5eef3845/json2.min.js"></script>
       <script src="gotoB.min.js"></script>
       <script>
          Time ['0: load'] = teishi.time () - Time.zero;
@@ -25,8 +24,16 @@
 
             var type = teishi.type, eq = teishi.eq, last = teishi.last, clog = teishi.clog;
 
-            // TODO remove after testing
-            //dale.clog = function () {}
+            // We override dale.clog to avoid seeing a ton of alerts on old browsers.
+            try {
+               dale.clog = console.log.bind (console);
+            }
+            catch (error) {
+               dale.clog = function () {
+                  var output = dale.go (arguments, function (v) {return v === undefined ? 'undefined' : v}).join (' ');
+                  if (window.console) window.console.log (output);
+               }
+            }
 
             window.Data  = B.store.Data  = {};
             window.State = B.store.State = {};
@@ -35,8 +42,8 @@
 
             var Test = function (tag, fun) {
                var error = fun ();
-               if (! error) return B.say ('log', 'test OK', tag);
-               B.say ('log', 'test error', error);
+               if (! error) return B.call ('log', 'test OK', tag);
+               B.call ('log', 'test error', error);
                B.eventlog ();
                throw new Error (tag + ': ' + error);
             }
@@ -47,49 +54,59 @@
                Errorlist.unshift (arguments);
             }
 
-            // *** BASE LISTENERS ***
+            // *** BASE RESPONDERS ***
 
             Test ('initial setup', function () {
-               if (! eq (dale.keys (B.listeners).sort (), ['add', 'error', 'rem', 'set'])) return 'Initial listeners mismatch.';
-               // We use a setTimeout to wait until all the event listeners are set before we call the first we want to execute.
-               setTimeout (function () {B.say ('test', 'log')}, 0);
+               if (! eq (dale.keys (B.responders).sort (), ['add', 'error', 'rem', 'set'])) return 'Initial responders mismatch.';
+               // We use a setTimeout to wait until all the event responders are set before we call the first we want to execute.
+               setTimeout (function () {B.call ('test', 'log')}, 0);
             });
 
             // *** B.LOG ***
 
-            B.listen ('test', 'log', {burn: true}, function (x) {
+            B.respond ('test', 'log', {burn: true}, function (x) {
 
-               B.say (x, 'verb1', 'a path', 'booyah');
-               B.say (x, 'verb2', 'a path');
+               B.call (x, 'verb1', 'a path', 'booyah');
+               B.call (x, 'verb2', 'a path');
 
                Test ('log', function () {
-                  if (B.log.length !== 4) return 'Invalid amount of log entries.';
-                  if (! eq ({verb: B.log [0].verb, path: B.log [0].path}, {verb: 'log', path: ['test OK']})) return 'Invalid test OK log.';
-                  if (! eq ({verb: B.log [1].verb, path: B.log [1].path}, {verb: 'test', path: ['log']})) return 'Invalid verb/path on first log item.';
-                  if (B.log [2].from !== B.log [1].id || B.log [3].from !== B.log [1].id) return 'Invalid from value in second and third log entries.';
+                  if (B.log.length !== 5) return 'Invalid amount of log entries.';
+                  var mismatch = dale.stopNot ([
+                     {from: undefined, id: 'E1', verb: 'log',   path: ['test OK'], args: ['initial setup']},
+                     {from: undefined, id: 'E2', verb: 'test',  path: ['log'],     args: undefined},
+                     {from: 'E2',      id: 'R5', verb: 'test',  path: ['log'],     args: undefined},
+                     {from: 'R5',      id: 'E3', verb: 'verb1', path: ['a path'],  args: ['booyah']},
+                     {from: 'R5',      id: 'E4', verb: 'verb2', path: ['a path'],  args: undefined}
+                  ], undefined, function (v, k) {
+                     var log = teishi.copy (B.log [k]);
+                     delete log.t;
+                     if (! eq (v, log)) return k;
+                  });
+                  if (mismatch !== undefined) return 'Invalid log entry #' + (mismatch);
                });
 
-               B.say (x, 'test', 'error');
+               B.call (x, 'test', 'error');
             });
 
-            B.listen ('test', 'error', {burn: true}, function (x) {
+            B.respond ('test', 'error', {burn: true}, function (x) {
 
                Test ('show eventlog in case of error', function () {
-                  B.say (x, 'error', 'test error');
-
+                  B.call (x, 'error', 'test error');
                   if (! c ('#eventlog'))          return 'Eventlog was not shown when error happened.';
+
                   if (! c ('#eventlog-snackbar')) return 'Snackbar was not shown when error happened.';
-
-                  // Turn off the error listener until it is tested.
-                  B.listeners.error.disabled = true;
-
                });
-               B.say (x, 'test', 'data');
+
+               // Turn off the error responder until it is tested.
+               B.responders.error.disabled = true;
+
+               B.call (x, 'test', 'data');
+
             });
 
             // *** DATA FUNCTIONS ***
 
-            B.listen ('test', 'data', {burn: true}, function (x) {
+            B.respond ('test', 'data', {burn: true}, function (x) {
 
                Test ('data', function () {
 
@@ -216,18 +233,18 @@
 
                   var incrementOnChange = 0;
 
-                  var listener = B.listen ('change', [], {match: function (ev) {return ev.verb === 'change'}}, function () {
+                  var responder = B.respond ('change', [], {match: function (ev) {return ev.verb === 'change'}}, function () {
                      incrementOnChange++;
                   });
 
                   dale.go ([[/notok/, 'ok'], [/notok/], [null, 'ok'], [null], [{}, 'ok'], [{}], [undefined, 'ok'], [undefined], [NaN, 'ok'], [NaN]], function (v, k) {
-                     B.say.apply (null, [x, 'set'].concat (v));
+                     B.call.apply (null, [x, 'set'].concat (v));
                   });
 
                   B.set (['Data', 'items'], ['a', 'b', 'c']);
 
                   dale.go ([[/notok/, 'ok'], [/notok/], [null, 'ok'], [null], [{}, 'ok'], [{}], [undefined, 'ok'], [undefined], [NaN, 'ok'], [NaN], [['Data', 'items', 0], 0]], function (v, k) {
-                     B.say.apply (null, [x, 'add'].concat (v));
+                     B.call.apply (null, [x, 'add'].concat (v));
                   });
 
                   // The last add will trigger an event (because it has a valid path) but it won't trigger a change event.
@@ -239,7 +256,7 @@
                   if (incrementOnChange !== 0) return 'change event fired with a data event receiving invalid arguments #1.';
 
                   dale.go ([[/notok/, 'ok'], [/notok/], [null, 'ok'], [null], [{}, 'ok'], [{}], [undefined, 'ok'], [undefined], [NaN, 'ok'], [NaN]], function (v, k) {
-                     B.say.apply (null, [x, 'rem'].concat (v));
+                     B.call.apply (null, [x, 'rem'].concat (v));
                   });
 
                   if (dale.fil (B.log, undefined, function (log) {
@@ -250,7 +267,7 @@
 
                   // All these invalid invocations will trigger an event (because they have valid paths) but they won't trigger a change event.
                   dale.go ([[['Data', 'items'], 'a'], ['Data', 0], [[], /foo/], ['Data', ['items', /foo/]]], function (v, k) {
-                     B.say.apply (null, [x, 'rem'].concat (v));
+                     B.call.apply (null, [x, 'rem'].concat (v));
                   });
 
                   if (dale.fil (B.log, undefined, function (log) {
@@ -264,7 +281,7 @@
 
                   // no-ops
                   dale.go ([['set', ['Data', 'items'], teishi.copy (B.get ('Data', 'items'))], ['set', [], teishi.copy (B.store)], ['set', 'foo', undefined], ['set', 'Data', B.get ('Data')], ['set', 'Data', teishi.copy (B.get ('Data'))], ['add', ['Data', 'items']], ['rem', ['Data', 'items'], 3, 4], ['rem', ['Data', 'items'], [3, 4]], ['rem', 'foo', 'bar'], ['rem', ['Data', 'items'], []], ['rem', ['Data', 'items']]], function (v, k) {
-                     B.say.apply (null, k % 2 === 0 ? [x].concat (v) : v);
+                     B.call.apply (null, k % 2 === 0 ? [x].concat (v) : v);
                   });
 
                   if (dale.fil (B.log, undefined, function (log) {
@@ -290,9 +307,9 @@
                      ['set', ['Data', 'null'], null],
                      ['rem', 'Data', 'obj', 'null']
                   ], undefined, function (test, k) {
-                     var evid = B.say.apply (null, [x].concat (test)), eprefix = 'Test #' + (k + 1) + ': ', path = type (test [1]) === 'array' ? test [1] : [test [1]];
+                     var evid = B.call.apply (null, [x].concat (test)), eprefix = 'Test #' + (k + 1) + ': ', path = type (test [1]) === 'array' ? test [1] : [test [1]];
 
-                     if (type (evid) !== 'string')      return eprefix + 'B.say didn\'t return event id.';
+                     if (type (evid) !== 'string')      return eprefix + 'B.call didn\'t return event id.';
                      if (incrementOnChange !== (k + 1)) return eprefix + 'no change event triggered.';
                      var args = type (test [2]) === 'array' ? test [2] : test.slice (2);
                      if (test [0] === 'rem') {
@@ -316,57 +333,57 @@
 
                   if (error) return error;
 
-                  B.forget (listener);
+                  B.forget (responder);
 
-                  // *** B.CHANGELISTENER ***
+                  // *** B.CHANGErespondER ***
 
                   var matches = [];
 
-                  B.listen ('change', ['foo', 'bar'], {match: B.changeListener}, function (x) {
+                  B.respond ('change', ['foo', 'bar'], {match: B.changeresponder}, function (x) {
                      matches.push (x.path);
                   });
 
-                  B.say (x, 'set', [], teishi.copy (B.store));
-                  if (matches.length !== 0) return 'B.changeListener error #1';
-                  B.say (x, 'set', ['foo', 'bar'], undefined);
-                  if (matches.length !== 0) return 'B.changeListener error #2';
-                  B.say (x, 'set', ['foo', 'bar'], 2);
-                  if (! teishi.eq (matches, [['foo', 'bar']])) return 'B.changeListener error #3';
-                  B.say (x, 'set', ['foo'], {bar: 2}, 2);
-                  if (! teishi.eq (matches, [['foo', 'bar']])) return 'B.changeListener error #4';
-                  B.say (x, 'set', ['foo'], {bar: 3});
-                  if (! teishi.eq (matches, [['foo', 'bar'], ['foo']])) return 'B.changeListener error #5';
-                  B.say (x, 'set', [], teishi.copy (B.store));
-                  if (! teishi.eq (matches, [['foo', 'bar'], ['foo']])) return 'B.changeListener error #6';
-                  B.say (x, 'set', [], {foo: {bar: 2}});
-                  if (! teishi.eq (matches, [['foo', 'bar'], ['foo'], []])) return 'B.changeListener error #7';
-                  B.say (x, 'set', ['foo', 'bar', 'yip'], 3);
-                  if (! teishi.eq (matches, [['foo', 'bar'], ['foo'], [], ['foo', 'bar', 'yip']])) return 'B.changeListener error #8';
-                  B.say (x, 'set', ['foo', 'bar', 'yip'], 3);
-                  if (! teishi.eq (matches, [['foo', 'bar'], ['foo'], [], ['foo', 'bar', 'yip']])) return 'B.changeListener error #9';
-                  B.say (x, 'set', ['foo', 'other'], 3);
-                  if (! teishi.eq (matches, [['foo', 'bar'], ['foo'], [], ['foo', 'bar', 'yip']])) return 'B.changeListener error #10';
-                  B.say (x, 'change', ['foo', 'bar']);
-                  if (! teishi.eq (matches, [['foo', 'bar'], ['foo'], [], ['foo', 'bar', 'yip'], ['foo', 'bar']])) return 'B.changeListener error #11';
-                  B.say (x, 'change', ['foo']);
-                  if (! teishi.eq (matches, [['foo', 'bar'], ['foo'], [], ['foo', 'bar', 'yip'], ['foo', 'bar'], ['foo']])) return 'B.changeListener error #12';
-                  B.say (x, 'change', ['foo', 'yip']);
-                  if (! teishi.eq (matches, [['foo', 'bar'], ['foo'], [], ['foo', 'bar', 'yip'], ['foo', 'bar'], ['foo']])) return 'B.changeListener error #13';
-                  B.say (x, 'change', ['yip']);
-                  if (! teishi.eq (matches, [['foo', 'bar'], ['foo'], [], ['foo', 'bar', 'yip'], ['foo', 'bar'], ['foo']])) return 'B.changeListener error #14';
-                  B.say (x, 'change', []);
-                  if (! teishi.eq (matches, [['foo', 'bar'], ['foo'], [], ['foo', 'bar', 'yip'], ['foo', 'bar'], ['foo'], []])) return 'B.changeListener error #15';
+                  B.call (x, 'set', [], teishi.copy (B.store));
+                  if (matches.length !== 0) return 'B.changeresponder error #1';
+                  B.call (x, 'set', ['foo', 'bar'], undefined);
+                  if (matches.length !== 0) return 'B.changeresponder error #2';
+                  B.call (x, 'set', ['foo', 'bar'], 2);
+                  if (! eq (matches, [['foo', 'bar']])) return 'B.changeresponder error #3';
+                  B.call (x, 'set', ['foo'], {bar: 2}, 2);
+                  if (! eq (matches, [['foo', 'bar']])) return 'B.changeresponder error #4';
+                  B.call (x, 'set', ['foo'], {bar: 3});
+                  if (! eq (matches, [['foo', 'bar'], ['foo']])) return 'B.changeresponder error #5';
+                  B.call (x, 'set', [], teishi.copy (B.store));
+                  if (! eq (matches, [['foo', 'bar'], ['foo']])) return 'B.changeresponder error #6';
+                  B.call (x, 'set', [], {foo: {bar: 2}});
+                  if (! eq (matches, [['foo', 'bar'], ['foo'], []])) return 'B.changeresponder error #7';
+                  B.call (x, 'set', ['foo', 'bar', 'yip'], 3);
+                  if (! eq (matches, [['foo', 'bar'], ['foo'], [], ['foo', 'bar', 'yip']])) return 'B.changeresponder error #8';
+                  B.call (x, 'set', ['foo', 'bar', 'yip'], 3);
+                  if (! eq (matches, [['foo', 'bar'], ['foo'], [], ['foo', 'bar', 'yip']])) return 'B.changeresponder error #9';
+                  B.call (x, 'set', ['foo', 'other'], 3);
+                  if (! eq (matches, [['foo', 'bar'], ['foo'], [], ['foo', 'bar', 'yip']])) return 'B.changeresponder error #10';
+                  B.call (x, 'change', ['foo', 'bar']);
+                  if (! eq (matches, [['foo', 'bar'], ['foo'], [], ['foo', 'bar', 'yip'], ['foo', 'bar']])) return 'B.changeresponder error #11';
+                  B.call (x, 'change', ['foo']);
+                  if (! eq (matches, [['foo', 'bar'], ['foo'], [], ['foo', 'bar', 'yip'], ['foo', 'bar'], ['foo']])) return 'B.changeresponder error #12';
+                  B.call (x, 'change', ['foo', 'yip']);
+                  if (! eq (matches, [['foo', 'bar'], ['foo'], [], ['foo', 'bar', 'yip'], ['foo', 'bar'], ['foo']])) return 'B.changeresponder error #13';
+                  B.call (x, 'change', ['yip']);
+                  if (! eq (matches, [['foo', 'bar'], ['foo'], [], ['foo', 'bar', 'yip'], ['foo', 'bar'], ['foo']])) return 'B.changeresponder error #14';
+                  B.call (x, 'change', []);
+                  if (! eq (matches, [['foo', 'bar'], ['foo'], [], ['foo', 'bar', 'yip'], ['foo', 'bar'], ['foo'], []])) return 'B.changeresponder error #15';
 
                   var currentValues  = [];
                   var previousValues = [];
-                  B.listen ('change', ['esa', 'abuela'], function (x, currentValue, previousValue) {
+                  B.respond ('change', ['esa', 'abuela'], function (x, currentValue, previousValue) {
                      currentValues.push  (currentValue);
                      previousValues.push (previousValue);
                   });
-                  B.say (x, 'set', ['esa', 'abuela'], 1);
-                  B.say (x, 'set', ['esa', 'abuela'], 2);
-                  if (! teishi.eq (currentValues, [1, 2])) return 'change event not fired with currentValue.';
-                  if (! teishi.eq (previousValues, [undefined, 1])) return 'change event not fired with previousValue.';
+                  B.call (x, 'set', ['esa', 'abuela'], 1);
+                  B.call (x, 'set', ['esa', 'abuela'], 2);
+                  if (! eq (currentValues, [1, 2])) return 'change event not fired with currentValue.';
+                  if (! eq (previousValues, [undefined, 1])) return 'change event not fired with previousValue.';
 
                });
 
@@ -374,15 +391,21 @@
                window.Data  = B.store.Data;
                window.State = B.store.State;
 
-               B.say (x, 'test', 'B.ev');
+               B.call (x, 'test', 'B.ev');
             });
 
             // *** B.EV ***
 
-            B.listen ('test', 'B.ev', {burn: true}, function (x) {
+            B.respond ('test', 'B.ev', {burn: true}, function (x) {
 
                Test ('B.str', function () {
-                  if (B.str ([undefined, null, function () {return true}, false, /a/, 'a', 3, {a: '\'b', c: ['d"', NaN, Infinity], 'e-f': null}]) !== '[undefined, null, function () {return true}, false, /a/, "a", 3, {"a": "\'b", "c": ["d\\"", NaN, Infinity], "e-f": null}]') return 'Warning: B.str setting list of values in a different way: ' + B.str ([undefined, null, function () {return true}, false, /a/, 'a', 3, {a: '\'b', c: ['d"', NaN, Infinity], 'e-f': null}]);
+                  if ([
+                     '[undefined, null, function () {return true}, false, /a/, "a", 3, {"a": "\'b", "c": ["d\\"", NaN, Infinity], "e-f": null}]',
+                     // Safari <= 8
+                     '[undefined, null, function () {return true;}, false, /a/, "a", 3, {"a": "\'b", "c": ["d\\"", NaN, Infinity], "e-f": null}]',
+                     // FF <= 16
+                     '[undefined, null, function () {\n    return true;\n}, false, /a/, "a", 3, {"a": "\'b", "c": ["d\\"", NaN, Infinity], "e-f": null}]'
+                  ].indexOf (B.str ([undefined, null, function () {return true}, false, /a/, 'a', 3, {a: '\'b', c: ['d"', NaN, Infinity], 'e-f': null}])) === -1) return 'Warning: B.str setting list of values in a different way: ' + B.str ([undefined, null, function () {return true}, false, /a/, 'a', 3, {a: '\'b', c: ['d"', NaN, Infinity], 'e-f': null}]);
                   var test = eval (B.str ([undefined, null, function () {return true}, false, /a/, 'a', 3, {a: '\'b', c: ['d"', NaN, Infinity], 'e-f': null}]));
 
                   if (test [0] !== undefined) return 'B.str didn\'t set undefined.';
@@ -415,25 +438,25 @@
 
                   var error = dale.stopNot ([
                      [[], ''],
-                     [['a', 'b'], ' B.say ({"from": id}, "a", "b", this.value);'],
-                     [['a', ['b']], ' B.say ({"from": id}, "a", ["b"], this.value);'],
-                     [['a', 'b', 'c'], ' B.say ({"from": id}, "a", "b", "c");'],
-                     [['a', 'b', undefined], ' B.say ({"from": id}, "a", "b", undefined);'],
-                     [['a', 'b', null], ' B.say ({"from": id}, "a", "b", null);'],
-                     [['a', 'b', null, true, NaN], ' B.say ({"from": id}, "a", "b", null, true, NaN);'],
-                     [['a', 'b', /null/], ' B.say ({"from": id}, "a", "b", /null/);'],
-                     [['a', 'b', {c: 'd'}], ' B.say ({"from": id}, "a", "b", {"c": "d"});'],
-                     [['a', 'b', [{c: 'd'}]], ' B.say ({"from": id}, "a", "b", [{"c": "d"}]);'],
-                     [['a', 'b', {raw: 'event'}], ' B.say ({"from": id}, "a", "b", event);'],
-                     [['a', 'b', 'c', {raw: 'event'}], ' B.say ({"from": id}, "a", "b", "c", event);'],
-                     [['a', 'b', 'c', {raw: 0}], ' B.say ({"from": id}, "a", "b", "c", {"raw": 0});'],
-                     [['a', 'b', 'c', {raw: ['not', 'a', 'string']}], ' B.say ({"from": id}, "a", "b", "c", {"raw": ["not", "a", "string"]});'],
-                     [['a', 'b', 'c', {raw: 'event', ignored: 'field'}], ' B.say ({"from": id}, "a", "b", "c", event);'],
-                     [['a', 'b', '"two', {raw: 'event'}, {raw: 'this'}], ' B.say ({"from": id}, "a", "b", "\\"two", event, this);'],
-                     [[['a', 'b'], ['c', 'd']], ' B.say ({"from": id}, "a", "b", this.value); B.say ({"from": id}, "c", "d", this.value);', true],
-                     [[['a', 'b'], ['c', 'd', {raw: 'event.preventDefault'}]], ' B.say ({"from": id}, "a", "b", this.value); B.say ({"from": id}, "c", "d", event.preventDefault);', true]
+                     [['a', 'b'], ' B.call ({"from": id}, "a", "b", this.value);'],
+                     [['a', ['b']], ' B.call ({"from": id}, "a", ["b"], this.value);'],
+                     [['a', 'b', 'c'], ' B.call ({"from": id}, "a", "b", "c");'],
+                     [['a', 'b', undefined], ' B.call ({"from": id}, "a", "b", undefined);'],
+                     [['a', 'b', null], ' B.call ({"from": id}, "a", "b", null);'],
+                     [['a', 'b', null, true, NaN], ' B.call ({"from": id}, "a", "b", null, true, NaN);'],
+                     [['a', 'b', /null/], ' B.call ({"from": id}, "a", "b", /null/);'],
+                     [['a', 'b', {c: 'd'}], ' B.call ({"from": id}, "a", "b", {"c": "d"});'],
+                     [['a', 'b', [{c: 'd'}]], ' B.call ({"from": id}, "a", "b", [{"c": "d"}]);'],
+                     [['a', 'b', {raw: 'event'}], ' B.call ({"from": id}, "a", "b", event);'],
+                     [['a', 'b', 'c', {raw: 'event'}], ' B.call ({"from": id}, "a", "b", "c", event);'],
+                     [['a', 'b', 'c', {raw: 0}], ' B.call ({"from": id}, "a", "b", "c", {"raw": 0});'],
+                     [['a', 'b', 'c', {raw: ['not', 'a', 'string']}], ' B.call ({"from": id}, "a", "b", "c", {"raw": ["not", "a", "string"]});'],
+                     [['a', 'b', 'c', {raw: 'event', ignored: 'field'}], ' B.call ({"from": id}, "a", "b", "c", event);'],
+                     [['a', 'b', '"two', {raw: 'event'}, {raw: 'this'}], ' B.call ({"from": id}, "a", "b", "\\"two", event, this);'],
+                     [[['a', 'b'], ['c', 'd']], ' B.call ({"from": id}, "a", "b", this.value); B.call ({"from": id}, "c", "d", this.value);', true],
+                     [[['a', 'b'], ['c', 'd', {raw: 'event.preventDefault'}]], ' B.call ({"from": id}, "a", "b", this.value); B.call ({"from": id}, "c", "d", event.preventDefault);', true]
                   ], undefined, function (v, k) {
-                     var result = 'var id = B.say ("ev", event.type, B.evh (this));' + v [1];
+                     var result = 'var id = B.call ("ev", event.type, B.evh (this));' + v [1];
                      if (B.ev.apply (null, v [0]) !== result) return 'B.ev error with valid arguments #' + (k + 1) + ': ' + B.ev.apply (null, v [0]) + ' Expected: ' + result;
                   });
                   if (error) return error;
@@ -462,13 +485,13 @@
                   if (! eq (logs [1], {t: logs [1].t, id: logs [1].id, from: logs [0].id, verb: 'verb', path: ['path'], args: ['hello']})) return 'B.ev error: invalid logs #2.';
                });
 
-               B.say (x, 'test', 'B.mount|unmount');
+               B.call (x, 'test', 'B.mount|unmount');
 
             });
 
             // *** B.MOUNT|UNMOUNT ***
 
-            B.listen ('test', 'B.mount|unmount', {burn: true}, function (x) {
+            B.respond ('test', 'B.mount|unmount', {burn: true}, function (x) {
 
                Test ('B.validateLith', function () {
                   var error;
@@ -544,7 +567,7 @@
                      ]]],
                      [true, ['script', {src: 'scripts.js', charset: 'utf-8'}]],
                      [true, ['style', ['span.action', {color: 'blue'}]]],
-                     [true, ['style', lith.css.g (['span.action', {color: 'blue'}])]],
+                     [true, ['style', lith.css.g (['span.action', {color: 'blue'}])]]
                   ], undefined, function (v) {
                      var validation = B.validateLith (v [1]);
                      if (v [0]   && validation !== 'Lith')    return 'B.validateLith error with valid input: ' + JSON.stringify (v [1]) + ' ' + validation;
@@ -592,13 +615,17 @@
                      return ['div', {id: 'first'}, 'a'];
                   });
 
-                  if (! teishi.eq (c.get ('body div', 'id'), [{id: 'first'}, {id: 'second'}])) return 'B.mount didn\'t put element at the top of the target.';
+                  if (! eq (c.get ('div', 'id'), [{id: 'first'}, {id: 'second'}])) return 'B.mount didn\'t put element at the top of the target.';
 
                   B.mount ('#first', function () {
                      return ['div', {id: 'third'}, 'c'];
                   });
 
-                  if (document.body.innerHTML !== '<div id="first"><div id="third">c</div>a</div><div id="second">b</div>') return 'B.mount didn\'t mount element inside element.';
+                  if ([
+                     '<div id="first"><div id="third">c</div>a</div><div id="second">b</div>',
+                     // IE <= 8
+                     '<DIV id=first>\r\n<DIV id=third>c</DIV>a</DIV>\r\n<DIV id=second>b</DIV>',
+                  ].indexOf (document.body.innerHTML) === -1) return 'B.mount didn\'t mount element inside element.';
 
                   c.empty ('#first');
 
@@ -610,21 +637,24 @@
 
                   if (document.body.innerHTML !== '') return 'B.unmount didn\'t clear target.';
 
-                  B.listen ('a', 'b', {id: B.B + 1}, function () {});
-                  B.listen ('a', 'b', {id: B.B + 2}, function () {});
+                  B.respond ('a', 'b', {id: B.B + 1}, function () {});
+                  B.respond ('a', 'b', {id: B.B + 2}, function () {});
                   B.mount ('body', function () {
                      return ['div', {id: B.B + 1}, 'id="' + B.B + 2 + '"'];
                   });
 
                   B.unmount ('body');
-                  if (B.listeners [B.B + 1]) return 'B.unmount didn\'t remove event listener that corresponded to an element id.';
-                  if (! B.listeners [B.B + 2]) return 'B.unmount removed listener that didn\'t correspond to an element id.';
+                  if (B.responders [B.B + 1]) return 'B.unmount didn\'t remove event responder that corresponded to an element id.';
+                  if (! B.responders [B.B + 2]) return 'B.unmount removed responder that didn\'t correspond to an element id.';
 
                   if (B.mount ('body', function () {}) !== undefined) return 'B.mount didn\'t accept empty element.';
                });
 
+               B.call (x, 'ok', 'ok');
+               B.eventlog ();
+
                // TODO uncomment to proceed
-               B.say (x, 'test', 'B.elem');
+               //B.call (x, 'test', 'B.elem');
             });
 
 
@@ -637,7 +667,7 @@
 
             // *** B.ELEM ***
 
-            B.listen ('test', 'B.elem', {burn: true}, function (x) {
+            B.respond ('test', 'B.elem', {burn: true}, function (x) {
 
                B.mount ('body', function () {
                   return B.elem (['Data', 'sabe'], function (sabe) {
@@ -645,11 +675,11 @@
                      return ['p', ['ya tu sabe:', sabe]];
                   });
                });
-               B.say (x, 'set', ['Data', 'sabe'], 'anxious');
-               //B.say (x, 'set', ['Data', 'sabe'], 'anxious');
+               B.call (x, 'set', ['Data', 'sabe'], 'anxious');
+               //B.call (x, 'set', ['Data', 'sabe'], 'anxious');
 
                // Turn on again error handler
-               // B.listeners.error.disabled = false;
+               // B.responders.error.disabled = false;
 
             });
 
@@ -663,10 +693,10 @@
             var f = function () {};
             var getid = function () {return B.B + (B.count - 1)}
 
-            B.listen ('test', 'old B.elem', {burn: true}, function (x) {
+            B.respond ('test', 'old B.elem', {burn: true}, function (x) {
 
                Test ('B.view validation', function () {
-                  var listeners = dale.keys (B.listeners);
+                  var responders = dale.keys (B.responders);
 
                   if (B.view (/notapath/, e) !== false) return 'B.view accepted invalid path.';
                   if (B.view (['path'], {attrs: {id: 'myid'}}, e) !== false) return 'B.view accepted id.';
@@ -683,27 +713,27 @@
 
                   if (B.view ('verb', 'path', e) !== false) return 'B.view accepted verb + path.';
 
-                  if (B.view ('path', {listen: {verb: 'a', path: 'b', lfun: e}}, e) !== false) return 'B.view accepted listen that is object.';
+                  if (B.view ('path', {respond: {verb: 'a', path: 'b', lfun: e}}, e) !== false) return 'B.view accepted respond that is object.';
 
-                  if (B.view ('path', {listen: [{verb: 'a', path: 'b'}]}, e) !== false) return 'B.view accepted listen with invalid args.';
+                  if (B.view ('path', {respond: [{verb: 'a', path: 'b'}]}, e) !== false) return 'B.view accepted respond with invalid args.';
 
-                  if (B.view ('path', {listen: [null, 'path', e]}, e) !== false) return 'B.view accepted invalid verb in listen.';
+                  if (B.view ('path', {respond: [null, 'path', e]}, e) !== false) return 'B.view accepted invalid verb in respond.';
 
-                  if (B.view ('path', {listen: [[{}, 'path', e]]}, e) !== false) return 'B.view accepted invalid verb in listen.';
+                  if (B.view ('path', {respond: [[{}, 'path', e]]}, e) !== false) return 'B.view accepted invalid verb in respond.';
 
-                  if (B.view ('path', {listen: ['verb', null, e]}, e) !== false) return 'B.view accepted invalid path in listen.';
+                  if (B.view ('path', {respond: ['verb', null, e]}, e) !== false) return 'B.view accepted invalid path in respond.';
 
-                  if (B.view ('path', {listen: [['verb', [[]], e]]}, e) !== false) return 'B.view accepted invalid path in listen.';
+                  if (B.view ('path', {respond: [['verb', [[]], e]]}, e) !== false) return 'B.view accepted invalid path in respond.';
 
-                  if (B.view ('path', {listen: [['verb', 'path', e], ['verb', {}, e]]}, e) !== false) return 'B.view accepted invalid second listen.';
+                  if (B.view ('path', {respond: [['verb', 'path', e], ['verb', {}, e]]}, e) !== false) return 'B.view accepted invalid second respond.';
 
-                  if (B.view ('path', {listen: [['verb', 'path', e], ['verb', null, e]]}, e) !== false) return 'B.view accepted invalid second listen.';
+                  if (B.view ('path', {respond: [['verb', 'path', e], ['verb', null, e]]}, e) !== false) return 'B.view accepted invalid second respond.';
 
-                  if (B.view ('path', {listen: ['a', 'b', {id: 'anything'}, e]}) !== false) return 'B.view accepted listener with id.';
+                  if (B.view ('path', {respond: ['a', 'b', {id: 'anything'}, e]}) !== false) return 'B.view accepted responder with id.';
 
-                  if (B.view ('path', {listen: [['verb', 'path', e], ['a', 'b', {id: 'anything'}, e]]}) !== false) return 'B.view accepted second listener with id.';
+                  if (B.view ('path', {respond: [['verb', 'path', e], ['a', 'b', {id: 'anything'}, e]]}) !== false) return 'B.view accepted second responder with id.';
 
-                  if (B.view ('path', {listen: [[['verb', 'path', e]]]}, e) !== false) return 'B.view accepted invalid listen that is too nested.';
+                  if (B.view ('path', {respond: [[['verb', 'path', e]]]}, e) !== false) return 'B.view accepted invalid respond that is too nested.';
 
                   var invalidView = B.view (x, ['a', 'path'], {ondraw: e, onforget: f}, function () {
                      return /notaview/;
@@ -714,20 +744,20 @@
 
                   var id = B.B + (B.count - 1);
 
-                  if (B.listeners [id].ondraw !== e) return 'B.view didn\'t correctly place ondraw in the listener.';
-                  if (B.listeners [id].onforget !== f) return 'B.view didn\'t correctly place onforget in the listener.';
-                  if (type (B.listeners [id].view) !== 'array') return 'B.view didn\t correctly place view in the listener.';
-                  if (B.listeners [id].view [0] !== 'pre') return 'B.view didn\t correctly place view in the listener.';
+                  if (B.responders [id].ondraw !== e) return 'B.view didn\'t correctly place ondraw in the responder.';
+                  if (B.responders [id].onforget !== f) return 'B.view didn\'t correctly place onforget in the responder.';
+                  if (type (B.responders [id].view) !== 'array') return 'B.view didn\t correctly place view in the responder.';
+                  if (B.responders [id].view [0] !== 'pre') return 'B.view didn\t correctly place view in the responder.';
 
                   B.forget (id);
 
-                  if (dale.keys (B.listeners).length !== listeners.length) return 'B.view generated invalid listeners.';
+                  if (dale.keys (B.responders).length !== responders.length) return 'B.view generated invalid responders.';
                });
 
 
                return;
 
-               var initialLength = dale.keys (B.listeners).length;
+               var initialLength = dale.keys (B.responders).length;
 
                Test ('B.view valid input', function () {
 
@@ -737,102 +767,102 @@
 
                   if (type (view) !== 'array' || view [0] !== 'div' || type (view [1]) !== 'object' || view [1].id !== getid () || view [1] ['path-' + B.B] !== [2, 3].join (':')) return 'B.view didn\'t initialize view attributes properly with lfun returning undefined.';
 
-                  if (! B.listeners [getid ()] || B.listeners [getid ()].view !== undefined) return 'B.view didn\'t generate properly listener with lfun returning undefined.';
+                  if (! B.responders [getid ()] || B.responders [getid ()].view !== undefined) return 'B.view didn\'t generate properly responder with lfun returning undefined.';
 
                   view = B.view (x, 'a', function () {return 2});
 
                   if (type (view) !== 'array' || view [0] !== 'div' || type (view [1]) !== 'object' || view [1].id !== getid () || view [1] ['path-' + B.B] !== 'a') return 'B.view didn\'t initialize view attributes properly #1.';
 
-                  if (! B.listeners [getid ()] || B.listeners [getid ()].view !== 2) return 'B.view didn\'t properly generate listener #1.';
+                  if (! B.responders [getid ()] || B.responders [getid ()].view !== 2) return 'B.view didn\'t properly generate responder #1.';
 
                   view = B.view (x, ['State', 'view'], {tag: 'p', attrs: {}, ondraw: e, onforget: f}, function () {return ['a', 1]});
 
                   if (type (view) !== 'array' || view [0] !== 'p' || type (view [1]) !== 'object' || view [1].id !== getid () || view [1] ['path-' + B.B] !== 'State:view') return 'B.view didn\'t initialize view attributes properly #2.';
 
-                  if (! B.listeners [getid ()] || B.listeners [getid ()].verb !== 'change' || B.listeners [getid ()].priority !== -1 || ! eq (B.listeners [getid ()].view, ['a', 1]) || B.listeners [getid ()].ondraw !== e || B.listeners [getid ()].onforget !== f) return 'B.view didn\'t properly generate listener #2.';
+                  if (! B.responders [getid ()] || B.responders [getid ()].verb !== 'change' || B.responders [getid ()].priority !== -1 || ! eq (B.responders [getid ()].view, ['a', 1]) || B.responders [getid ()].ondraw !== e || B.responders [getid ()].onforget !== f) return 'B.view didn\'t properly generate responder #2.';
 
                   view = B.view (x, ['State', 'items', 0], {tag: 'input', attrs: {'class': 'blue', type: 'text'}}, function () {});
 
                   if (type (view) !== 'array' || view [0] !== 'input' || type (view [1]) !== 'object' || ! eq ({id: getid (), 'path-в': 'State:items:0', "class": 'blue', type: 'text'}, view [1])) return 'B.view didn\'t initialize view attributes properly #3.';
 
-                  if (! B.listeners [getid ()] || B.listeners [getid ()].verb !== 'change' || B.listeners [getid ()].priority !== -1 || ! eq (B.listeners [getid ()].view, undefined)) return 'B.view didn\'t properly generate listener #3.';
+                  if (! B.responders [getid ()] || B.responders [getid ()].verb !== 'change' || B.responders [getid ()].priority !== -1 || ! eq (B.responders [getid ()].view, undefined)) return 'B.view didn\'t properly generate responder #3.';
 
-                  view = B.view (x, 'c', {listen: ['a', 'b', e]}, function () {});
+                  view = B.view (x, 'c', {respond: ['a', 'b', e]}, function () {});
 
-                  if (type (view) !== 'array') return 'B.view didn\'t properly generate listener with listener #1.';
+                  if (type (view) !== 'array') return 'B.view didn\'t properly generate responder with responder #1.';
 
-                  var listeners = dale.fil (B.listeners, undefined, function (listener) {
-                     if (listener.parent === getid ()) return listener;
+                  var responders = dale.fil (B.responders, undefined, function (responder) {
+                     if (responder.parent === getid ()) return responder;
                   });
 
-                  if (listeners.length !== 1 || ! eq (listeners [0], {verb: 'a', path: ['b'], id: listeners [0].id, lfun: e, parent: getid ()})) return 'B.view didn\'t register listeners properly #1.';
+                  if (responders.length !== 1 || ! eq (responders [0], {verb: 'a', path: ['b'], id: responders [0].id, lfun: e, parent: getid ()})) return 'B.view didn\'t register responders properly #1.';
 
-                  view = B.view (x, 'c', {listen: [['a', 'b', e]]}, function () {});
+                  view = B.view (x, 'c', {respond: [['a', 'b', e]]}, function () {});
 
-                  if (type (view) !== 'array' || B.listeners [getid ()].verb !== 'change' || B.listeners [getid ()].priority !== -1) return 'B.view didn\'t properly generate listener with listener #2.';
+                  if (type (view) !== 'array' || B.responders [getid ()].verb !== 'change' || B.responders [getid ()].priority !== -1) return 'B.view didn\'t properly generate responder with responder #2.';
 
-                  listeners = dale.fil (B.listeners, undefined, function (listener) {
-                     if (listener.parent === getid ()) return listener;
+                  responders = dale.fil (B.responders, undefined, function (responder) {
+                     if (responder.parent === getid ()) return responder;
                   });
 
-                  if (listeners.length !== 1 || ! eq (listeners [0], {verb: 'a', path: ['b'], id: listeners [0].id, lfun: e, parent: getid ()})) return 'B.view didn\'t register listeners properly #2.';
+                  if (responders.length !== 1 || ! eq (responders [0], {verb: 'a', path: ['b'], id: responders [0].id, lfun: e, parent: getid ()})) return 'B.view didn\'t register responders properly #2.';
 
-                  view = B.view ('c', {listen: [[{verb: 'a', path: 'b'}, e]]}, function () {});
+                  view = B.view ('c', {respond: [[{verb: 'a', path: 'b'}, e]]}, function () {});
 
-                  if (type (view) !== 'array' || B.listeners [getid ()].verb !== 'change' || B.listeners [getid ()].priority !== -1) return 'B.view didn\'t properly generate listener with listener #3.';
+                  if (type (view) !== 'array' || B.responders [getid ()].verb !== 'change' || B.responders [getid ()].priority !== -1) return 'B.view didn\'t properly generate responder with responder #3.';
 
-                  listeners = dale.fil (B.listeners, undefined, function (listener) {
-                     if (listener.parent === getid ()) return listener;
+                  responders = dale.fil (B.responders, undefined, function (responder) {
+                     if (responder.parent === getid ()) return responder;
                   });
 
-                  if (listeners.length !== 1 || ! eq (listeners [0], {verb: 'a', path: ['b'], id: listeners [0].id, lfun: e, parent: getid ()})) return 'B.view didn\'t register listeners properly #3.';
+                  if (responders.length !== 1 || ! eq (responders [0], {verb: 'a', path: ['b'], id: responders [0].id, lfun: e, parent: getid ()})) return 'B.view didn\'t register responders properly #3.';
 
-                  view = B.view ('c', {listen: [['a', 'b', {parent: 'add', priority: 2, burn: true}, e]]}, function () {});
+                  view = B.view ('c', {respond: [['a', 'b', {parent: 'add', priority: 2, burn: true}, e]]}, function () {});
 
-                  if (type (view) !== 'array' || B.listeners [getid ()].verb !== 'change' || B.listeners [getid ()].priority !== -1) return 'B.view didn\'t properly generate listener with listener #4.';
+                  if (type (view) !== 'array' || B.responders [getid ()].verb !== 'change' || B.responders [getid ()].priority !== -1) return 'B.view didn\'t properly generate responder with responder #4.';
 
-                  var getListener = function () {
-                     return dale.stopNot (B.listeners, undefined, function (listener) {
-                        if (listener.parent === 'add') return listener;
+                  var getresponder = function () {
+                     return dale.stopNot (B.responders, undefined, function (responder) {
+                        if (responder.parent === 'add') return responder;
                      });
                   }
 
-                  if (! eq (getListener (), {id: getListener ().id, verb: 'a', path: ['b'], parent: 'add', priority: 2, burn: true, lfun: e})) return 'B.view didn\'t register listeners properly #4.';
+                  if (! eq (getresponder (), {id: getresponder ().id, verb: 'a', path: ['b'], parent: 'add', priority: 2, burn: true, lfun: e})) return 'B.view didn\'t register responders properly #4.';
 
-                  B.forget (getListener ().id);
+                  B.forget (getresponder ().id);
 
-                  view = B.view ('c', {listen: ['a', 'b', {parent: 'add', priority: 2, burn: true}, e]}, function () {});
+                  view = B.view ('c', {respond: ['a', 'b', {parent: 'add', priority: 2, burn: true}, e]}, function () {});
 
-                  if (type (view) !== 'array' || B.listeners [getid ()].verb !== 'change' || B.listeners [getid ()].priority !== -1) return 'B.view didn\'t properly generate listener with listener #5.';
+                  if (type (view) !== 'array' || B.responders [getid ()].verb !== 'change' || B.responders [getid ()].priority !== -1) return 'B.view didn\'t properly generate responder with responder #5.';
 
-                  if (! eq (getListener (), {id: getListener ().id, verb: 'a', path: ['b'], parent: 'add', priority: 2, burn: true, lfun: e})) return 'B.view didn\'t register listeners properly #5.';
+                  if (! eq (getresponder (), {id: getresponder ().id, verb: 'a', path: ['b'], parent: 'add', priority: 2, burn: true, lfun: e})) return 'B.view didn\'t register responders properly #5.';
 
-                  B.forget (getListener ().id);
+                  B.forget (getresponder ().id);
 
-                  view = B.view ('c', {listen: [['a', 'b', {parent: 'add', priority: 2, burn: true}, e], ['c', 'd', f]]}, function () {});
+                  view = B.view ('c', {respond: [['a', 'b', {parent: 'add', priority: 2, burn: true}, e], ['c', 'd', f]]}, function () {});
 
-                  if (type (view) !== 'array' || B.listeners [getid ()].verb !== 'change' || B.listeners [getid ()].priority !== -1) return 'B.view didn\'t properly generate listener with listener #6.';
+                  if (type (view) !== 'array' || B.responders [getid ()].verb !== 'change' || B.responders [getid ()].priority !== -1) return 'B.view didn\'t properly generate responder with responder #6.';
 
-                  if (! eq (getListener (), {id: getListener ().id, verb: 'a', path: ['b'], parent: 'add', priority: 2, burn: true, lfun: e})) return 'B.view didn\'t register listeners properly #6.';
+                  if (! eq (getresponder (), {id: getresponder ().id, verb: 'a', path: ['b'], parent: 'add', priority: 2, burn: true, lfun: e})) return 'B.view didn\'t register responders properly #6.';
 
-                  B.forget (getListener ().id);
+                  B.forget (getresponder ().id);
 
-                  listeners = dale.fil (B.listeners, undefined, function (listener) {
-                     if (listener.parent === getid ()) return listener;
+                  responders = dale.fil (B.responders, undefined, function (responder) {
+                     if (responder.parent === getid ()) return responder;
                   });
 
-                  if (listeners.length !== 1 || ! eq (listeners [0], {verb: 'c', path: ['d'], id: listeners [0].id, lfun: f, parent: getid ()})) return 'B.view didn\'t register listeners properly #6.';
+                  if (responders.length !== 1 || ! eq (responders [0], {verb: 'c', path: ['d'], id: responders [0].id, lfun: f, parent: getid ()})) return 'B.view didn\'t register responders properly #6.';
 
-                  view = B.view ('c', {listen: []}, e);
+                  view = B.view ('c', {respond: []}, e);
 
-                  if (! eq (view, ['div', {id: 'в20', 'path-в': 'c'}, ['LITERAL', '']])) return 'B.view didn\'t create view with empty listener.';
+                  if (! eq (view, ['div', {id: 'в20', 'path-в': 'c'}, ['LITERAL', '']])) return 'B.view didn\'t create view with empty responder.';
 
                   dale.go (dale.times (B.count - initial, initial), function (id) {
                      id = B.B + id;
                      B.forget (id);
                   });
 
-                  if (dale.keys (B.listeners).length !== initialLength) return 'Cleanup failed #1.';
+                  if (dale.keys (B.responders).length !== initialLength) return 'Cleanup failed #1.';
                });
 
                Test ('B.mount & B.unmount invalid input', function () {
@@ -876,8 +906,8 @@
                         if (type (x.from) !== 'array') throw new Error ('onforget from unmount received wrong x.from.');
                         if (x.from [0].ev !== 'unmount') throw new Error ('onforget from unmount received wrong x.from [0].ev.');
                         if (x.from [0].target !== 'body') throw new Error ('onforget from unmount received wrong x.from [0].target.');
-                        if (type (x.listener) !== 'object') throw new Error ('onforget from unmount received wrong x.listener.');
-                        if (type (x.listener.id) !== 'string') throw new Error ('onforget from unmount received wrong id.');
+                        if (type (x.responder) !== 'object') throw new Error ('onforget from unmount received wrong x.responder.');
+                        if (type (x.responder.id) !== 'string') throw new Error ('onforget from unmount received wrong id.');
                      }}, function () {
                         return {a: 'b'};
                      });
@@ -912,10 +942,10 @@
                      ondraw: function (x) {
                         if (type (x) !== 'object') throw new Error ('ondraw received wrong context.');
                         if (type (x.from) !== 'array') throw new Error ('ondraw received wrong x.from.');
-                        if (type (x.listener) !== 'object') throw new Error ('ondraw received wrong x.listener.');
-                        if (x.listener.id !== getid ()) throw new Error ('ondraw received wrong id.');
+                        if (type (x.responder) !== 'object') throw new Error ('ondraw received wrong x.responder.');
+                        if (x.responder.id !== getid ()) throw new Error ('ondraw received wrong id.');
                         if (counter !== 0)   throw new Error ('ondraw timing error.');
-                        if (! c ('#' + x.listener.id))  throw new Error ('ondraw was executed before the DOM elements were placed.');
+                        if (! c ('#' + x.responder.id))  throw new Error ('ondraw was executed before the DOM elements were placed.');
                         if (x.from [0].ev !== 'mount') throw new Error ('ondraw from mount received wrong x.from [0].ev.');
                         if (x.from [0].target !== 'body') throw new Error ('ondraw from mount received wrong x.from [0].target.');
                         counter++;
@@ -923,10 +953,10 @@
                      onforget: function (x) {
                         if (type (x) !== 'object') throw new Error ('onforget received wrong context.');
                         if (type (x.from) !== 'array') throw new Error ('onforget received wrong x.from.');
-                        if (type (x.listener) !== 'object') throw new Error ('onforget received wrong x.listener.');
-                        if (x.listener.id !== getid ()) throw new Error ('onforget received wrong id.');
+                        if (type (x.responder) !== 'object') throw new Error ('onforget received wrong x.responder.');
+                        if (x.responder.id !== getid ()) throw new Error ('onforget received wrong id.');
                         if (counter !== 1)   throw new Error ('onforget timing error.');
-                        if (! c ('#' + x.listener.id))  throw new Error ('onforget was executed after the DOM elements were removed.');
+                        if (! c ('#' + x.responder.id))  throw new Error ('onforget was executed after the DOM elements were removed.');
                         counter++;
                      }
                   }, function () {return ['p', {"class": 'vamo'}]}));
@@ -949,14 +979,14 @@
 
                });
 
-               B.say (x, 'test', 'init');
+               B.call (x, 'test', 'init');
             });
 
             var Views = {};
 
             // *** INIT ***
 
-            B.listen ('test', 'init', {burn: true}, function (x) {
+            B.respond ('test', 'init', {burn: true}, function (x) {
 
                // *** BASE VIEW ***
 
@@ -989,39 +1019,39 @@
 
                B.mount ('body', Views.base);
 
-               B.say (x, 'set', ['State', 'default'], [['To be'], ' determined']);
+               B.call (x, 'set', ['State', 'default'], [['To be'], ' determined']);
 
                Test ('canvas initialization', function () {
                   if (c ('body #canvas').length        !== 1) return 'Canvas not placed.';
                   if (c ('body #canvas style').length  !== 1) return 'Inner style not placed.';
                   if (c ('body #canvas div div').length !== 1) return 'Inner div not placed.';
 
-                  B.say (x, 'set', ['State', 'default'], ['h1', [['To be'], ' determined']]);
+                  B.call (x, 'set', ['State', 'default'], ['h1', [['To be'], ' determined']]);
                   if (c ('body #canvas div div h1') [0].innerHTML !== 'To be determined') return 'Content of inner div not placed properly.';
 
                   var evs = B.eventlog.length;
-                  B.say (x, 'set', ['State', 'default'], ['h1', [['To be'], ' determined']]);
+                  B.call (x, 'set', ['State', 'default'], ['h1', [['To be'], ' determined']]);
                   if (B.eventlog.length - evs !== 1) return 'B.change didn\'t prevent redrawing on equal set.';
                   if (c ('body #canvas div div h1') [0].innerHTML !== 'To be determined') return 'Content of inner div not placed properly.';
 
                });
 
-               Test ('viewlisteners', function () {
-                  var viewlisteners = dale.fil (dale.keys (B.listeners), undefined, function (v) {
+               Test ('viewresponders', function () {
+                  var viewresponders = dale.fil (dale.keys (B.responders), undefined, function (v) {
                      if (v.match ('в')) return v;
                   });
-                  if (viewlisteners.length !== 2) return 'Unexpected viewlisteners.';
-                  var viewlistener = B.listeners [viewlisteners [0]];
-                  if (viewlistener.verb !== 'change') return 'Invalid viewlistener verb #1.';
-                  if (! eq (viewlistener.path, ['State', 'view'])) return 'Invalid viewlistener path #1.';
-                  if (type (viewlistener.view) !== 'array') return 'Invalid viewlistener view #1.';
-                  if (viewlistener.priority !== -1) return 'Invalid viewlistener priority #1.';
+                  if (viewresponders.length !== 2) return 'Unexpected viewresponders.';
+                  var viewresponder = B.responders [viewresponders [0]];
+                  if (viewresponder.verb !== 'change') return 'Invalid viewresponder verb #1.';
+                  if (! eq (viewresponder.path, ['State', 'view'])) return 'Invalid viewresponder path #1.';
+                  if (type (viewresponder.view) !== 'array') return 'Invalid viewresponder view #1.';
+                  if (viewresponder.priority !== -1) return 'Invalid viewresponder priority #1.';
 
-                  viewlistener = B.listeners [viewlisteners [1]];
-                  if (viewlistener.verb !== 'change') return 'Invalid viewlistener verb #2.';
-                  if (! eq (viewlistener.path, ['State'])) return 'Invalid viewlistener path #2.';
-                  if (type (viewlistener.view) !== 'array') return 'Invalid viewlistener view #2.';
-                  if (viewlistener.priority !== -2) return 'Invalid viewlistener priority #2.';
+                  viewresponder = B.responders [viewresponders [1]];
+                  if (viewresponder.verb !== 'change') return 'Invalid viewresponder verb #2.';
+                  if (! eq (viewresponder.path, ['State'])) return 'Invalid viewresponder path #2.';
+                  if (type (viewresponder.view) !== 'array') return 'Invalid viewresponder view #2.';
+                  if (viewresponder.priority !== -2) return 'Invalid viewresponder priority #2.';
                });
 
                Test ('dangling', function () {
@@ -1030,21 +1060,21 @@
                      if (type (x) !== 'object') throw new Error ('onforget from dangling error received wrong context.');
                      if (type (x.from) !== 'array') throw new Error ('onforget from dangling error received wrong x.from.');
                      if (x.from [0].ev !== 'danglingView') throw new Error ('onforget from dangling error received wrong x.from [0].ev.');
-                     if (type (x.listener) !== 'object') throw new Error ('onforget from dangling error received wrong x.listener.');
-                     if (type (x.listener.id) !== 'string') throw new Error ('onforget from dangling error received wrong id.');
-                     if (type (x.listener.path) !== 'array' || x.listener.path.length !== 0) throw new Error ('onforget from dangling error received wrong x.listener.path.');
+                     if (type (x.responder) !== 'object') throw new Error ('onforget from dangling error received wrong x.responder.');
+                     if (type (x.responder.id) !== 'string') throw new Error ('onforget from dangling error received wrong id.');
+                     if (type (x.responder.path) !== 'array' || x.responder.path.length !== 0) throw new Error ('onforget from dangling error received wrong x.responder.path.');
                   }}, function () {});
 
-                  B.say (x, 'set', ['Data', 'test'], 1);
+                  B.call (x, 'set', ['Data', 'test'], 1);
 
-                  var viewlisteners = dale.fil (dale.keys (B.listeners), undefined, function (v) {
+                  var viewresponders = dale.fil (dale.keys (B.responders), undefined, function (v) {
                      if (v.match ('в')) return v;
                   });
 
-                  if (viewlisteners.length !== 2) return 'Dangling listener was not removed.';
+                  if (viewresponders.length !== 2) return 'Dangling responder was not removed.';
 
                   delete B.eventlog [0].from;
-                  delete B.eventlog [0].listener;
+                  delete B.eventlog [0].responder;
 
                   if (! eq (B.eventlog [0], {verb: 'change', path: ['Data', 'test']})) return 'change event fired with wrong parameters.';
 
@@ -1061,7 +1091,7 @@
                   ];
                }
 
-               B.say (x, 'set', ['State', 'view'], 'args');
+               B.call (x, 'set', ['State', 'view'], 'args');
 
                Data.items = [];
 
@@ -1074,14 +1104,14 @@
                   if (c ('#canvas div div.nav div ul.items') [0].innerHTML !== '') return 'ul not placed.';
                });
 
-               B.say (x, 'set', ['Data', 'title'], 'One big title.');
+               B.call (x, 'set', ['Data', 'title'], 'One big title.');
 
                Test ('view changed after set operation', function () {
                   if (c ('#canvas h1') [0].innerHTML !== Data.title) return 'title not placed correctly.';
                });
 
                dale.go (['a', 'b', 'c', 'd'], function (v) {
-                  B.say (x, 'add', ['Data', 'items'], v);
+                  B.call (x, 'add', ['Data', 'items'], v);
                });
 
                Test ('views updated after add operation', function () {
@@ -1089,7 +1119,7 @@
                   if (c ('ul.items li').length !== 4) return 'ul contents not updated.';
                });
 
-               B.say (x, 'rem', ['Data', 'items'], [0, 2]);
+               B.call (x, 'rem', ['Data', 'items'], [0, 2]);
 
                Test ('views updated after rem operation', function () {
                   if (JSON.stringify (Data.items) !== JSON.stringify (['b', 'd'])) return 'rem not working properly.';
@@ -1097,7 +1127,7 @@
                   if (c ('ul.items li') [0].innerHTML !== 'b') return 'rem not working properly.';
                });
 
-               B.say (x, 'set', ['Data', 'items', 1], 'e');
+               B.call (x, 'set', ['Data', 'items', 1], 'e');
 
                Test ('views updated after set in array', function () {
                   if (JSON.stringify (Data.items) !== JSON.stringify (['b', 'e'])) return 'rem not working properly.';
@@ -1105,7 +1135,7 @@
                   if (c ('ul.items li') [1].innerHTML !== 'e') return 'rem not working properly.';
                });
 
-               B.say (x, 'set', ['Data', 'items'], {a: 'b', c: 'd'});
+               B.call (x, 'set', ['Data', 'items'], {a: 'b', c: 'd'});
 
                Test ('views updated after setting object', function () {
                   if (JSON.stringify (Data.items) !== JSON.stringify ({a: 'b', c: 'd'})) return 'rem not working properly.';
@@ -1114,7 +1144,7 @@
                   if (c ('ul.items li') [1].innerHTML !== 'd') return 'rem not working properly.';
                });
 
-               B.say (x, 'rem', ['Data', 'items'], 'a');
+               B.call (x, 'rem', ['Data', 'items'], 'a');
 
                Test ('views updated after removal', function () {
                   if (JSON.stringify (Data.items) !== JSON.stringify ({c: 'd'})) return 'rem not working properly.';
@@ -1122,7 +1152,7 @@
                   if (c ('ul.items li.c').length !== 1) return 'ul contents not updated.';
                });
 
-               B.say (x, 'rem', ['Data', 'items'], dale.keys (Data.items));
+               B.call (x, 'rem', ['Data', 'items'], dale.keys (Data.items));
 
                Test ('views updated after complete removal', function () {
                   if (JSON.stringify (Data.items) !== JSON.stringify ({})) return 'rem not working properly.';
@@ -1130,13 +1160,13 @@
                   if (c ('ul.items li.c').length !== 0) return 'ul contents not updated.';
                });
 
-               B.say (x, 'test', 'B.view additional');
+               B.call (x, 'test', 'B.view additional');
 
             });
 
             // *** B.VIEW ADDITIONAL TESTS ***
 
-            B.listen ('test', 'B.view additional', {burn: true}, function (x) {
+            B.respond ('test', 'B.view additional', {burn: true}, function (x) {
 
                var counter1 = 0, counter2 = 0;
 
@@ -1160,7 +1190,7 @@
                            return ['table', ['thead']];
                         }),
                         B.view (['same', 'path'], {ondraw: function () {
-                           if (B.get ('same', 'path') === undefined) B.say (x, 'set', ['same', 'path'], 1);
+                           if (B.get ('same', 'path') === undefined) B.call (x, 'set', ['same', 'path'], 1);
                         }}, function () {
                            return ['table', ['br']];
                         })
@@ -1168,11 +1198,11 @@
                   });
                }
 
-               B.say (x, 'set', ['State', 'view'], 'escapes');
+               B.call (x, 'set', ['State', 'view'], 'escapes');
 
                Test ('B.view quotes & special characters; and tbodys!', function () {
 
-                  B.say (x, 'change', ['same', 'path']);
+                  B.call (x, 'change', ['same', 'path']);
                   if (c ('table').length !== 6) return 'tables weren\'t created.';
                   if (c ('tbody').length !== 5) return 'tbodys weren\'t created.';
 
@@ -1185,7 +1215,7 @@
 
                   if (c ('table') [5].innerHTML !== '<tbody><br></tbody>') return 'table #6 was not created properly.';
 
-                  B.say (x, 'change', ['same', 'path']);
+                  B.call (x, 'change', ['same', 'path']);
 
                   if (c ('table') [0].innerHTML !== '<thead><th></th></thead><tbody><tr><td>"I have \'quotes\'!"</td></tr></tbody>') return 'table #1 was not created properly.';
                   if (c ('table') [1].innerHTML !== '<tbody><tr><td>&lt;`Me &amp; you too!`&gt;</td></tr></tbody>') return 'table #2 was not created properly.';
@@ -1203,21 +1233,21 @@
                   });
                }
 
-               B.say (x, 'set', ['State', 'view'], 'tablebr');
+               B.call (x, 'set', ['State', 'view'], 'tablebr');
 
-               B.say (x, 'set', ['Data', 'viewevent1'], 7);
-               B.say (x, 'set', ['Data', 'viewevent2'], 9);
+               B.call (x, 'set', ['Data', 'viewevent1'], 7);
+               B.call (x, 'set', ['Data', 'viewevent2'], 9);
 
                Views.viewevents = function () {
                   return B.view (['Data', 'viewevent1'], {
                      ondraw:   function (id) {checkid (id); checktd ('ondraw1'); Data.ondraw1++},
                      onforget: function (id) {checkid (id); checktd ('onforget1'); Data.onforget1++},
-                     listen: ['a', 'b', function () {}]
+                     respond: ['a', 'b', function () {}]
                   }, function (x, viewevent1) {
                      return B.view (['Data', 'viewevent2'], {
                         ondraw:   function (id) {checkid (id); checktd ('ondraw2'); Data.ondraw2++},
                         onforget: function (id) {checkid (id); Data.onforget2++},
-                        listen: [
+                        respond: [
                            ['a', 'b', function () {}],
                            ['a', 'b', function () {}],
                         ]
@@ -1239,29 +1269,29 @@
                var checkid = function (x) {
                   if (type (x) !== 'object') throw new Error ('ondraw/onforget didn\'t receive context');
                   if (type (x.from) !== 'array') throw new Error ('ondraw/onforget didn\'t receive x.from');
-                  if (type (x.listener) !== 'object') throw new Error ('ondraw/onforget didn\'t receive x.listener');
-                  if (type (x.listener.id) !== 'string' || ! x.listener.id.match (/^в[0-9a-f]+$/)) throw new Error ('ondraw/onforget didn\'t receive valid id.');
+                  if (type (x.responder) !== 'object') throw new Error ('ondraw/onforget didn\'t receive x.responder');
+                  if (type (x.responder.id) !== 'string' || ! x.responder.id.match (/^в[0-9a-f]+$/)) throw new Error ('ondraw/onforget didn\'t receive valid id.');
                }
 
                var compare = function (comparison) {
                   return ('' + Data.ondraw1 + Data.ondraw2 + Data.onforget1 + Data.onforget2) !== comparison;
                }
 
-               B.say (x, 'set', ['State', 'view'], 'viewevents');
+               B.call (x, 'set', ['State', 'view'], 'viewevents');
 
                Test ('Testing view events', function () {
                   if (compare ('1100')) return 'ondraw/onforget didn\'t work #1.';
-                  B.say (x, 'set', ['Data', 'viewevent2'], 11);
+                  B.call (x, 'set', ['Data', 'viewevent2'], 11);
                   if (compare ('1200')) return 'ondraw/onforget didn\'t work #2.';
-                  B.say (x, 'set', ['Data', 'viewevent1'], 4);
+                  B.call (x, 'set', ['Data', 'viewevent1'], 4);
                   if (compare ('2301')) return 'ondraw/onforget didn\'t work #3.';
-                  B.say (x, 'change', ['State'], State);
+                  B.call (x, 'change', ['State'], State);
                   if (compare ('3412')) return 'ondraw/onforget didn\'t work #4.';
-                  B.say (x, 'set', ['State', 'view'], 'bla');
+                  B.call (x, 'set', ['State', 'view'], 'bla');
                   if (compare ('3423')) return 'ondraw/onforget didn\'t work #5.';
                });
 
-               Views.listen = function () {
+               Views.respond = function () {
                   return B.view (['Data'], function (x, Data) {
                      return [
                         Data.extra ? [
@@ -1275,14 +1305,14 @@
                   });
                }
 
-               B.say (x, 'set', ['State', 'view'], 'listen');
+               B.call (x, 'set', ['State', 'view'], 'respond');
 
                c ('#user').focus ();
 
-               B.say (x, 'set', ['Data', 'user'], 'hello!');
-               B.say (x, 'set', ['Data', 'pass'], 'secreto');
+               B.call (x, 'set', ['Data', 'user'], 'hello!');
+               B.call (x, 'set', ['Data', 'pass'], 'secreto');
 
-               B.say (x, 'set', ['Data', 'extra'], true);
+               B.call (x, 'set', ['Data', 'extra'], true);
 
                Test ('Focus & value tests', function () {
                   if (document.activeElement !== c ('#user')) return 'focus wasn\'t preserved when it should.';
@@ -1299,7 +1329,7 @@
                         return [
                            ['table', dale.go (dale.times (ltable), function (v) {
                               return ['tr', dale.go (dale.times (ltable), function (v2, k2) {
-                                 if (k2 === 0) return ['td', {class: 'something ' + State.opaqueclass, opaque: true}, ['input']];
+                                 if (k2 === 0) return ['td', {'class': 'something ' + State.opaqueclass, opaque: true}, ['input']];
                                  else return ['td', k2];
                               })];
                            })],
@@ -1314,8 +1344,8 @@
                   });
                }
 
-               B.say (x, 'set', ['State', 'ltable'], 2);
-               B.say (x, 'set', ['State', 'view'], 'opaque');
+               B.call (x, 'set', ['State', 'ltable'], 2);
+               B.call (x, 'set', ['State', 'view'], 'opaque');
 
                Test ('Testing opaque elements', function () {
                   var opaques = c ('.something');
@@ -1324,7 +1354,7 @@
                   if (opaques.length !== 2) return 'Opaque contents were not created.';
 
                   c.fill ('.something', '<input><input>');
-                  B.say (x, 'set', ['State', 'ltable'], 4);
+                  B.call (x, 'set', ['State', 'ltable'], 4);
                   opaques = c ('.something');
                   if (opaques.length !== 4) return 'Opaques were not updated 1.';
                   opaques = c ('.something input');
@@ -1333,7 +1363,7 @@
                   c.fill ('.something', 'boo');
                   if (c ('.something') [0].innerHTML !== 'boo') return 'Opaque contents were not updated.';
 
-                  B.say (x, 'set', ['State', 'ltable'], 5);
+                  B.call (x, 'set', ['State', 'ltable'], 5);
                   opaques = c ('.something');
                   if (opaques.length !== 5) return 'Opaques were not updated 2.';
                   opaques = c ('.something input');
@@ -1341,8 +1371,8 @@
 
                   c.fill ('.something', '<div><input><span></span></div>');
 
-                  B.say (x, 'set', ['State', 'ltable'], 4);
-                  B.say (x, 'set', ['State', 'opaqueclass'], 'style');
+                  B.call (x, 'set', ['State', 'ltable'], 4);
+                  B.call (x, 'set', ['State', 'opaqueclass'], 'style');
 
                   opaques = c ('.style');
                   if (opaques.length !== 4) return 'Opaques were not updated 3.';
@@ -1354,41 +1384,41 @@
                   if (c ('#d3').innerHTML !== '<span></span><span></span>') return 'Opaque multiple has invalid content after redraw.';
                });
 
-               B.say (x, 'test', 'prediff');
+               B.call (x, 'test', 'prediff');
 
             });
 
             // *** PREDIFF TEST ***
 
-            B.listen ('test', 'prediff', {burn: true}, function (x) {
+            B.respond ('test', 'prediff', {burn: true}, function (x) {
 
                Views.prediff = function () {return [['just'], 'some', 'strings']}
 
-               B.say (x, 'set', ['State', 'view'], 'prediff');
+               B.call (x, 'set', ['State', 'view'], 'prediff');
 
                Test ('B.prediff', function () {
                   if (c ('div#canvas div div') [0].innerHTML !== 'justsomestrings') return 'prediff test wasn\'t passed.';
                });
 
-               B.say (x, 'test', 'events');
+               B.call (x, 'test', 'events');
             });
 
             // *** EVENTS TEST ***
 
-            B.listen ('test', 'events', {burn: true}, function (x) {
+            B.respond ('test', 'events', {burn: true}, function (x) {
 
                var counter = 0;
 
                Views.events = function () {
-                  return B.view (x, ['Data'], {listen: [
+                  return B.view (x, ['Data'], {respond: [
                      ['upload', 'i2', function (x, arg2, arg3) {
                         Test ('form upload', function () {
-                           if (! x.from [1] || x.from [1].ev !== 'onclick' || ! x.from [1].attrs || x.from [1].attrs.value !== 'Submit') return 'B.ev didn\'t pass event or attributes in its stringified invocation to B.say.';
+                           if (! x.from [1] || x.from [1].ev !== 'onclick' || ! x.from [1].attrs || x.from [1].attrs.value !== 'Submit') return 'B.ev didn\'t pass event or attributes in its stringified invocation to B.call.';
                            if (JSON.stringify ({user: 'Talk about', pass: 'thepassion'}) !== JSON.stringify (Data.i2)) return 'form values weren\'t updated.';
                            if (arg2 !== '"a"' || arg3 !== ',"b"') return 'extra args weren\'t passed properly.';
                         });
                      }],
-                     ['just', ['another', 'listener'], function () {}]
+                     ['just', ['another', 'responder'], function () {}]
                   ]}, function (x, Data) {
                      counter++;
                      Test ('x.from inside view function', function () {
@@ -1432,12 +1462,12 @@
                   });
                }
 
-               B.say (x, 'set', ['State', 'view'], 'events');
+               B.call (x, 'set', ['State', 'view'], 'events');
 
                Test ('events', function () {
                   c.set ('#i1', {value: 'i1'});
                   if (Data.i1 !== 'i1') return 'input onchange didn\'t update properly.';
-                  B.say (x, 'set', ['Data', 'i1'], 'i1plus');
+                  B.call (x, 'set', ['Data', 'i1'], 'i1plus');
                   if (c.get ('#i1', 'value').value !== 'i1plus') return 'input wasn\'t refreshed properly.';
 
                   c.set ('#i2 [name="user"]', {value: 'Talk about'});
@@ -1452,10 +1482,10 @@
                      c ('#i2 [type="button"]') [0].click ();
                   }
 
-                  B.say (x, 'set', ['Data', 'i3'], 'some text');
+                  B.call (x, 'set', ['Data', 'i3'], 'some text');
                   if (c ('#i3').value !== 'some text') return 'textarea wasn\'t set properly';
 
-                  B.say (x, 'set', ['Data', 'i4', 'fries'], true);
+                  B.call (x, 'set', ['Data', 'i4', 'fries'], true);
                   if (c ('#i4 input') [0].checked !== true) return 'checkbox wasn\'t checked.';
 
                   try {
@@ -1473,21 +1503,21 @@
                   if (B.get ('Data', 'i4', 'fries') !== false) return 'checkbox didn\'t change data after being changed.';
                   if (c ('#i4 input') [0].checked !== false) return 'checkbox wasn\'t unchecked.';
 
-                  B.say (x, 'set', ['Data', 'i5'], 'green');
+                  B.call (x, 'set', ['Data', 'i5'], 'green');
                   if (c ('#i5 input') [1].checked !== true) return 'radio wasn\'t selected.';
 
-                  B.say (x, 'set', ['Data', 'i6'], 'ok computer');
+                  B.call (x, 'set', ['Data', 'i6'], 'ok computer');
 
                   if (c ('option') [2].selected !== true)       return 'select wasn\'t updated after data change 1.';
                   if (c ('select') [0].value !== 'ok computer') return 'select wasn\'t updated after data change 2.';
 
                   c ('#i7').focus ();
 
-                  B.say (x, 'set', ['Data', 'i8'], true);
+                  B.call (x, 'set', ['Data', 'i8'], true);
 
                   if (document.activeElement !== c ('#i7')) return 'focus wasn\'t preserved when it should.';
 
-                  B.say (x, 'set', ['Data', 'i7'], true);
+                  B.call (x, 'set', ['Data', 'i7'], true);
 
                   if (document.activeElement !== null && document.activeElement !== c ('body') [0]) {
                      return 'focus was preserved when it shouldn\'t.';
@@ -1502,9 +1532,9 @@
 
                Views.selfmodify = function () {
                   return B.view (x, ['State', 'self'], {tag: 'div', attrs: {"class": 'self'}, ondraw: function (x) {
-                     if (! B.get ('State', 'self')) B.say (x, 'set', ['State', 'self'], 1);
+                     if (! B.get ('State', 'self')) B.call (x, 'set', ['State', 'self'], 1);
                   }, onforget: function () {
-                     B.say ('set', ['foo', 'bar'], 2);
+                     B.call ('set', ['foo', 'bar'], 2);
                   }}, function (x, self) {return [
                      dale.go (dale.times (50), function () {
                         return ['td', self];
@@ -1513,7 +1543,7 @@
                   ]});
                }
 
-               B.say (x, 'set', ['State', 'view'], 'selfmodify');
+               B.call (x, 'set', ['State', 'view'], 'selfmodify');
 
                Test ('B.view selfmodify', function () {
                   var targets = c ('div.self td');
@@ -1528,7 +1558,7 @@
                      B.view (['Data', 'self'], {ondraw: function () {
                         if (! B.get ('Data', 'self')) {
                            if (B.resolvequeue.length !== 1) throw new Error ('B.resolvequeue error.');
-                           B.say (x, 'set', ['Data', 'self'], 1);
+                           B.call (x, 'set', ['Data', 'self'], 1);
                            if (B.resolvequeue.length !== 3) throw new Error ('B.resolvequeue error.');
                         }
                      }},
@@ -1541,7 +1571,7 @@
                   ];
                }
 
-               B.say (x, 'set', ['State', 'view'], 'simult');
+               B.call (x, 'set', ['State', 'view'], 'simult');
 
                Test ('B.view simult', function () {
                   var targets = c ('td');
@@ -1562,20 +1592,20 @@
                   });
                }
 
-               B.say (x, 'set', ['State', 'view'], 'trample');
+               B.call (x, 'set', ['State', 'view'], 'trample');
 
                Test ('B.resolve trample', function () {
                   if (c ('table') [0].innerHTML !== '<thead><tr><td>items</td></tr></thead><tbody></tbody>') return 'booyah';
-                  B.say (x, 'set', ['State', 'items'], dale.times (200));
+                  B.call (x, 'set', ['State', 'items'], dale.times (200));
                   var t = teishi.time ();
-                  B.say (x, 'set', ['State', 'items'], dale.times (1));
+                  B.call (x, 'set', ['State', 'items'], dale.times (1));
                   if (teishi.time () - t > 1000) return 'B.trample is not working!';
                });
 
                Views.select = function () {
                   return B.view (['State', 'select'], {ondraw: function (x) {
                      var s = B.get ('State', 'select');
-                     if (s === 0) return B.say (x, 'set', ['State', 'select'], 1);
+                     if (s === 0) return B.call (x, 'set', ['State', 'select'], 1);
                   }}, function (x, select) {
                      return [
                         ['select', [
@@ -1606,10 +1636,10 @@
                }
 
                Views.textarea = function () {
-                  return B.view (['State', 'textarea'], {listen: [
+                  return B.view (['State', 'textarea'], {respond: [
                      ['shuffle', '*', function (x) {
-                        B.say (x, 'set', ['State', 'textarea'], shuffleArray (B.get ('State', 'textarea')));
-                        B.say (x, 'change', ['State', 'textarea']);
+                        B.call (x, 'set', ['State', 'textarea'], shuffleArray (B.get ('State', 'textarea')));
+                        B.call (x, 'change', ['State', 'textarea']);
                      }],
                   ], ondraw: function () {
                   }}, function (x, textarea) {
@@ -1633,7 +1663,7 @@
 
                Views.selectShuffle = function () {
                   return B.view (['State', 'selectshuffle'], {ondraw: function () {
-                     if (! B.get ('State', 'selectshuffle')) B.say ('set', ['State', 'selectshuffle'], 1);
+                     if (! B.get ('State', 'selectshuffle')) B.call ('set', ['State', 'selectshuffle'], 1);
                   }}, function (x, c) {
                      if (! c) return ['select', [
                         ['option', 1],
@@ -1652,17 +1682,17 @@
                }
 
                Test ('moving selects & textareas', function () {
-                  B.say (x, 'set', ['State', 'view'], 'select');
-                  B.say (x, 'set', ['State', 'select'], 0);
+                  B.call (x, 'set', ['State', 'view'], 'select');
+                  B.call (x, 'set', ['State', 'select'], 0);
                   var firstOption = c ('option') [0];
                   // `selected` as empty string is only in IE and Edge
                   if (firstOption.getAttribute ('selected') !== null && firstOption.getAttribute ('selected') !== '') return 'Falsy value was inserted as attribute by B.prediff.';
 
                   if (c ('option') [1].selected !== true || c ('option') [2].selected !== false) return 'Option values were not updated!';
 
-                  B.say (x, 'set', ['State', 'textarea'], dale.times (5));
+                  B.call (x, 'set', ['State', 'textarea'], dale.times (5));
 
-                  B.say (x, 'set', ['State', 'view'], 'textarea');
+                  B.call (x, 'set', ['State', 'view'], 'textarea');
 
                   if (! eq (dale.go (c ('textarea.main'), function (textarea) {
                      return textarea.value;
@@ -1682,7 +1712,7 @@
                      return '<' + v + '><';
                   }))) return 'Text input mismatch error #1.';
 
-                  B.say (x, 'set', ['State', 'textarea'], dale.times (5, 10));
+                  B.call (x, 'set', ['State', 'textarea'], dale.times (5, 10));
 
                   if (! eq (dale.go (c ('textarea.main'), function (textarea) {
                      return textarea.value;
@@ -1706,7 +1736,7 @@
                      textarea.value = '';
                   });
 
-                  B.say (x, 'shuffle', '*');
+                  B.call (x, 'shuffle', '*');
 
                   if (! eq (dale.go (c ('textarea.main'), function (textarea) {
                      return textarea.value;
@@ -1726,7 +1756,7 @@
                      return '<' + v + '><';
                   }))) return 'Text input mismatch error #3.';
 
-                  B.say (x, 'set', ['State', 'textarea'], ['a', 'b', undefined, 'd', 'e']);
+                  B.call (x, 'set', ['State', 'textarea'], ['a', 'b', undefined, 'd', 'e']);
 
                   if (! eq (dale.go (c ('textarea.main'), function (textarea) {
                      return textarea.value || undefined;
@@ -1746,21 +1776,21 @@
                      return v ? '<' + v + '><' : undefined;
                   }))) return 'Text input mismatch error #4.';
 
-                  B.say ('set', ['State', 'view'], 'selectShuffle');
+                  B.call ('set', ['State', 'view'], 'selectShuffle');
 
                   if (c ('select') [1].value !== '2') return 'new select with two kept options that were selected before error';
 
                });
 
-               B.say (x, 'test', 'attrs');
+               B.call (x, 'test', 'attrs');
 
             });
 
             // *** ATTRS TEST ***
 
-            B.listen ('test', 'attrs', {burn: true}, function (x) {
+            B.respond ('test', 'attrs', {burn: true}, function (x) {
 
-               B.say (x, 'set', ['Data', 'items'], [
+               B.call (x, 'set', ['Data', 'items'], [
                   {id: 'widget1', title: 'Widget #1', price: 5,  checked: false},
                   {id: 'widget2', title: 'Widget #2', price: 8,  checked: true},
                   {id: 'widget3', title: 'Widget #3', price: 11, checked: true},
@@ -1781,7 +1811,7 @@
                   });
                }
 
-               B.say (x, 'set', ['State', 'view'], 'attrs');
+               B.call (x, 'set', ['State', 'view'], 'attrs');
 
                Test ('attrs', function () {
                   if (c ('input') [0].checked !== false) return 'wrong checkbox was checked.';
@@ -1789,8 +1819,8 @@
                   if (c ('input') [2].checked !== true) return 'checkbox wasn\'t checked.';
                   if (c ('input') [3].checked !== false) return 'wrong checkbox was checked.';
 
-                  B.say (x, 'set', ['Data', 'filter'], 'booyah');
-                  B.say (x, 'set', ['Data', 'filter'], '');
+                  B.call (x, 'set', ['Data', 'filter'], 'booyah');
+                  B.call (x, 'set', ['Data', 'filter'], '');
 
                   if (c ('input') [0].checked !== false) return 'wrong checkbox was checked.';
                   if (c ('input') [1].checked !== true) return 'checkbox wasn\'t checked.';
@@ -1799,13 +1829,13 @@
 
                });
 
-               B.say (x, 'test', 'perf');
+               B.call (x, 'test', 'perf');
 
             });
 
             // *** PERFORMANCE ***
 
-            B.listen ('test', 'perf', {burn: true}, function (x) {
+            B.respond ('test', 'perf', {burn: true}, function (x) {
 
                Views.perf = function () {
                   return B.view (x, ['Data', 'perf'], function (x, perf) {
@@ -1828,31 +1858,31 @@
 
                clog ('Starting perf');
 
-               B.say (x, 'set', ['State', 'view'], 'perf');
+               B.call (x, 'set', ['State', 'view'], 'perf');
 
                Time ['2: perfsetview'] = teishi.time () - dale.acc (Time, function (a, b) {return a + b});
 
                clog ('Done setting view');
 
-               B.say (x, 'set', ['Data', 'perf'], {});
-               B.say (x, 'set', ['Data', 'perf', 'data'], data);
+               B.call (x, 'set', ['Data', 'perf'], {});
+               B.call (x, 'set', ['Data', 'perf', 'data'], data);
                Time ['3: perfsetdata'] = teishi.time () - dale.acc (Time, function (a, b) {return a + b});
                clog ('Done updating view with all data');
 
-               B.say (x, 'set', ['Data', 'perf', 'data', 10, 2], 'something');
+               B.call (x, 'set', ['Data', 'perf', 'data', 10, 2], 'something');
                Time ['4: perfupdateone'] = teishi.time () - dale.acc (Time, function (a, b) {return a + b});
                clog ('Done updating one item');
 
-               B.say (x, 'set', ['Data', 'perf', 'class'], 'aclass');
+               B.call (x, 'set', ['Data', 'perf', 'class'], 'aclass');
                Time ['5: perfupdateall'] = teishi.time () - dale.acc (Time, function (a, b) {return a + b});
                clog ('Done updating all items');
 
-               B.say (x, 'rem', ['Data', 'perf', 'data', 10], 2);
+               B.call (x, 'rem', ['Data', 'perf', 'data', 10], 2);
                Time ['6: perfrem'] = teishi.time () - dale.acc (Time, function (a, b) {return a + b});
 
                clog ('Done removing one item');
 
-               B.say (x, 'add', ['Data', 'perf', 'data', 10], 999);
+               B.call (x, 'add', ['Data', 'perf', 'data', 10], 999);
 
                Time ['7: perfadd'] = teishi.time () - dale.acc (Time, function (a, b) {return a + b});
 
@@ -1864,11 +1894,11 @@
 
                clog ('Done adding one item');
 
-               Test ('listener cleanup', function () {
-                  if (dale.keys (B.listeners).length !== 8) return 'Some listeners were not cleaned up!';
+               Test ('responder cleanup', function () {
+                  if (dale.keys (B.responders).length !== 8) return 'Some responders were not cleaned up!';
                });
 
-               B.say (x, 'test', 'success');
+               B.call (x, 'test', 'success');
             });
 
             Views.done = function () {
@@ -1878,9 +1908,9 @@
                ];
             }
 
-            B.listen ('test', 'success', {burn: true}, function (x) {
+            B.respond ('test', 'success', {burn: true}, function (x) {
                if (Errorlist.length === 0) {
-                  B.say (x, 'set', ['State', 'view'], 'done');
+                  B.call (x, 'set', ['State', 'view'], 'done');
                   clog ('Success', 'All tests were successful!');
                   return;
                }
@@ -1891,7 +1921,7 @@
                      ['pre', teishi.str (Errorlist, null, '   ')]
                   ];
                };
-               B.say (x, 'set', ['State', 'view'], 'error');
+               B.call (x, 'set', ['State', 'view'], 'error');
             });
 
 

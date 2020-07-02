@@ -16,18 +16,18 @@ Please refer to readme.md to read the annotated source.
 
    var type = teishi.type;
 
-   var B = window.B = {v: '2.0.0', B: 'в', t: teishi.time (), r: r, listeners: r.listeners, store: r.store, log: r.log, say: r.say, listen: r.listen, forget: r.forget};
+   var B = window.B = {v: '2.0.0', B: 'в', t: teishi.time (), r: r, responders: r.responders, store: r.store, log: r.log, call: r.call, respond: r.respond, forget: r.forget};
 
    // *** ERROR REPORTING ***
 
    r.error = B.error = function () {
       var x = type (arguments [0]) === 'object' ? arguments [0] : undefined;
       var args = dale.go (arguments, function (v) {return v}).slice (x ? 1 : 0);
-      B.say.apply (null, [x || {}, 'error'].concat (args));
+      B.call.apply (null, [x || {}, 'error'].concat (args));
       return false;
    }
 
-   B.listen ({id: 'error', verb: 'error', path: [], match: function (ev) {return ev.verb === 'error'}}, function () {
+   B.respond ({id: 'error', verb: 'error', path: [], match: function (ev) {return ev.verb === 'error'}}, function () {
       document.body.innerHTML += lith.g (['div', {
          id: 'eventlog-snackbar', style: lith.css.style ({position: 'fixed', 'font-weight': 'bold', opacity: '0.8', top: 0, left: 0.1, width: 0.8, padding: 10, color: 'white', 'background-color': 'black', 'z-index': '10001', 'text-align': 'center'})
       }, 'There was an error.'], true);
@@ -42,20 +42,20 @@ Please refer to readme.md to read the annotated source.
    B.eventlog = function () {
       if (c ('#eventlog')) document.body.removeChild (c ('#eventlog'));
 
-      var index = {}, colors = ['maroon', 'red', 'olive', 'green', 'purple', 'fuchsia', 'teal', 'blue', 'black', 'gray', 'salmon', 'darkcyan', 'darkviolet', 'indigo', 'limegreen', 'coral', 'orangered'], columns = ['ms', 'entry', 'from', 'verb', 'path', 'args'];
+      var index = {}, colors = ['#fe6f6c', '#465775', '#e086c3', '#8332ac', '#462749', '#044389', '#59c9a6', '#ffad05', '#7cafc4', '#5b6c5d'], columns = ['#', 'ms', 'id', 'from', 'verb', 'path', 'args'];
 
       document.body.innerHTML += lith.g (['table', {id: 'eventlog'}, [
-         ['style', ['#eventlog', {'border-collapse': 'collapse', 'font-family': 'serif', 'font-size': 18, position: 'absolute', 'right, top': 4, width: Math.min (window.innerWidth, 800), 'z-index': '10000', border: 'solid 4px #4488DD'}, ['th, td', {'padding-left, padding-right': 10, 'border-bottom, border-right': 'solid 1px black'}]]],
+         ['style', ['#eventlog', {'border-collapse': 'collapse', 'font-family': 'monospace', 'font-size': 18, position: 'absolute', 'right, top': 4, width: Math.min (window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth, 800), 'z-index': '10000', border: 'solid 4px #4488DD'}, ['th, td', {'padding-left, padding-right': 10, 'border-bottom, border-right': 'solid 1px black'}]]],
          ['tr', dale.go (columns, function (header) {
-            return ['th', {style: lith.css.style ({'background-color': '#bababa'})}, header];
+            return ['th', {style: lith.css.style ({'background-color': '#efefef'})}, header];
          })],
          dale.go (B.log, function (entry, k) {
             index [entry.id] = k;
-            return ['tr', {style: lith.css.style ({'background-color': {0: '#eaeaea', 1: '#bababa'} [k % 2]})}, dale.go ([entry.t - B.t, k, index [entry.from], entry.verb, entry.path.join (':'), dale.go (entry.args, B.str).join (', ')], function (value, k2) {
-               if (k2 === 0) return ['td', (value / 1000) + (! (value % 1000) ? '.0' : '') + (! (value % 100) ? '0' : '') + (! (value % 10) ? '0' : '') + 's'];
-               if (k2 !== 1 && k2 !== 2) return ['td', value];
-               var onclick = value === undefined ? '' : ('c ("tr") [' + (value + 1) + '].scrollIntoView ()');
-               return ['td', {onclick: onclick, style: lith.css.style ({cursor: 'pointer', 'font-weight': 'bold', color: colors [value % colors.length]})}, value === undefined ? '' : ((k2 === 2 ? 'from ' : '') + '#' + (value + 1))];
+            return ['tr', {style: lith.css.style ({'background-color': {0: '#fcfcfc', 1: '#efefef'} [k % 2]})}, dale.go (['#' + (k + 1), entry.t - B.t, entry.id, entry.from, entry.verb, entry.path.join (':'), dale.go (entry.args, B.str).join (', ')], function (value, k2) {
+               if (k2 === 1) return ['td', (value / 1000) + (! (value % 1000) ? '.0' : '') + (! (value % 100) ? '0' : '') + (! (value % 10) ? '0' : '') + 's'];
+               if (k2 !== 2 && k2 !== 3) return ['td', value];
+               var onclick = (value === undefined || ! value.match (/^E\d/)) ? '' : ('c ("tr") [' + (index [value] + 1) + '].scrollIntoView ()');
+               return ['td', {onclick: onclick, style: lith.css.style ({cursor: 'pointer', 'font-weight': 'bold', color: colors [parseInt (index [value]) % colors.length]})}, value === undefined ? '' : value];
             })];
          }),
       ]], true);
@@ -160,23 +160,23 @@ Please refer to readme.md to read the annotated source.
       return true;
    }
 
-   // *** CHANGE EVENT & B.CHANGELISTENER ***
+   // *** CHANGE EVENT & B.CHANGERESPONDER ***
 
    dale.go (['add', 'rem', 'set'], function (verb) {
-      B.listen ({id: verb, verb: verb, path: [], match: function (ev, listener) {
-         return r.compare (ev.verb, listener.verb);
+      B.respond ({id: verb, verb: verb, path: [], match: function (ev, responder) {
+         return r.compare (ev.verb, responder.verb);
       }}, function (x) {
          var previousValue = verb === 'set' ? B.get (x.path) : teishi.copy (B.get (x.path));
          if (B [x.verb].apply (null, [x, x.path].concat (dale.go (arguments, function (v) {return v}).slice (1))) === false) return;
-         if (! teishi.eq (previousValue, B.get (x.path))) B.say (x, 'change', x.path, B.get (x.path), previousValue);
+         if (! teishi.eq (previousValue, B.get (x.path))) B.call (x, 'change', x.path, B.get (x.path), previousValue);
       });
    });
 
-   B.changeListener = function (ev, listener) {
-      if (! r.compare (ev.verb, listener.verb)) return false;
-      if (ev.path.length === 0 || listener.path.length === 0) return true;
-      return dale.stop (dale.times (Math.min (ev.path.length, listener.path.length), 0), false, function (k) {
-         return r.compare (ev.path [k], listener.path [k]);
+   B.changeResponder = function (ev, responder) {
+      if (! r.compare (ev.verb, responder.verb)) return false;
+      if (ev.path.length === 0 || responder.path.length === 0) return true;
+      return dale.stop (dale.times (Math.min (ev.path.length, responder.path.length), 0), false, function (k) {
+         return r.compare (ev.path [k], responder.path [k]);
       });
    }
 
@@ -218,10 +218,10 @@ Please refer to readme.md to read the annotated source.
          B.error ('B.ev', error, 'Events:', evs);
       })) return false;
 
-      var output = 'var id = B.say ("ev", event.type, B.evh (this));';
+      var output = 'var id = B.call ("ev", event.type, B.evh (this));';
 
       dale.go (evs, function (ev) {
-         output += ' B.say ({"from": id}, ' + dale.go (ev.length === 2 ? ev.concat ({raw: 'this.value'}) : ev, function (v, k) {
+         output += ' B.call ({"from": id}, ' + dale.go (ev.length === 2 ? ev.concat ({raw: 'this.value'}) : ev, function (v, k) {
             if (k > 1 && type (v) === 'object' && type (v.raw) === 'string') return v.raw;
             return B.str (v);
          }).join (', ') + ');';
@@ -260,7 +260,7 @@ Please refer to readme.md to read the annotated source.
       if (! B.prod && ! element) return B.error ('B.unmount', 'Target not found:', target);
 
       c ({selector: '*', from: element}, function (child) {
-         if (child.id && child.id.match (/^в[0-9a-f]+$/g) && B.listeners [child.id]) B.forget (child.id);
+         if (child.id && child.id.match (/^в[0-9a-f]+$/g) && B.responders [child.id]) B.forget (child.id);
       });
 
       element.innerHTML = '';
@@ -291,11 +291,11 @@ Please refer to readme.md to read the annotated source.
             if (! B.prod && B.validateLith (elem) !== 'Lith') return B.error ('B.elem', 'Function must return a lith element but instead is:', elem, 'Arguments:', {paths: paths, fun: fun});
 
             dale.go (dale.times (B.internal.count - count, 1), function (k) {
-               var listener = B.listeners [B.B + count + k];
-               listener.priority--;
-               if (! listener.parent) {
-                  children.push (listener.id);
-                  listener.parent = id;
+               var responder = B.responders [B.B + count + k];
+               responder.priority--;
+               if (! responder.parent) {
+                  children.push (responder.id);
+                  responder.parent = id;
                }
             });
 
@@ -303,17 +303,17 @@ Please refer to readme.md to read the annotated source.
             elem [1].id    = id;
             elem [1].paths = dale.go (paths, function (path) {return path.join (':')}).join (', ');
          }
-         B.listeners [id].elem     = elem;
-         B.listeners [id].children = children;
+         B.responders [id].elem     = elem;
+         B.responders [id].children = children;
          return elem;
       }
 
-      B.listen ('change', [], {id: id, priority: -1, match: function (ev) {
+      B.respond ('change', [], {id: id, priority: -1, match: function (ev) {
          return dale.stop (paths, true, function (path) {
-            return B.changeListener (ev, {verb: 'change', path: path});
+            return B.changeResponder (ev, {verb: 'change', path: path});
          });
       }}, function (x) {
-         var oldElement = B.listeners [id].elem, oldChildren = B.listeners [id].children;
+         var oldElement = B.responders [id].elem, oldChildren = B.responders [id].children;
          if (makeElement ()) B.redraw (x, id, oldElement, oldChildren);
       });
 
@@ -350,30 +350,30 @@ Please refer to readme.md to read the annotated source.
       var done = function () {
          var next = dale.stopNot (B.internal.queue, undefined, function (v, k) {
             var next = B.internal.queue.shift ();
-            // listener might be absent because of it being deleted by a previous redraw
-            if (B.listeners [next [1]]) return next;
+            // responder might be absent because of it being deleted by a previous redraw
+            if (B.responders [next [1]]) return next;
          });
 
          if (next) B.redraw.apply (null, next.concat (true));
          else      B.internal.redrawing = false;
       }
 
-      var listener = B.listeners [id], element = document.getElementById (id);
+      var responder = B.responders [id], element = document.getElementById (id);
 
       if (! B.prod && ! element) {
          B.forget (id);
-         return B.error (x, 'B.redraw', 'Attempted to redraw dangling element, omitting redraw & deleting listener.', {listener: listener});
+         return B.error (x, 'B.redraw', 'Attempted to redraw dangling element, omitting redraw & deleting responder.', {responder: responder});
       }
 
-      var diff = B.diff (B.prediff (oldElement), B.prediff (listener.elem));
+      var diff = B.diff (B.prediff (oldElement), B.prediff (responder.elem));
 
       // we delete the old children after we do the prediff, to know what's actually there on the DOM! oldELement's nested reactive children might not be accurate if they were redrawn after the parent was redrawn.
       dale.go (oldChildren, function (id) {B.forget (id)});
 
-      if (diff) B.applyDiff (x, listener, element, diff);
+      if (diff) B.applyDiff (x, responder, element, diff);
       else {
-         if (! B.prod) B.say (x, 'trample', {timeout: B.internal.timeout, listener: listener});
-         document.getElementById (id).innerHTML = lith.g (listener.elem);
+         if (! B.prod) B.call (x, 'trample', {timeout: B.internal.timeout, responder: responder});
+         document.getElementById (id).innerHTML = lith.g (responder.elem);
       }
 
       done ();
@@ -402,7 +402,7 @@ Please refer to readme.md to read the annotated source.
                innerHTML: element.innerHTML,
                /*
                expectedHTML: lith.g (view, lith.g (view)),
-               oldElement: listener.elem,
+               oldElement: responder.elem,
                newElement: view,
                diff: dale.obj (teishi.copy (diff), function (v2, k2) {return [k2, v2]})
                */
@@ -598,7 +598,7 @@ Please refer to readme.md to read the annotated source.
 
          // TODO: LITERAL
 
-         if (input [1] && input [1].id && (input [1].id + '').match (/^в[0-9a-f]+$/g)) input = B.listeners [input [1].id].elem;
+         if (input [1] && input [1].id && (input [1].id + '').match (/^в[0-9a-f]+$/g)) input = B.responders [input [1].id].elem;
 
          var attrs = type (input [1]) !== 'object' ? undefined : dale.obj (input [1], function (v, k) {
             if (v || v === 0) return [k, v];

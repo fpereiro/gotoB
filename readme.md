@@ -96,7 +96,7 @@ B.mount ('body', counter);
 ### Todo list
 
 ```javascript
-B.listen ('create', 'todo', function (x) {
+B.respond ('create', 'todo', function (x) {
    var todo = prompt ('What\'s one to do?');
    if (todo) B.call (x, 'add', 'todos', todo);
 });
@@ -152,7 +152,7 @@ All of the above is valid for any type of webapp. Let's explore now how gotoв s
 
 1. gotoв creates all the HTML in the browser using js: the presentation logic is fully separated from the server and the full power of js is available to generate HTML.
 2. gotoв centralizes all the state into a js object: instead of having data spreaded out in different places (DOM elements, js variables), it centralizes all the state in a single location that can be easily queried and updated.
-3. gotoв uses events to update the state *and* to update the HTML: by using events, the app can be updated efficiently without having to track dependencies.
+3. gotoв uses events to update the state *and* to update the HTML: by using events, the app can be updated efficiently without having to manually track dependencies between parts of the app.
 
 Let's see each of these in turn:
 
@@ -186,7 +186,7 @@ var helloWorld = function () {
 }
 ```
 
-If you come from other frontend frameworks, these functions are called *views*. To emphasize the fact that in gotoв views are always functions, we'll call them `vfun` (short for *view function*).
+If you come from other frontend frameworks, these functions are called *views*. To emphasize the fact that in gotoв views are always functions, we'll call them `vfuns` (short for *view functions*).
 
 It is possible and even handy (but not mandatory) to generate CSS with gotoв (see the details [here](https://github.com/fpereiro/lith#litcs)).
 
@@ -207,7 +207,7 @@ gotoв stores all the state of the application (rather, all the state that belon
 }
 ```
 
-The store is located at `B.store`. `B`, by the way, is the global variable where gotoв is available.
+The store is located at `B.store` and gotoв automatically creates it when the app is loaded. `B`, by the way, is the global variable where gotoв is available.
 
 The following are examples of what can (and should!) be contained on the store:
 
@@ -225,42 +225,44 @@ The function for **triggering** an event is `B.call`. We prefer the term *call* 
 
 Going back to `B.call`, it receives as arguments a `verb`, a `path` and optional extra `arguments`.
 
-gotoв provides three built-in `verbs` for modifying `B.store`: `set`, `add` and `rem`. Let's see them through examples:
+Events are not much use unless another part of the program *responds* to them. Traditionally, these are called *event listeners* but we call these *responders*, since they respond to an event being called. To create `responders`, we will use the function `B.respond`, which we'll cover in a later section. For now, all you need to know is that `responders` are defined with a `verb` and a `path` (exactly like events) and are *matched* (triggered) by events with matching `verbs` and `paths`.
+
+gotoв provides three built-in `responders` for modifying `B.store`: `set`, `add` and `rem`. These responders are already created and allow you to modify the store. Let's see them through examples:
 
 ```javascript
 // At the beginning, B.store is merely an empty object
 
-// We now say an event with verb `set`, path `username` and `mono` as its first argument.
+// We now call an event with verb `set`, path `username` and `mono` as its first argument.
 B.call ('set', 'username', 'mono');
 
 // Now, B.store is {username: 'mono'}
 
-// We now say an event with verb `set`, path `['State', 'page']` and `main` as its first argument.
+// We now call an event with verb `set`, path `['State', 'page']` and `main` as its first argument.
 B.call ('set', ['State', 'page'], 'main');
 
 // Now, B.store is {username: 'mono', State: {page: 'main'}}
 
-// We now say an event with verb `rem`, path `[]` and `username` as its first argument.
+// We now call an event with verb `rem`, path `[]` and `username` as its first argument.
 B.call ('rem', [], 'username');
 
 // Now, B.store is {State: {page: 'main'}}
 
-// We now say an event with verb `rem`, path `State` and `page` as its first argument.
+// We now call an event with verb `rem`, path `State` and `page` as its first argument.
 B.call ('rem', 'State', 'page');
 
 // Now, B.store is {State: {}}
 
-// We now say an event with verb `set`, path `['Data', 'items']` and `['foo', 'bar']` as its first argument.
+// We now call an event with verb `set`, path `['Data', 'items']` and `['foo', 'bar']` as its first argument.
 B.call ('set', ['Data', 'items'], ['foo', 'bar']);
 
 // Now, B.store is {State: {}, Data: {items: ['foo', 'bar']}}
 
-// We now say an event with verb `add`, path `['Data', 'items']` and `boo` as its first argument.
+// We now call an event with verb `add`, path `['Data', 'items']` and `boo` as its first argument.
 B.call ('add', ['Data', 'items'], 'boo');
 
 // Now, B.store is {State: {}, Data: {items: ['foo', 'bar', 'boo']}}
 
-// We now say an event with verb `rem`, path `['Data', 'items']` and `0` as its first argument.
+// We now call an event with verb `rem`, path `['Data', 'items']` and `0` as its first argument.
 B.call ('rem', ['Data', 'items'], 0);
 
 // Now, B.store is {State: {}, Data: {items: ['bar', 'boo']}}
@@ -272,7 +274,7 @@ It is important to note that events can be used for things other than updating `
 
 ### Updating the page when the store changes
 
-gotoв provides `B.view`, a function for creating views that automatically update themselves when the store changes. To make the app more understandable (and efficient), views can depend on a specific part of the store, instead of depending on the whole thing. This means that if a view depends on a part X of the store, then if Y is modified, the view will remain unchanged.
+gotoв provides `B.view`, a function for creating views that automatically update themselves when the store changes. To make the app more understandable (and efficient), views can depend on a specific part of the store, instead of depending on the whole state. This means that if a view depends on a part X of the store, then if Y is modified (and Y is not contained inside X, nor X inside Y), the view will remain unchanged.
 
 Let's see an example:
 
@@ -282,6 +284,8 @@ var counter = function () {
       return ['h2', 'The counter is ' + counter];
    });
 }
+
+B.mount ('body', counter);
 ```
 
 Whenever `B.store.counter` is updated, the `h2` element will be automatically updated.
@@ -311,6 +315,8 @@ var counter = function () {
       ]];
    });
 }
+
+B.mount ('body', counter);
 ```
 
 But it is much better to use `B.ev`, which will create a stringified call to `B.call` that we can put within the `onclick` attribute directly.
@@ -326,6 +332,8 @@ var counter = function () {
       ]];
    });
 }
+
+B.mount ('body', counter);
 ```
 
 ### Summary
@@ -362,7 +370,7 @@ gotoв automatically loads its five dependencies on the following global variabl
 - `R`: [recalc](https://github.com/fpereiro/recalc).
 - `c`: [cocholate](https://github.com/fpereiro/cocholate).
 
-You can use these libraries at your discretion. If you do so, I recommend also assigning local variables to them:
+You can use these libraries at your discretion. If you do so, I recommend also assigning local variables to them, for clarity's sake:
 
 ```javascript
 var dale = window.dale, teishi = window.teishi, lith = window.lith, c = window.c;
@@ -372,7 +380,7 @@ You may have noticed I omitted recalc in the line of code above. This is because
 
 ### `B.mount`
 
-`B.mount` is the function that places your outermost views on the page. This function takes two arguments: the `target` (the DOM element where the HTML will be placed) and a vfun (the function that generates the liths that will be converted to HTML). For example:
+`B.mount` is the function that places your outermost view(s) on the page. This function takes two arguments: the `target` (the DOM element where the HTML will be placed) and a `vfun` (the function that generates the liths that will be converted to HTML). For example:
 
 ```javascript
 var helloWorld = function () {
@@ -382,9 +390,9 @@ var helloWorld = function () {
 B.mount ('body', helloWorld);
 ```
 
-`target` must always be a string. It can be either `'body'` or a string of the form `'#ID'`, where `ID` is the id of a DOM element that is already in the document. If `target` is not present in the document, the function will notify an error and will return `false`.
+`target` must always be a string. It can be either `'body'` or a string of the form `'#ID'`, where `ID` is the id of a DOM element that is already in the document. If `target` is not present in the document, the function will report an error and will return `false`.
 
- `B.mount` will execute the vfun function passing no parameters to it. This function must return either a lith or a lithbag. If the function doesn't return a valid lith or lithbag, `B.mount` will notify an error and return `false`.
+ `B.mount` will execute the `vfun` passing no parameters to it. This function must return either a lith or a lithbag. If the function doesn't return a valid lith or lithbag, `B.mount` will report an error and return `false`.
 
 The HTML generated will be placed at the *top* of the target. In the example above, the `<body>` will look like this:
 
@@ -405,7 +413,7 @@ B.mount ('#container', function () {
 });
 ```
 
-`B.unmount` is a function to undo what was done by `B.mount`. It receives a `target` which is just like the `target` passed to `B.mount`. It will remove *all* of the HTML contained inside `target`. If an invalid or non-existing `target` is passed to `B.unmount`, the function will notify an error and return `false`.
+`B.unmount` is a function to undo what was done by `B.mount`. It receives a `target` which is just like the `target` passed to `B.mount`. It will remove **all of the HTML** contained inside `target`. If an invalid or non-existing `target` is passed to `B.unmount`, the function will report an error and return `false`.
 
 ```javascript
 B.unmount ('#container');
@@ -417,10 +425,69 @@ B.unmount ('#container');
 
 ### Introduction to the event system
 
+gotoв is built around events. Its [event system](https://github.com/fpereiro/recalc) considers events as *communication* between different parts of the app with each other. Some parts of the program perform *calls* and other parts of the program *respond* to those calls.
+
+The two nouns with which we can structure this paradigm is: *event* and *responder*. The two corresponding verbs are *call* and *match*: events are *called* (almost always by responders), responders are *matched* by events.
+
+An event call can match zero, one or multiple responders. When a responder is matched, it is executed.
+
+```
+event call -> (nothing happens, no responders were matched)
+
+event call -> exactly one responder matched
+
+event call -> this responder is matched
+         |--> this responder is also matched
+```
+
+Events are called with the function `B.call`, which takes the following parameters:
+
+- A `verb`, which is a string. For example: `'get'`, `'set'` or `'someverb'`.
+- A `path`, which can be either a string, an integer, or an array with zero or more strings or integers. For example, `'hello'`, `1`, or `['hello', '1']`. If you pass a single string or integer, it will be interpreted as an array containing that element (for example, `'hello'` is considered to be `['hello']` and `0` is considered to be `[0]`).
+- Optional extra arguments of any type (we will refer to them as `args` later). These arguments will be passed to matching responders.
+
+If invalid parameters are passed to `B.call`, the function will report an error and return `false`.
+
+An invocation to `B.call` will call an event once.
+
+Responders are created with the function `B.respond`, which takes the following parameters:
+
+- `verb`, which can be a string or a regex.
+- `path`, which can be a string, an integer, a regex, or an array containing those types of elements.
+- `options`, an optional object with additional options.
+- `rfun`, the function that will be executed when the responder is matched. `rfun` is short for `responder function`.
+
+If invalid parameters are passed to `B.respond`, the function will report an error and return `false`.
+
+If the invocation is valid, `B.respond` will create a responder and place it in `B.responders`. This responder will be matched (executed) by any matching event calls throughout the course of the program. Seen from this perspective, a single call to `B.respond` has a more lasting effect than a call to `B.call`.
+
+When does an event match a responder? A full answer is contained [here](https://github.com/fpereiro/recalc#rrespond) and [here](https://github.com/fpereiro/recalc#rrespond-advanced-matching-wildcards--empty-paths). The short answer is: when both the `verb` and the `path` of the event and the responder match.
+
+Let's define the following events and responders:
+
+```
+B.respond ('a', 0)   // RESPONDER A
+B.respond ('a', '*') // RESPONDER B
+B.respond ('b', [])  // RESPONDER B
+
+B.call ('a', 0); // EVENT A
+B.call ('a', 1); // EVENT B
+B.call ('b', 0); // EVENT C
+```
+
+
+
+
+Notice that we called `B.respond` before `B.call`; if we had done this the other way around, the event calls would have had no effect since the responders would have not been registered then.
+
+
+
+
+
 TODO
 
 Errors first
-Events: basic, data, your own, logic in the listeners, context, order and async (,ref to recakc)
+Events: basic, data, your own, logic in the responders, context, order and async (,ref to recakc)
 Bricks: b.elem connected to events, brick rules, no reuse, literals, all of it.
 B.ev to fire events from within. Bev before belem.
 Design principles and comparisons with other frameworks
@@ -433,20 +500,20 @@ Lightweight, see through in Dom and in global object
 
 
 State management, who to update, invert control
-Events! Many listeners. Incidentally, server! Ordered, one at a time.
+Events! Many responders. Incidentally, server! Ordered, one at a time.
 Events also for doing other things. Go beyond just touching the state. In the end, state gets modified.
 Log states and chains, to see what happens.
-Your app: events, listeners and bricks
+Your app: events, responders and bricks
 Events as fun executions
 No lifecycle hooks, use change
 Negative priorities as nestedness
 Opaque and literal
 Trample and perflogs
-(Perhaps drop ev in "ev listener")
+(Perhaps drop ev in "ev responder")
 
 - store
 - perform
-- listen
+- respond
 
 gotoв uses an event system to structure all the *actions* that happen in your webapp. Events are how things happen in a gotoв application.
 
@@ -472,15 +539,15 @@ In a straightforward implementation, every time we modify S1, S2 and S3, we woul
 
 Real life applications (even very simple ones), can easily have a dozen components and two dozen pieces of information on which they depend. Things can get entangled very, very quickly.
 
-An event system is a way out of this pickle. Instead of having dedicated functions to update the store and then certain components, we simply trigger an event when modifying a part of the store. Then, all the components that rely on that part of the store *listen* to that event and automatically update themselves.
+An event system is a way out of this pickle. Instead of having dedicated functions to update the store and then certain components, we simply trigger an event when modifying a part of the store. Then, all the components that rely on that part of the store *respond* to that event and automatically update themselves.
 
 When a component (or an action coming from a different place, perhaps a timer or a notification from the server) wants to update the state, it does it **through an event**. What's so special about performing actions through an event? Glad you asked: when an operation is done through an event, all the concerned parties are notified automatically and they react in consequence. If your code uses events, there can be functions that get automatically notified/updated when a certain type of event is triggered. The difference in effort is the same between staffing a sit-down restaurant vs a buffet: in the sit-down restaurant, you need to take orders and fulfill them for each of the persons sitting down. In the buffet, you just bring the food to the common areas with hot plates and trays, and the patrons get up and get it themselves.
 
-The store where we keep all the data is an object located at `B.store`. The function for triggering events is `B.call`. This function takes a `verb`, a `path` and optional arguments. Why do we call this function `B.call` and not `B.trigger` or `B.fire`? To emphasize the key point: an event system is about *communication* between parts of a program. The event system is a channel of communcation, where some functions *say events* and some functions *listen to them*.
+The store where we keep all the data is an object located at `B.store`. The function for triggering events is `B.call`. This function takes a `verb`, a `path` and optional arguments. Why do we call this function `B.call` and not `B.trigger` or `B.fire`? To emphasize the key point: an event system is about *communication* between parts of a program. The event system is a channel of communcation, where some functions *call events* and some functions *respond to them*.
 
 Before going deeper into the event system, let's see how we can create bricks that will be automatically updated when the state changes. Events are quite abstract, so having something as concrete as a brick can help us see it more clearly.
 
-To get started, let's just fire an event to update the store. We'll set the `counter` property to `1` and jump to our first brick that is automatically updated.
+To get started, let's call an event to update the store. We'll set the `counter` property to `1` and jump to our first brick that is automatically updated.
 
 ```javascript
 // Initially, `B.store` is an empty object.
@@ -618,13 +685,13 @@ When `counter` is 0, the call to `B.ev` will generate a string that looks like t
 
 If the user clicks on the button, `counter` will be updated, the brick function will be updated, and then the button's event handler will look like this: `"B.call ('set', 'counter', 2)"`.
 
-Let's now see another example, to illustrate other aspects of `B.ev`: we'll create a button that, when clicked, will say an event with verb `submit` and path `data`.
+Let's now see another example, to illustrate other aspects of `B.ev`: we'll create a button that, when clicked, will call an event with verb `submit` and path `data`.
 
 ```javascript
 ['button', {onclick: B.ev ('submit', 'data')}]
 ```
 
-You can pass extra arguments when saying an event. For example, if you want to pass an object of the shape `{update: true}` you can instead write:
+You can pass extra arguments when calling an event. For example, if you want to pass an object of the shape `{update: true}` you can instead write:
 
 ```javascript
 ['button', {onclick: B.ev ('submit', 'data', {update: true})}]
@@ -636,7 +703,7 @@ You can pass all sorts of things as arguments:
 ['button', {onclick: B.ev ('submit', 'data', null, NaN, Infinity, undefined, /a regular expression/)}]
 ```
 
-If you want to say more than one event within the same user interaction, you can do it by wrapping the event arguments into an array, and then wrapping them into another array:
+If you want to call more than one event within the same user interaction, you can do it by wrapping the event arguments into an array, and then wrapping them into another array:
 
 ```javascript
 ['button', {onclick: B.ev (['submit', 'data'], ['clear', 'data'])}]
@@ -668,7 +735,7 @@ If an object has a key `raw` but its value is not a string, it will be considere
 ['button', {onclick: B.ev ('submit', 'data', {raw: 0})}]
 ```
 
-The event listener above will receive `{raw: 0}` as its first argument.
+The event responder above will receive `{raw: 0}` as its first argument.
 
 If you pass an object with a `raw` key that contains a string, other keys within that object will be ignored.
 
@@ -684,25 +751,25 @@ Now that we have covered the main elements of gotoв, let's go back to see the e
 
 gotoв's event sytem is provided by [recalc](https://github.com/fpereiro/recalc), a library that implements the basic functions of the event system. We won't, however, be using recalc's functions directly - rather, we'll use event functions provided by gotoв.
 
-The two main operations of an event system are 1) saying an event; and 2) setting event listeners that get notified when certain events are said.
+The two main operations of an event system are 1) calling an event; and 2) setting event responders that get notified when certain events are said.
 
-To say an event, we use the function [`B.call`](https://github.com/fpereiro/recalc#rsay). This function takes the following arguments:
+To call an event, we use the function [`B.call`](https://github.com/fpereiro/recalc#rcall). This function takes the following arguments:
 
 - An [optional context object](https://github.com/fpereiro/recalc#tracking-event-chains) (`x`), to keep track of what previous events (if any) triggered this event. We'll see more about this object below.
 - A `verb`, which is a string. For example: `'add'`, `'set'` or `'someverb'`.
 - A `path`, which can be either a string, an integer, or an array with zero or more strings or integers. For example, `'hello'`, `1`, or `['hello', '1']`. If you pass a single string or integer, it will be interpreted as an array containing that element (for example, `'hello'` is considered to be `['hello']` and `0` is considered to be `[0]`).
-- You can pass unlimited additional arguments when you say an event. These arguments can be of any type.
+- You can pass unlimited additional arguments when you call an event. These arguments can be of any type.
 
 You might ask: why use a combination of `verb` and `path` instead of just having a single event name instead? The answer is: too often we see event names like `toggleFooter`, `updateUser`, `savePosition`. By splitting an event name into a verb and a path, we achieve more clarity and versatility; very often, actions like `toggle`, `update`, `save` can be generalized. A great example of this are *data verbs*, which we already saw in the examples above and we'll describe now.
 
 ### Data verbs
 
-gotoв sets event listeners for three data verbs: `add`, `rem` and `set`. Whenever an event is said that has one of these three verbs, these listeners will be executed and they will do two things:
+gotoв sets event responders for three data verbs: `add`, `rem` and `set`. Whenever an event is said that has one of these three verbs, these responders will be executed and they will do two things:
 
 1. Update the store.
-2. Say a `change` event.
+2. call a `change` event.
 
-`change` events are very important, because these are the ones that update the page! In fact, `B.view`, the function for creating reactive elements, creates event listeners that are executed when `change` events are said.
+`change` events are very important, because these are the ones that update the page! In fact, `B.view`, the function for creating reactive elements, creates event responders that are executed when `change` events are said.
 
 Let's see now how each of these events operate:
 
@@ -890,9 +957,9 @@ B.call ('rem', [], ['Data', 'State']);
 
 #### The `change` event and calling the data functions directly
 
-When you call any of the data verbs through `B.call`, a `change` event with the same `path` will be fired. More precisely, a `change` event will be fired whenever you call a data verb with 1) valid arguments; and 2) when your invocation actually modifies the store. If the event is fired with incorrect arguments or it doesn't modify the store, no `change` event will be triggered.
+When you call any of the data verbs through `B.call`, a `change` event with the same `path` will be called. More precisely, a `change` event will be called whenever you call a data verb with 1) valid arguments; and 2) when your invocation actually modifies the store. If the event is called with incorrect arguments or it doesn't modify the store, no `change` event will be triggered.
 
-gotoв's function for creating reactive elements (`B.view`), relies on the `change` event to know when it should redraw a view. `B.view` essentially creates a listener function on the `change` event on a given path. This means that views are redrawn when a `change` event is emitted.
+gotoв's function for creating reactive elements (`B.view`), relies on the `change` event to know when it should redraw a view. `B.view` essentially creates a responder function on the `change` event on a given path. This means that views are redrawn when a `change` event is emitted.
 
 This is the reason for which you need to use events to modify the store. If you modified the store directly, the views depending on a part of the store would not be updated when the store changes!
 
@@ -913,7 +980,7 @@ var updateItems = function (items) {
       // We modify the items on the store directly.
       B.set (['items', index], updatedItem);
    });
-   // When we're done updating the store, we say a `change` event
+   // When we're done updating the store, we call a `change` event
    B.call ('change', 'items');
 }
 ```
@@ -932,18 +999,18 @@ If, instead, you write `var username = B.get ('user', 'username')`, if `B.store.
 
 Using this function is completely optional - it is just provided for your convenience.
 
-`B.get` takes either a list of integers and strings or a single array containing integers and strings. These integers and strings represent the *path* to the part of the store you're trying to access. This `path` is the same `path` that `B.call` (the event saying function) takes as an argument.
+`B.get` takes either a list of integers and strings or a single array containing integers and strings. These integers and strings represent the *path* to the part of the store you're trying to access. This `path` is the same `path` that `B.call` (the event calling function) takes as an argument.
 
 If you pass invalid arguments to `B.get`, it will return `undefined` and report an error to the console.
 
 If you pass an empty `path` to `B.get` (by passing either an empty array or no arguments), you'll get back `B.store` in its entirety.
 
-#### Writing your own event listeners
+#### Writing your own event responders
 
-Change listeners: common patterns: check if matching is precise; and get value. Show function doing this and think about whether to include it. `B.changeListener`
+Change responders: common patterns: check if matching is precise; and get value. Show function doing this and think about whether to include it. `B.changeresponder`
 lifecycle hooks
 
-listeners vs events
+responders vs events
 server: routes vs requests
 code: function definition vs function call
 
@@ -954,7 +1021,7 @@ Instead of logging to the console, emit events and then see them in B.debug! Ver
 
 Two things in error reporting: visibility, and once you see it, identifiability, which means to track it quickly and certainly to which part of the code is making it. For the second, we put valuable info (including the `from` in some cases), but not more than necessary.
 
-`B.mlisten`.
+`B.mrespond`.
 
 Instead of lifecycle hooks: events with very negative priority.
 
@@ -1019,7 +1086,7 @@ By requiring every brick to return a lith, there's a 1:1 relationship between a 
 
 `B.view` will generate two outputs:
 - A lith structure with a DOM element.
-- Set up an event listener that .
+- Set up an event responder that .
 
 TODO
 - cannot pass id, will be overwritten.
@@ -1032,11 +1099,11 @@ If you set `B.prod` to `true`, you'll turn on *production mode*. When production
 
 ### Debugging
 
-gotoв stores a list of all the events fired into `B.log`. Since gotoв applications are built around events, This can be extremely useful for debugging an app. Instead of inspecting `B.log` with the browser console, you can invoke `B.eventlog`, which will add an HTML table to the page where you can see all the information about the events.
+gotoв stores a list of all the events called into `B.log`. Since gotoв applications are built around events, This can be extremely useful for debugging an app. Instead of inspecting `B.log` with the browser console, you can invoke `B.eventlog`, which will add an HTML table to the page where you can see all the information about the events.
 
-The table presented by `B.eventlog` is ordered by time (so you can see what happened first and what later), it allows to track dependencies between events (if the context is passed in nested calls, see below) and it shows the time when the event was fired relative to the initial loading of the application (which allows for performance benchmarking).
+The table presented by `B.eventlog` is ordered by time (so you can see what happened first and what later), it allows to track dependencies between events (if the context is passed in nested calls, see below) and it shows the time when the event was called relative to the initial loading of the application (which allows for performance benchmarking).
 
-If one of gotoв's functions is invoked with invalid arguments, an `error` event will be emitted. There's an `error` event listener that will report an error message, plus an invocation to `B.eventlog`. The end result is that you'll see the error as the last row of the `eventlog` immediately after the error happens. Note that this won't happen if `B.prod` is enabled. If you wish to turn off this behavior, run this command at the top of your application: `B.forget ('error')`.
+If one of gotoв's functions is invoked with invalid arguments, an `error` event will be emitted. There's an `error` event responder that will report an error message, plus an invocation to `B.eventlog`. The end result is that you'll see the error as the last row of the `eventlog` immediately after the error happens. Note that this won't happen if `B.prod` is enabled. If you wish to turn off this behavior, run this command at the top of your application: `B.forget ('error')`.
 
 If you wish to turn off logging of events, (what happens if error?)
 B.r.log, turn off if needed.
@@ -1095,7 +1162,7 @@ And, of course, gotoв must be very useful for building a real webapp.
 
 ### What does gotoв care about?
 
-- **Ease of use**: 90% of the functionality you need is contained in three functions (one for saying an event (`B.call`), one for stringifying an event call into a DOM attribute (`B.ev`) and one for creating dynamic elements which are updated automatically (`B.view`)). There's also three more events for performing data changes that you'll use often. But that's pretty much it.
+- **Ease of use**: 90% of the functionality you need is contained in three functions (one for calling an event (`B.call`), one for stringifying an event call into a DOM attribute (`B.ev`) and one for creating dynamic elements which are updated automatically (`B.view`)). There's also three more events for performing data changes that you'll use often. But that's pretty much it.
 - **Fast reload**: the edit-reload cycle should take under two seconds. No need to wait until no bundle is completed.
 - **Smallness**: gotoв and its dependencies are < 2k lines of consistent, annotated javascript. In other words, it is less than 2048 lines on top of [vanilla.js](http://vanilla-js.com/).
 - **Batteries included**: the core functionality for building a webapp is all provided. Whatever libraries you add on top will probably be for specific things (nice CSS, a calendar widget, etc.)
@@ -1174,24 +1241,24 @@ This object has three keys that hold strings or numbers:
 
 The remaining seven keys of the main object map to recalc entities. The first one, `r`, maps to the single instance of recalc used by gotoв. The other six map to the public objects and methods of the recalc instance:
 
-- `r.listeners`, an array which contains all event listeners.
+- `r.responders`, an array which contains all event responders.
 - `r.store`, an object which is the global state.
-- `r.log`, an array which contains all the events fired, used for debugging purposes.
-- `r.say`, the function for emitting events.
-- `r.listen`, the function for creating an event listener.
-- `r.forget`, the function for deleting an event listener.
+- `r.log`, an array which contains all the events called and responders matched, used for debugging purposes.
+- `r.call`, the function for emitting events.
+- `r.respond`, the function for creating an event responder.
+- `r.forget`, the function for deleting an event responder.
 
 ```javascript
-   var B = window.B = {v: '2.0.0', B: 'в', t: teishi.time (), r: r, listeners: r.listeners, store: r.store, log: r.log, say: r.say, listen: r.listen, forget: r.forget};
+   var B = window.B = {v: '2.0.0', B: 'в', t: teishi.time (), r: r, responders: r.responders, store: r.store, log: r.log, call: r.call, respond: r.respond, forget: r.forget};
 ```
 
-gotoв is essentially a set of functions built on top of recalc. The last six keys are meant as shorthands to the corresponding recalc objects for quicker debugging from the browser console. If it wasn't for these shorthands, instead of writing `B.say`, for example, we'd have to write `B.r.say`, which is longer and doesn't look as nice.
+gotoв is essentially a set of functions built on top of recalc. The last six keys are meant as shorthands to the corresponding recalc objects for quicker debugging from the browser console. If it wasn't for these shorthands, instead of writing `B.call`, for example, we'd have to write `B.r.call`, which is longer and doesn't look as nice.
 
 ### Error reporting
 
-We define a function `B.error`, which we'll use to report errors when a gotoв function is used with invalid inputs. We will also store this function in `r.error`, so that recalc also uses it to inform errors. This is necessary since we're directly exposing some recalc functions directly without writing gotoв wrappers for them - so we want their errors to be reported by gotoв proper.
+We define a function `B.error`, which we'll use to report errors when a gotoв function is used with invalid inputs. We will also store this function in `r.error`, so that recalc also uses it to report errors. This is necessary since we're directly exposing some recalc functions directly without writing gotoв wrappers for them - so we need these functions to pass its errors to gotoв so that gotoв can report them.
 
-This function receives arguments which contain the contents of an error; it will emit an `error` event through `B.say` and return `false`.
+This function receives arguments which contain the contents of an error; it will emit an `error` event through `B.call` and return `false`.
 
 ```javascript
    r.error = B.error = function () {
@@ -1209,26 +1276,26 @@ We collect all the arguments into a local variable `args`, taking care to ignore
       var args = dale.go (arguments, function (v) {return v}).slice (x ? 1 : 0);
 ```
 
-We fire an event through `B.say`, passing either the provided context (if present) or an empty context, plus the verb `error`, and the rest of the arguments, of which the first one will function as a path.
+We call an event through `B.call`, passing either the provided context (if present) or an empty context, plus the verb `error`, and the rest of the arguments, of which the first one will function as a path.
 
 ```javascript
-      B.say.apply (null, [x || {}, 'error'].concat (args));
+      B.call.apply (null, [x || {}, 'error'].concat (args));
 ```
 
-We return `false` and close the function. This return value is needed since both recalc and some gotoв functions return `false` when they receive invalid inputs.
+We return `false` and close the function. This return value is convenient since both recalc and some gotoв functions return `false` when they receive invalid inputs.
 
 ```javascript
       return false;
    }
 ```
 
-We create an event listener for reporting an error. This listener have an `id` of `error` and will match any event with verb `error` (notice the `match` function, which only requires the event's verb to be `error` for the match to happen.
+We create an event responder for reporting an error. This responder has an `id` of `error` and will match any event with verb `error` (notice the `match` function, which only requires the event's verb to be `error` for the match to happen.
 
 ```javascript
-   B.listen ({id: 'error', verb: 'error', path: [], match: function (ev) {return ev.verb === 'error'}}, function () {
+   B.respond ({id: 'error', verb: 'error', path: [], match: function (ev) {return ev.verb === 'error'}}, function () {
 ```
 
-The listener will add to the body a `<div>` with `id` `eventlog-snackbar` to the page to mark that there was an error. It will then remove it after 3 seconds through a timeout.
+The responder will add to the body a `<div>` with `id` `eventlog-snackbar` to the page to mark that there was an error. It will then remove it after 3 seconds through a timeout.
 
 The `true` third argument passed to `lith.g` turns off lith's validation for this particular HTML generation, to make it faster.
 
@@ -1242,14 +1309,14 @@ The `true` third argument passed to `lith.g` turns off lith's validation for thi
       }, 3000);
 ```
 
-We invoke `B.eventlog`, a function we'll define below and which will print a table with all the events fired so far. We then close the listener.
+We invoke `B.eventlog`, a function we'll define below and which will print a table with all the events called and all responders matched so far. We then close the responder.
 
 ```javascript
       B.eventlog ()
    });
 ```
 
-We define `B.eventlog`, a function that prints a table with a list of all the events fired so far. This table can be very useful for debugging purposes. This function prints a subset of the information contained at `B.r.log`.
+We define `B.eventlog`, a function that prints a table with a list of all the events called and all responders matched so far. This table can be very useful for debugging purposes. This function prints a subset of the information contained at `B.r.log`.
 
 ```javascript
    B.eventlog = function () {
@@ -1262,12 +1329,12 @@ If there's already a DOM element with `id` `eventlog`, we remove it.
 ```
 
 We define three variables for drawing the table of events:
-- `index`, which will store the ordinal position of each event id.
-- `colors`, a list of colors to assign to event numbers.
+- `index`, which will store the ordinal position of each event or responder.
+- `colors`, a list of colors to assign to event & responder ids.
 - `columns`, the columns for the table.
 
 ```javascript
-      var index = {}, colors = ['maroon', 'red', 'olive', 'green', 'purple', 'fuchsia', 'teal', 'blue', 'black', 'gray', 'salmon', 'darkcyan', 'darkviolet', 'indigo', 'limegreen', 'coral', 'orangered'], columns = ['ms', 'entry', 'from', 'verb', 'path', 'args'];
+      var index = {}, colors = ['#fe6f6c', '#465775', '#e086c3', '#8332ac', '#462749', '#044389', '#59c9a6', '#ffad05', '#7cafc4', '#5b6c5d'], columns = ['#', 'ms', 'id', 'from', 'verb', 'path', 'args'];
 ```
 
 We will add to the body a `<table>` element with `id` `eventlog`.
@@ -1280,52 +1347,52 @@ We will add to the body a `<table>` element with `id` `eventlog`.
 We add a `<style>` tag to add format to the `eventlog` table and some of its components.
 
 ```javascript
-         ['style', ['#eventlog', {'border-collapse': 'collapse', 'font-family': 'serif', 'font-size': 18, position: 'absolute', 'right, top': 4, width: Math.min (window.innerWidth, 800), 'z-index': '10000', border: 'solid 4px #4488DD'}, ['th, td', {'padding-left, padding-right': 10, 'border-bottom, border-right': 'solid 1px black'}]]],
+         ['style', ['#eventlog', {'border-collapse': 'collapse', 'font-family': 'monospace', 'font-size': 18, position: 'absolute', 'right, top': 4, width: Math.min (window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth, 800), 'z-index': '10000', border: 'solid 4px #4488DD'}, ['th, td', {'padding-left, padding-right': 10, 'border-bottom, border-right': 'solid 1px black'}]]],
 ```
 
 We iterate the `columns` and generate a row with all the headers for the table.
 
 ```javascript
          ['tr', dale.go (columns, function (header) {
-            return ['th', {style: lith.css.style ({'background-color': '#bababa'})}, header];
+            return ['th', {style: lith.css.style ({'background-color': '#efefef'})}, header];
          })],
 ```
 
-We iterate the entries of `B.log`, an array that contains a list of all the events fired.
+We iterate the entries of `B.log`, an array that contains a list of all the events called and all responders matched.
 
 ```javascript
          dale.go (B.log, function (entry, k) {
 ```
 
-We set an entry in `index` to associate the event with element `id` with the position of this event on the log.
+We set an entry in `index` to associate the event with element `id` with the position of this event or responder on the log. This will be accurate only for events, not responders, since responders can appear more than once on the log (since they can be matched multiple times).
 
 ```javascript
             index [entry.id] = k;
 ```
 
-We prepare the row on which we'll print the details of the event fired. We alternate a background color (with two types of grays).
+We prepare the row on which we'll print the details of either the event or responder. We alternate a background color (with two types of grays).
 
 ```javascript
-            return ['tr', {style: lith.css.style ({'background-color': {0: '#eaeaea', 1: '#bababa'} [k % 2]})}, dale.go ([entry.t - B.t, k, index [entry.from], entry.verb, entry.path.join (':'), dale.go (entry.args, B.str).join (', ')], function (value, k2) {
+            return ['tr', {style: lith.css.style ({'background-color': {0: '#fcfcfc', 1: '#efefef'} [k % 2]})}, dale.go (['#' + (k + 1), entry.t - B.t, entry.id, entry.from, entry.verb, entry.path.join (':'), dale.go (entry.args, B.str).join (', ')], function (value, k2) {
 ```
 
-If we're printing the first column (`ms`), we round the value.
+If we're printing the second column (`ms`), we round the value.
 
 ```javascript
-               if (k2 === 0) return ['td', (value / 1000) + (! (value % 1000) ? '.0' : '') + (! (value % 100) ? '0' : '') + (! (value % 10) ? '0' : '') + 's'];
+               if (k2 === 1) return ['td', (value / 1000) + (! (value % 1000) ? '.0' : '') + (! (value % 100) ? '0' : '') + (! (value % 10) ? '0' : '') + 's'];
 ```
 
-For all columns that are not the first three, we merely print the corresponding value.
+For all columns that are not the second, third or fourth, we merely print the corresponding value.
 
 ```javascript
-               if (k2 !== 1 && k2 !== 2) return ['td', value];
+               if (k2 !== 2 && k2 !== 3) return ['td', value];
 ```
 
-For the `entry` and `from` columns (which contain references to events fired), we add an `onclick` event to jump to that event on the table. We also apply a color taken from `colors` and based on the position of the event in the list.
+For the `entry` and `from` columns (which contain references to events called), we add an `onclick` event to jump to that event on the table. We also apply a color taken from `colors` and based on the position of the event in the list. We however don't add an `onclick` if the `id` belongs to a responder; this is because we cannot be sure of which entry of the log matches to a given match of a responder, since there can be multiple entries. This could be improved in the future.
 
 ```javascript
-               var onclick = value === undefined ? '' : ('c ("tr") [' + (value + 1) + '].scrollIntoView ()');
-               return ['td', {onclick: onclick, style: lith.css.style ({cursor: 'pointer', 'font-weight': 'bold', color: colors [value % colors.length]})}, value === undefined ? '' : ((k2 === 2 ? 'from ' : '') + '#' + (value + 1))];
+               var onclick = (value === undefined || ! value.match (/^E\d/)) ? '' : ('c ("tr") [' + (index [value] + 1) + '].scrollIntoView ()');
+               return ['td', {onclick: onclick, style: lith.css.style ({cursor: 'pointer', 'font-weight': 'bold', color: colors [parseInt (index [value]) % colors.length]})}, value === undefined ? '' : value];
             })];
 ```
 
@@ -1336,7 +1403,7 @@ We close the iterating function and the call to `lith.g` - note the `true` param
       ]], true);
 ```
 
-We scroll to the last row of the table (representing the last element fired) using the `scrollIntoView` method. There's nothing left to do so we close the function.
+We scroll to the last row of the table (representing the last element called) using the `scrollIntoView` method. There's nothing left to do so we close the function.
 
 ```javascript
       c ('tr') [B.log.length].scrollIntoView ();
@@ -1361,7 +1428,7 @@ If the first argument is an array, we will consider that array to be `path`. Oth
       var path = type (arguments [0]) === 'array' ? arguments [0] : dale.go (arguments, function (v) {return v});
 ```
 
-If we're in production mode, we do not validate `path` to save execution time. We will see this pattern again in most of the functions of gotoв. If we're not in production mode, we invoke `r.isPath` to validate that `path` is a valid recalc `path` (that is, either an integer, a string, or an array made of strings and integers). If we validate `path` and it turns to be invalid, we notify the error through `B.error`.
+If we're in production mode, we do not validate `path` to save execution time. We will see this pattern again in most of the functions of gotoв. If we're not in production mode, we invoke `r.isPath` to validate that `path` is a valid recalc `path` (that is, either an integer, a string, or an array made of strings and integers). If we validate `path` and it turns to be invalid, we report the error through `B.error`.
 
 ```javascript
       if (! B.prod && ! r.isPath (path)) return B.error ('B.get', 'Invalid path:', path) || undefined;
@@ -1418,7 +1485,7 @@ This function takes two or three arguments:
       var path = arguments [x ? 1 : 0], value = arguments [x ? 2 : 1];
 ```
 
-If we're not in production mode, we do not validate `path` to save execution time. Otherwise, we invoke `r.isPath` to validate that `path` is a valid recalc `path` (that is, either an integer, a string, or an array made of strings and integers). If we validate `path` and it turns to be invalid, we will notify the error through `B.error` and return `false`.
+If we're not in production mode, we do not validate `path` to save execution time. Otherwise, we invoke `r.isPath` to validate that `path` is a valid recalc `path` (that is, either an integer, a string, or an array made of strings and integers). If we validate `path` and it turns to be invalid, we will report the error through `B.error` and return `false`.
 
 ```javascript
       if (! B.prod && ! r.isPath (path)) return B.error (x || {}, 'B.set', 'Invalid path:', path);
@@ -1508,7 +1575,7 @@ We return `true` and close the function.
    }
 ```
 
-We now define `B.add`, which pushes elements onto an existing array. This function takes an optional context argument and a mandatory [recalc `path`](https://github.com/fpereiro/recalc#rsay), plus other optional arguments. These extra arguments are the elements that will be pushed onto the array located at `path`.
+We now define `B.add`, which pushes elements onto an existing array. This function takes an optional context argument and a mandatory [recalc `path`](https://github.com/fpereiro/recalc#rcall), plus other optional arguments. These extra arguments are the elements that will be pushed onto the array located at `path`.
 
 ```javascript
    B.add = function () {
@@ -1521,7 +1588,7 @@ If the first argument is an object, we will consider it to represent a context a
       var path = arguments [x ? 1 : 0];
 ```
 
-If we're not in production mode, we invoke `r.isPath` to validate that `path` is a valid recalc `path` (that is, either an integer, a string, or an array made of strings and integers). If we validate `path` and it turns to be invalid, we notify the error through `B.error` and return `false`.
+If we're not in production mode, we invoke `r.isPath` to validate that `path` is a valid recalc `path` (that is, either an integer, a string, or an array made of strings and integers). If we validate `path` and it turns to be invalid, we report the error through `B.error` and return `false`.
 
 ```javascript
       if (! B.prod && ! r.isPath (path)) return B.error (x || {}, 'B.add', 'Invalid path:', path);
@@ -1539,7 +1606,7 @@ We define a local variable `target` where we will store a reference to the array
       var target = B.get (path);
 ```
 
-If we're not in production mode, we check whether `target` actually points to an array. If it doesn't, we notify the error and return `false`.
+If we're not in production mode, we check whether `target` actually points to an array. If it doesn't, we report the error and return `false`.
 
 ```javascript
       if (! B.prod && type (target) !== 'array') return B.error (x || {}, 'B.add', 'Cannot add to something that is not an array. Path:', path);
@@ -1578,7 +1645,7 @@ If the first argument is an object, we will consider it to represent a context a
       var path = arguments [x ? 1 : 0];
 ```
 
-If we're not in production mode, we validate `path`. If it's invalid, we notify the error through `B.error` and return `false`.
+If we're not in production mode, we validate `path`. If it's invalid, we report the error through `B.error` and return `false`.
 
 ```javascript
       if (! B.prod && ! r.isPath (path)) return B.error (x || {}, 'B.rem', 'Invalid path:', path);
@@ -1616,7 +1683,7 @@ If `target` is an array, we check that each of `keys` are integers; and if `targ
          targetType === 'object' ? ['keys of object target', keys, 'string',  'each'] : []
 ```
 
-If any of these validations is not passed, we will notify the error through `B.error` and return `false`.
+If any of these validations is not passed, we report the error through `B.error` and return `false`.
 
 ```javascript
       ], function (error) {
@@ -1643,7 +1710,7 @@ We copy `keys` (which, in this case, contains integers) and then sort it so that
          keys.sort (function (a, b) {return b - a});
 ```
 
-For each of the keys, we remove them from the array with splice - since we remove the keys from the end to the beginning, there's no possibility that the original indexes will be shifted. If we did this the other way around and (say) we removed the first element of the array, we would have to decrement all the `keys` by 1, otherwise we would be removing the wrong elements.
+For each of the keys, we remove them from the array with splice - since we remove the keys from the end to the beginning, there's no possibility that the original indexes will be shifted. If we did this the other way around and (call) we removed the first element of the array, we would have to decrement all the `keys` by 1, otherwise we would be removing the wrong elements.
 
 ```javascript
          dale.go (keys, function (v) {target.splice (v, 1)})
@@ -1657,11 +1724,11 @@ There's nothing else to do, so we return `true` and close the function. Note tha
    }
 ```
 
-### Change listeners
+### Change responders
 
-We're now ready to define the three data listeners. These functions are wrappers around the three data functions that modify the store: `add` for `B.add`, `rem` for `B.rem` and `set` for `B.set`.
+We're now ready to define the three data responders. These functions are wrappers around the three data functions that modify the store: `add` for `B.add`, `rem` for `B.rem` and `set` for `B.set`.
 
-These listeners do the following: 1) invoke the underlying data function; 2) if the data function executed correctly (because its arguments were valid) *and* the store was modified, a `change` event will be triggered.
+These responders do the following: 1) invoke the underlying data function; 2) if the data function executed correctly (because its arguments were valid) *and* the store was modified, a `change` event will be triggered.
 
 We iterate the three verbs.
 
@@ -1669,18 +1736,18 @@ We iterate the three verbs.
    dale.go (['add', 'rem', 'set'], function (verb) {
 ```
 
-For each of these verbs, we invoke `B.listen` to create an event listener. We set both its `id` and `verb` to the verb itself, and we set its path to an empty array. By setting the path to an empty array, this event will be triggered by any event that has the same verb, regardless of its path.
+For each of these verbs, we invoke `B.respond` to create an event responder. We set both its `id` and `verb` to the verb itself, and we set its path to an empty array. By setting the path to an empty array, this event will be triggered by any event that has the same verb, regardless of its path.
 
 We pass a `match` function to use special matching logic for these functions.
 
 ```javascript
-      B.listen ({id: verb, verb: verb, path: [], match: function (ev, listener) {
+      B.respond ({id: verb, verb: verb, path: [], match: function (ev, responder) {
 ```
 
-The `match` function will return `true` if the verb of the event matches that of the listener. This means that as long as both verbs match, this listener will be matched by an event with any path.
+The `match` function will return `true` if the verb of the event matches that of the responder. This means that as long as both verbs match, this responder will be matched by an event with any path.
 
 ```javascript
-         return r.compare (ev.verb, listener.verb);
+         return r.compare (ev.verb, responder.verb);
       }}, function (x) {
 ```
 
@@ -1696,46 +1763,46 @@ We invoke the corresponding data function with the context as the first argument
          if (B [x.verb].apply (null, [x, x.path].concat (dale.go (arguments, function (v) {return v}).slice (1))) === false) return;
 ```
 
-If we're here, the corresponding data function was executed successfully. If the relevant part of the store changed, we trigger a `change` event on the path. We also pass `previousValue` as an extra argument since it will be useful for `change` listeners to detect whether there was a change in the value of their path.
+If we're here, the corresponding data function was executed successfully. If the relevant part of the store changed, we trigger a `change` event on the path. We also pass `previousValue` as an extra argument since it will be useful for `change` responders to detect whether there was a change in the value of their path.
 
 ```javascript
-         if (! teishi.eq (previousValue, B.get (x.path))) B.say (x, 'change', x.path, previousValue);
+         if (! teishi.eq (previousValue, B.get (x.path))) B.call (x, 'change', x.path, previousValue);
 ```
 
-There's nothing else to do, so we close the listener and the iterating function.
+There's nothing else to do, so we close the responder and the iterating function.
 
 ```javascript
       });
    });
 ```
 
-We now define `B.changeListener`, a helper function meant to be passed as a `match` paramter to certain listeners on the `change` event.
+We now define `B.changeresponder`, a helper function meant to be passed as a `match` paramter to certain responders on the `change` event.
 
 This function solves the following problem: if a certain reactive element depends on a path `a.b.c`, it shouldn't only be redrawn when `a.b.c` is changed; it should also be redrawn when `a.b`, `a` and even the root path changes. It should also be redrawn when any path starting with `a.b.c` is changed as well. This is what this function will do.
 
-This function is meant to be used as a `match` parameter passed to a listener. Those parameters are functions that receive two elements, an `event` and a `listener`.
+This function is meant to be used as a `match` parameter passed to a responder. Those parameters are functions that receive two elements, an `event` and a `responder`.
 
 ```javascript
-   B.changeListener = function (ev, listener) {
+   B.changeresponder = function (ev, responder) {
 ```
 
-If the verb of both the event and the listener don't match, we return `false` to indicate there's no match. Notice we use `r.compare` to perform the comparisons, instead of a mere equality. `r.compare` contains logic to support wildcards and regexes.
+If the verb of both the event and the responder don't match, we return `false` to indicate there's no match. Notice we use `r.compare` to perform the comparisons, instead of a mere equality. `r.compare` contains logic to support wildcards and regexes.
 
 ```javascript
-      if (! r.compare (ev.verb, listener.verb)) return false;
+      if (! r.compare (ev.verb, responder.verb)) return false;
 ```
 
-If either path is empty, there must be a match - following the logic we're implementing, an event with empty path affects all listeners with a matching verb, whereas a listener with an empty path is concerned with any event with a matching verb.
+If either path is empty, there must be a match - following the logic we're implementing, an event with empty path affects all responders with a matching verb, whereas a responder with an empty path is concerned with any event with a matching verb.
 
 ```javascript
-      if (ev.path.length === 0 || listener.path.length === 0) return true;
+      if (ev.path.length === 0 || responder.path.length === 0) return true;
 ```
 
-We take whatever is shortest, the event's path or the listener's path, and we compare each of their elements. If all of them match, the function will return `true`, or `false` otherwise.
+We take whatever is shortest, the event's path or the responder's path, and we compare each of their elements. If all of them match, the function will return `true`, or `false` otherwise.
 
 ```javascript
-      return dale.stop (dale.times (Math.min (ev.path.length, listener.path.length), 0), false, function (k) {
-         return r.compare (ev.path [k], listener.path [k]);
+      return dale.stop (dale.times (Math.min (ev.path.length, responder.path.length), 0), false, function (k) {
+         return r.compare (ev.path [k], responder.path [k]);
       });
 ```
 
@@ -1828,29 +1895,29 @@ If we're not in production mode, we make sure that each of the elements of `evs`
 
 We create `output`, a string that will contain the output of a function.
 
-We initialize `output` with the code needed to invoke `B.say` with the following arguments: `'ev'` as the verb, `event.type` (a string with the name of the event being fired) as the `path`; as its third argument, we pass the result of invoking `B.evh` with `this` (the DOM element which received the event) as its only argument. This third argument will contain an object with all attribute names and values, *except* for those that are event handlers and start with *on* (i.e.: `onclick`, `oninput`).
+We initialize `output` with the code needed to invoke `B.call` with the following arguments: `'ev'` as the verb, `event.type` (a string with the name of the event being called) as the `path`; as its third argument, we pass the result of invoking `B.evh` with `this` (the DOM element which received the event) as its only argument. This third argument will contain an object with all attribute names and values, *except* for those that are event handlers and start with *on* (i.e.: `onclick`, `oninput`).
 
-Invoking `B.say` will generate an id. We store this id in a variable `id` that is local to the event handler.
+Invoking `B.call` will generate an id. We store this id in a variable `id` that is local to the event handler.
 
 ```javascript
-      var output = 'var id = B.say ("ev", event.type, B.evh (this));';
+      var output = 'var id = B.call ("ev", event.type, B.evh (this));';
 ```
 
-We iterate each of the events to be fired. For each of them, we will append to `output` an invocation to `B.say`.
+We iterate each of the events to be called. For each of them, we will append to `output` an invocation to `B.call`.
 
 ```javascript
       dale.go (evs, function (ev) {
 ```
 
-We invoke `B.say` passing as its first argument a context object with the `from` key set to `id` (so that this event can be tracked to the DOM event that generated it.
+We invoke `B.call` passing as its first argument a context object with the `from` key set to `id` (so that this event can be tracked to the DOM event that generated it.
 
 After this, we iterate the elements of `ev` - notice that if this `ev` has only a verb and a path, we add a third argument `{raw: 'this.value'}`, which we'll review in a minute.
 
 ```javascript
-         output += ' B.say ({"from": id}, ' + dale.go (ev.length === 2 ? ev.concat ({raw: 'this.value'}) : ev, function (v, k) {
+         output += ' B.call ({"from": id}, ' + dale.go (ev.length === 2 ? ev.concat ({raw: 'this.value'}) : ev, function (v, k) {
 ```
 
-`B.ev` has a mechanism to allow you to pass raw arguments to `B.say`. A raw event is a string that is not stringified, and thus can be used to access the event properties directly. For example, if you want to access the value of an `input` field, you would need the raw argument `this.value`. To represent raw elements, `B.ev` expects an object with a key `raw` and a value that is a string.
+`B.ev` has a mechanism to allow you to pass raw arguments to `B.call`. A raw event is a string that is not stringified, and thus can be used to access the event properties directly. For example, if you want to access the value of an `input` field, you would need the raw argument `this.value`. To represent raw elements, `B.ev` expects an object with a key `raw` and a value that is a string.
 
 Going back to the default value of `{raw: 'this.value'}`: when no arguments are passed, a very useful default is to return the value of the element - for example, for handlers with `<input>` or `<textarea>` elements.
 
@@ -1866,7 +1933,7 @@ If the element doesn't represent a `raw` argument, we stringify it through `B.st
             return B.str (v);
 ```
 
-We join the elements by a comma and a space; then append a closing parenthesis (to close the invocation to `B.say`) and a semicolon.
+We join the elements by a comma and a space; then append a closing parenthesis (to close the invocation to `B.call`) and a semicolon.
 
 ```javascript
          }).join (', ') + ');';
@@ -1941,7 +2008,7 @@ We close the function.
    }
 ```
 
-We now define `B.mount`, a function that will clear a `target` (presumably already mounted by `B.mount`) and `forget` all the event listeners of the reactive views contained within `target`.
+We now define `B.mount`, a function that will clear a `target` (presumably already mounted by `B.mount`) and `forget` all the event responders of the reactive views contained within `target`.
 
 ```javascript
    B.unmount = function (target) {
@@ -1969,7 +2036,7 @@ We iterate all the elements within `element` - if their `id` has a `в` followed
 
 ```javascript
       c ({selector: '*', from: element}, function (child) {
-         if (child.id && child.id.match (/^в[0-9a-f]+$/g) && B.listeners [child.id]) B.forget (child.id);
+         if (child.id && child.id.match (/^в[0-9a-f]+$/g) && B.responders [child.id]) B.forget (child.id);
       });
 ```
 
@@ -2060,7 +2127,7 @@ The web was revolutionary because - ruthlessly summarizing - 1) HTML could be in
 
 Webpages are stored as files on a server, and are served as-is to a web browser that requested them. Webpages, thus, are *static*. The same URL yields the same HTML. If a webpage is updated, then the HTML will change, but it will change for everyone that requests the page since the update.
 
-To the best of my knowledge, the first webapp followed the creation of the web by about [five years](https://en.wikipedia.org/wiki/Viaweb). Webapps leverage the web (HTML, URLs and the HTTP protocol to communicate between the browser and the server) to provide functionality hitherto provided by native apps. Instead of distributing software programs that users should install on their computers, webapps allow users to use the app *through their web browser, without installing any additional software*. This proved to be perhaps as revolutionary as the web itself.
+To the best of my knowledge, the first webapp followed the creation of the web by about [five years](https://en.wikipedia.org/wiki/Viaweb). Webapps leverage the web (HTML, URLs and the HTTP protocol to enable communication between the browser and the server) to provide functionality hitherto provided by native apps. Instead of distributing software programs that users should install on their computers, webapps allow users to use the app *through their web browser, without installing any additional software*. This proved to be perhaps as revolutionary as the web itself.
 
 In my view, the boundary between a webpage and a webapp is the following: at a given moment in time, an URL pointing to a webpage will return identical HTML documents; whereas an URL pointing to a webapp will return distinct HTML documents, depending on the previous interactions of the user with the server. A webapp is *dynamic*, in that it doesn't show the same content with a given URL. To make things more concrete, let's introduce our example, the shopping cart.
 

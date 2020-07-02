@@ -3,12 +3,12 @@
    "version": "2.0.0",
    "description": "One .min.js to rule 'em all.",
    "dependencies": {
-      "cocholate": "2.3.0",
-      "dale":      "6.0.1",
-      "lith":      "6.0.3",
-      "recalc":    "4.1.0",
-      "teishi":    "5.0.2",
-      "uglify-js": "3.7.7"
+      "cocholate": "3.0.1",
+      "dale":      "6.0.2",
+      "lith":      "6.0.5",
+      "recalc":    "5.0.1",
+      "teishi":    "5.0.3",
+      "uglify-js": "3.10.0"
    },
    "main": "gotoB.min.js",
    "author": "Federico Pereiro <fpereiro@gmail.com>",

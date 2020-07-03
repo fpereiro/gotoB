@@ -335,44 +335,44 @@
 
                   B.forget (responder);
 
-                  // *** B.CHANGErespondER ***
+                  // *** B.CHANGERESPONDER ***
 
                   var matches = [];
 
-                  B.respond ('change', ['foo', 'bar'], {match: B.changeresponder}, function (x) {
+                  B.respond ('change', ['foo', 'bar'], {match: B.changeResponder}, function (x) {
                      matches.push (x.path);
                   });
 
                   B.call (x, 'set', [], teishi.copy (B.store));
-                  if (matches.length !== 0) return 'B.changeresponder error #1';
+                  if (matches.length !== 0) return 'B.changeResponder error #1';
                   B.call (x, 'set', ['foo', 'bar'], undefined);
-                  if (matches.length !== 0) return 'B.changeresponder error #2';
+                  if (matches.length !== 0) return 'B.changeResponder error #2';
                   B.call (x, 'set', ['foo', 'bar'], 2);
-                  if (! eq (matches, [['foo', 'bar']])) return 'B.changeresponder error #3';
+                  if (! eq (matches, [['foo', 'bar']])) return 'B.changeResponder error #3';
                   B.call (x, 'set', ['foo'], {bar: 2}, 2);
-                  if (! eq (matches, [['foo', 'bar']])) return 'B.changeresponder error #4';
+                  if (! eq (matches, [['foo', 'bar']])) return 'B.changeResponder error #4';
                   B.call (x, 'set', ['foo'], {bar: 3});
-                  if (! eq (matches, [['foo', 'bar'], ['foo']])) return 'B.changeresponder error #5';
+                  if (! eq (matches, [['foo', 'bar'], ['foo']])) return 'B.changeResponder error #5';
                   B.call (x, 'set', [], teishi.copy (B.store));
-                  if (! eq (matches, [['foo', 'bar'], ['foo']])) return 'B.changeresponder error #6';
+                  if (! eq (matches, [['foo', 'bar'], ['foo']])) return 'B.changeResponder error #6';
                   B.call (x, 'set', [], {foo: {bar: 2}});
-                  if (! eq (matches, [['foo', 'bar'], ['foo'], []])) return 'B.changeresponder error #7';
+                  if (! eq (matches, [['foo', 'bar'], ['foo'], []])) return 'B.changeResponder error #7';
                   B.call (x, 'set', ['foo', 'bar', 'yip'], 3);
-                  if (! eq (matches, [['foo', 'bar'], ['foo'], [], ['foo', 'bar', 'yip']])) return 'B.changeresponder error #8';
+                  if (! eq (matches, [['foo', 'bar'], ['foo'], [], ['foo', 'bar', 'yip']])) return 'B.changeResponder error #8';
                   B.call (x, 'set', ['foo', 'bar', 'yip'], 3);
-                  if (! eq (matches, [['foo', 'bar'], ['foo'], [], ['foo', 'bar', 'yip']])) return 'B.changeresponder error #9';
+                  if (! eq (matches, [['foo', 'bar'], ['foo'], [], ['foo', 'bar', 'yip']])) return 'B.changeResponder error #9';
                   B.call (x, 'set', ['foo', 'other'], 3);
-                  if (! eq (matches, [['foo', 'bar'], ['foo'], [], ['foo', 'bar', 'yip']])) return 'B.changeresponder error #10';
+                  if (! eq (matches, [['foo', 'bar'], ['foo'], [], ['foo', 'bar', 'yip']])) return 'B.changeResponder error #10';
                   B.call (x, 'change', ['foo', 'bar']);
-                  if (! eq (matches, [['foo', 'bar'], ['foo'], [], ['foo', 'bar', 'yip'], ['foo', 'bar']])) return 'B.changeresponder error #11';
+                  if (! eq (matches, [['foo', 'bar'], ['foo'], [], ['foo', 'bar', 'yip'], ['foo', 'bar']])) return 'B.changeResponder error #11';
                   B.call (x, 'change', ['foo']);
-                  if (! eq (matches, [['foo', 'bar'], ['foo'], [], ['foo', 'bar', 'yip'], ['foo', 'bar'], ['foo']])) return 'B.changeresponder error #12';
+                  if (! eq (matches, [['foo', 'bar'], ['foo'], [], ['foo', 'bar', 'yip'], ['foo', 'bar'], ['foo']])) return 'B.changeResponder error #12';
                   B.call (x, 'change', ['foo', 'yip']);
-                  if (! eq (matches, [['foo', 'bar'], ['foo'], [], ['foo', 'bar', 'yip'], ['foo', 'bar'], ['foo']])) return 'B.changeresponder error #13';
+                  if (! eq (matches, [['foo', 'bar'], ['foo'], [], ['foo', 'bar', 'yip'], ['foo', 'bar'], ['foo']])) return 'B.changeResponder error #13';
                   B.call (x, 'change', ['yip']);
-                  if (! eq (matches, [['foo', 'bar'], ['foo'], [], ['foo', 'bar', 'yip'], ['foo', 'bar'], ['foo']])) return 'B.changeresponder error #14';
+                  if (! eq (matches, [['foo', 'bar'], ['foo'], [], ['foo', 'bar', 'yip'], ['foo', 'bar'], ['foo']])) return 'B.changeResponder error #14';
                   B.call (x, 'change', []);
-                  if (! eq (matches, [['foo', 'bar'], ['foo'], [], ['foo', 'bar', 'yip'], ['foo', 'bar'], ['foo'], []])) return 'B.changeresponder error #15';
+                  if (! eq (matches, [['foo', 'bar'], ['foo'], [], ['foo', 'bar', 'yip'], ['foo', 'bar'], ['foo'], []])) return 'B.changeResponder error #15';
 
                   var currentValues  = [];
                   var previousValues = [];

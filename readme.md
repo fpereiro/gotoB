@@ -56,9 +56,9 @@ An in-depth tutorial is available [here](tutorial/tutorial.md). The tutorial cov
 
 - [Examples](#examples)
 - [Introduction](#introduction)
+- [Frequently Asked Questions](#faq)
 - [API reference](#api-reference)
 - [Internals](#internals)
-- [Frequently Asked Questions](#faq)
 - [Annotated source code](#source-code)
 - [License](#license)
 - [Appendix: A brief history of the frontend](#a-brief-history-of-the-frontend)
@@ -346,6 +346,67 @@ And that, in a nutshell, is how gotoв works:
 4. Views depend on parts of the store and are automatically updated whenever the relevant part of the store changes.
 5. Views can contain DOM elements that can call events.
 
+An app written with gotoв will mostly consist of *views* and *responders* (responders are functions that are executed by events).
+
+## FAQ
+
+### Why did you write another javascript framework?!?
+
+I experience two difficulties with existing javascript frontend frameworks:
+
+1. They are hard to understand, at least for me.
+2. They are constantly changing.
+
+The combination of these two characteristics mean that I must constantly spend an enormous amount of time and effort to remain an effective frontend developer. Which makes me unhappy, because complex things frustrate me and I am quite lazy when it comes to things I don't enjoy.
+
+Rather than submit to this grind or reject it altogether (and missing out the possibility of creating my webapps), I took a third way out, by deciding to write a frontend framework that:
+
+1. Is optimized for understanding.
+2. Built on fundamentals, so that the framework will change [less and less as times goes by](https://en.wikipedia.org/wiki/Asymptote).
+
+And, of course, gotoв must be very useful for building a real webapp.
+
+### Is gotoв for me?
+
+**gotoв is for you if:**
+
+- You have freedom to decide the technology you use.
+- Complexity is a massive turn-off for you.
+- You like ES5 javascript.
+- You miss not having to compile your javascript.
+- You enjoy understanding the internals of a tool, so that you can then use it with precision and confidence.
+- You like technology that's a bit strange.
+- You want to build a community together with me.
+
+**gotoв is *not* for you if**:
+
+- You need to support browsers without javascript.
+- You need a widely supported framework, with a large community of devs and tools.
+- You are looking for a framework that is similar to Angular, Ember or React.
+- You need a very fast framework; gotoв chooses simplicity over performance in a couple of critical and permanent respects.
+
+### What does gotoв care about?
+
+- **Ease of use**: 90% of the functionality you need is contained in three functions (one for calling an event (`B.call`), one for stringifying an event call into a DOM attribute (`B.ev`) and one for creating dynamic elements which are updated automatically (`B.view`)). There's also three more events for performing data changes that you'll use often. But that's pretty much it.
+- **Fast reload**: the edit-reload cycle should take under two seconds. No need to wait until no bundle is completed.
+- **Smallness**: gotoв and its dependencies are < 2k lines of consistent, annotated javascript. In other words, it is less than 2048 lines on top of [vanilla.js](http://vanilla-js.com/).
+- **Batteries included**: the core functionality for building a webapp is all provided. Whatever libraries you add on top will probably be for specific things (nice CSS, a calendar widget, etc.)
+- **Trivial to set up**: add `<script src="https://cdn.jsdelivr.net/gh/fpereiro/gotob@/gotoB.min.js"></script>` at the top of the `<body>`.
+- **Everything in plain sight**: all properties and state are directly accessible from the javascript console of the browser. DOM elements have stringified event handlers that can be inspected with any modern browser.
+- **Performance**: gotoв itself is small (~13kb when minified and gzipped, including all dependencies) so it is loaded and parsed quickly. Its view redrawing mechanism is reasonably fast.
+- **Cross-browser compatibility**: gotoв is intended to work on virtually all the browsers you may encounter. See browser current compatibility above in the *Installation* section.
+
+### What does gotoв *not* care about?
+
+- **Browsers without javascript**: gotoв is 100% reliant on client-side javascript - if you want to create webapps that don't require javascript, gotoв cannot possibly help you create them.
+- **Post-2009 javascript**: everything's written in a subset of ES5 javascript. This means no transpilation, no different syntaxes, and no type declarations. You can of course write your application in ES6 or above and gotoв will still work.
+- **Module loading**: gotoв and its dependencies happily and unavoidably bind to the global object. No CommonJS or AMD.
+- **Build/toolchain integration**: there's no integration with any standard tool for compiling HTML, CSS and js. gotoв itself is pre-built with a 70-line javascript file.
+- **Hot-reloading**: better get that refresh finger ready!
+- **Plugin system**: gotoв tries to give provide you all the essentials out of the box, without installation or configuration.
+- **Object-oriented programming**: gotoв uses objects mostly as namespaces. There's no inheritance and no use of `bind`. Classes are nowhere to be found.
+- **Pure functional programming**: in gotoв, [side-effects are expressed as events](https://github.com/fpereiro/recalc). The return values from event handlers are ignored, and every function has access to the global store. There's no immutability; the global state is modified through functions that update it in place.
+
 ## API reference
 
 Before reading this section, it is recommended that you read the [introduction](#introduction).
@@ -431,6 +492,14 @@ The two nouns with which we can structure this paradigm is: *event* and *respond
 
 An event call can match zero, one or multiple responders. When a responder is matched, it is executed.
 
+Events are more general than mere function calls. When a function is called, the function must exist and must be defined only once:
+
+```
+function call -> a function is executed
+```
+
+With events, we can have one-to-none, one-to-one or one-to-many execution relationships:
+
 ```
 event call -> (nothing happens, no responders were matched)
 
@@ -439,6 +508,8 @@ event call -> exactly one responder matched
 event call -> this responder is matched
          |--> this responder is also matched
 ```
+
+This generality of events is extremely useful to model and write the code of interfaces, which is highly interconnected, asynchronous and triggered by user interactions. When a responder is matched by an event, its associated function (which we call `rfun` or *responder function*) is executed. The ultimate purpose of events and responders is to execute the `rfuns` (responder functions) at the right time; rfuns, together with their responders and with matching events, can replace direct function calls in most of the logic of the frontend.
 
 Events are called with the function `B.call`, which takes the following parameters:
 
@@ -466,102 +537,256 @@ When does an event match a responder? A full answer is contained [here](https://
 Let's define the following events and responders:
 
 ```
-B.respond ('a', 0)   // RESPONDER A
-B.respond ('a', '*') // RESPONDER B
-B.respond ('b', [])  // RESPONDER B
+B.respond ('foo', 0, rfun)          // responder A
+B.respond ('foo', '*', rfun)        // responder B
+B.respond ('foo', ['*', '*'], rfun) // responder C
+B.respond ('bar', [], rfun)         // responder D
 
-B.call ('a', 0); // EVENT A
-B.call ('a', 1); // EVENT B
-B.call ('b', 0); // EVENT C
+B.call ('foo', 0);      // event A
+B.call ('foo', 1);      // event B
+B.call ('foo', [0, 1]); // event C
+B.call ('bar', 0);      // event D
 ```
 
+What will happen?
 
+- Event `A`:
+   - Will match responder A, because both their `verb` (`'foo'`) and `path` (`0`) are identical.
+   - Will match responder B, because their `verb` (`'foo'`) is identical, and because the responder's `path` (`'*'`) will be matched by any event's `path` with length 1.
+   - Will not match responder C, because while their `verb` (`'foo'`) is identical, responder C `path`'s will be matched only by events with `path`s of length 2.
+   - Will not match responder D, because their `verb` is different (`'foo'` vs `'bar'`).
+- Event `B`:
+   - Will not match responder A, because while their `verb` is identical, their `path` is not.
+   - Will match responder B, because their `verb` is identical and because the responder's `path` will be matched by any event's `path` with length 1.
+   - Will not match responder C, because while their `verb` (`'foo'`) is identical, responder C `path`'s will be matched only by events with `path`s of length 2.
+   - Will not match responder D, because their `verb` is different (`'foo'` vs `'bar'`).
+- Event `C`:
+   - Will not match responders A or B, because while their `verb` (`'foo'`) is identical, their `paths` don't match.
+   - Will match responder C, because their `verb` (`'foo'`) is identical and because responder C `path`'s will be matched the `path` of event C, which has length 2.
+   - Will not match responder D, because their `verb` is different (`'foo'` vs `'bar'`).
+- Event `D`:
+   - Will not match responders A, B or C, because their `verbs` are different.
+   - Will not match responder D, because while their `verb` (`'bar'`) is identical, responder D will only be matched by events with `paths` of length 0.
 
+Notice that in the example above we called `B.respond` before `B.call`; if we had done this the other way around, the event calls would have had no effect since the responders would have not been registered yet.
 
-Notice that we called `B.respond` before `B.call`; if we had done this the other way around, the event calls would have had no effect since the responders would have not been registered then.
+Wildcards (`'*'`) and regexes can be used in the `verbs` and `path` elements of responders, but not of events.
 
+Regarding the optional `options` object passed to `B.respond`, please check [recalc's documentation](https://github.com/fpereiro/recalc#rrespond) for a full specification; the most useful ones are: 10 `id` (a string or integer), to determine the responder's `id`; 2) `priority`, an integer value and determines the order of execution if multiple responders are matched by an event call; by default, `priority` is 0, but you can specify a number that's larger or smaller than that (the higher the priority, the earlier the responder will be executed). If two responders are matched and have the same priority, the oldest one takes precedence; 3) `match`, a function to let the responder decide whether it should be matched by any incoming event; this function supersedes the default `verb` and `path` matching logic with your own custom logic; the function receives two rguments, an object with the `verb` and `path` of the event being called, plus the responder itself.
 
+Responders are stored in `B.responders`. To remove a responder, invoke `B.forget`, passing the `id` of the responder. The `id` of the responder will be that provided by you when creating it (if you passed it as an option), or the automatically generated `id` which will be returned if the invocation to `B.respond` was successful.
 
+### Data: the `store` and data verbs
 
+As we saw in the introduction, all the state and data that is relevant to the frontend should be stored inside `B.store`, which is a plain object where all the data is contained.
+
+Rather than modifying the `store` directly, gotoв requires you to do it through the three built-in *data responders*, which have the following verbs: `'set'`, `'add'` and `'rem'`. Whenever you call an event with one of these three verbs (`set/add/rem`), these responders will be executed and they will do two things:
+
+1. Update the store.
+2. Call a `change` event.
+
+`change` events are very important, because these are the ones that update the page! In fact, `B.view`, the function for creating reactive elements, creates event responders that are matched when `change` events are called.
+
+Let's see now each of these responders:
+
+#### `set`
+
+The first data responder is `set`. This responder sets data into a particular location inside `B.store`. It takes a `path` and a `value`. `path` can be an integer, a string, or an array containing integers and strings (as any responder's `path`, really); `path` represents *where* we want to set the value inside `B.store`.
+
+Let's see now a set of examples. In each of these examples, I'll consider that we start with an empty `B.store` so that we don't carry data from one example to the other.
+
+```javascript
+B.call ('set', 'title', 'Hello!');
+
+// B.store is now {title: 'Hello!'}
+```
+
+As you can see, we pass `'set'` as the first argument; then we pass the `path` (`'title'`) and finally the value (`'Hello!'`). `set` also allows you to set nested properties:
+
+```javascript
+B.call ('set', ['user', 'username'], 'mono');
+
+// B.store is now {user: {username: 'mono'}}
+```
+
+Notice how `B.store.user` was initialized to an empty object. Because the second element of the path is a string (`username`), the `set` data responder knows that `B.store.user` must be initialized to an object. Contrast this to the following example:
+
+```javascript
+B.call ('set', ['users', 0], 'mono');
+
+// B.store is now {users: ['mono']}
+```
+
+In the example above, `B.store.users` is initialized to an array instead, since `0` is an integer and integers can only be the keys of arrays, not objects.
+
+If your `path` has length 1, you can use a single integer or object as `path`:
+
+```javascript
+B.call ('set', 'foo', 'bar');
+
+// B.store is now {foo: 'bar'}
+```
+
+If you pass an empty `path`, you will overwrite the entire `B.store`. In this case, `value` can only be an array or object, otherwise an error will be reported and no change will happen to `B.store`.
+
+```javascript
+B.call ('set', [], []);
+
+// B.store is now []
+
+B.call ('set', [], 'hello');
+
+// B.store still is [], the invocation above will report an error and do nothing else.
+
+B.call ('set', [], {});
+
+// B.store is now {}
+```
+
+`set` will overwrite whatever part of the existing store stands in its way. Let's see an example:
+
+```javascript
+B.call ('set', ['Data', 'items'], [0, 1, 2]);
+
+// B.store is now {Data: {items: [0, 1, 2]}}
+
+B.call ('set', ['Data', 'key'], 'val');
+
+// B.store is now {Data: {items: [0, 1, 2], key: 'val'}}
+
+B.call ('set', ['Data', 0], 1);
+
+// B.store is now {Data: [1]}
+```
+
+In the example above, when we set `['Data', 'key']`, `['Data', 'items']` is left untouched. However, when we set `['Data', 0]` to `1`, that assertion requires that `Data` be an array. Because it is an object, it will be overwritten completely and set to an array. This would also happen if `Data` were an array and a subsequent assertion required it being an object.
+
+In summary, `set` will preserve the existing keys on the store unless there is a type mismatch, in which case it will overwrite the required keys with the necessary arrays/objects.
+
+#### `add`
+
+The second data responder is `add`. This responder puts elements at the end of an array. It takes a `path`, plus zero or more elements that will be placed in the array. These elements can be of any type.
+
+```javascript
+B.call ('set', ['Data', 'items'], []);
+
+// B.store is now {Data: {items: []}}
+
+B.call ('add', ['Data', 'items'], 0, 1, 2);
+
+// B.store is now {Data: {items: [0, 1, 2]}}
+
+B.call ('add', ['Data', 'items']);
+
+// B.store is still {Data: {items: [0, 1, 2]}}
+```
+
+If `path` points to a location with value `undefined`, the array will be created automatically:
+
+```javascript
+B.call ('add', ['Data', 'items'], 0, 1, 2);
+
+// B.store is now {Data: {items: [0, 1, 2]}}
+```
+
+If no elements are passed to `add` but `path` points to an undefined value, the containing array will still be created.
+
+```javascript
+B.call ('add', ['Data', 'items']);
+
+// B.store is now {Data: {items: []}}
+```
+
+#### `rem`
+
+The third and final data responder is `rem`. This responder removes keys from either an array or an object within the store. Like the other data responders, it receives a `path`, plus zero or more keys that will be removed.
+
+```javascript
+B.call ('add', ['Data', 'items'], 'a', 'b', 'c');
+
+// B.store is now {Data: {items: ['a', 'b', 'c']}}
+
+B.call ('rem', ['Data', 'items'], 1);
+
+// B.store is now {Data: {items: ['a', 'c']}}
+
+B.call ('rem', 'Data', 'items');
+
+// B.store is now {Data: {}}
+
+B.call ('rem', [], 'Data');
+
+// B.store is now {}
+```
+
+If `path` points to an array, the keys must all be integers. If `path` points to an object, the keys must instead be all strings. If `path` points to neither an array nor an object, `rem` will report an error and do nothing.
+
+```javascript
+B.call ('add', ['Data', 'items'], 'a', 'b', 'c');
+
+// B.store is now {Data: {items: ['a', 'b', 'c']}}
+
+B.call ('rem', ['Data', 'items'], 'a');
+
+// The last invocation will report an error and make no change on B.store
+
+B.call ('rem', 'Data', 0);
+
+// The last invocation will also report an error and make no change on B.store
+
+B.call ('rem', ['Data', 'items', 0], 'foo');
+
+// The last invocation will also report an error and make no change on B.store
+```
+
+If `path` points to `undefined`, `rem` will not produce any effect but no error will be printed.
+
+```javascript
+B.call ('rem', ['Data', 'foo'], 'bar');
+
+// Nothing will happen.
+```
+
+Nothing will happen also if you pass no keys to remove.
+
+```javascript
+B.call ('rem', ['Data', 'items']);
+
+// Nothing will happen.
+```
+
+Instead of passing the keys as arguments, you can also pass them all together as an array of keys.
+
+```javascript
+// These two invocations are equivalent:
+B.call ('rem', ['Data', 'items'], 'a');
+B.call ('rem', ['Data', 'items'], ['a']);
+
+// These two invocations are equivalent:
+B.call ('rem', [], 'Data', 'State');
+B.call ('rem', [], ['Data', 'State']);
+```
+
+###
 
 TODO
 
-Errors first
-Events: basic, data, your own, logic in the responders, context, order and async (,ref to recakc)
-Bricks: b.elem connected to events, brick rules, no reuse, literals, all of it.
-B.ev to fire events from within. Bev before belem.
-Design principles and comparisons with other frameworks
-Self contained in func
-Some libraries are used directly, some are conveniences (and also used internally)
-No compilation
-All global
-No components and no classes. Instead, namespace in events and in store
-Lightweight, see through in Dom and in global object
-
-
-State management, who to update, invert control
-Events! Many responders. Incidentally, server! Ordered, one at a time.
-Events also for doing other things. Go beyond just touching the state. In the end, state gets modified.
-Log states and chains, to see what happens.
-Your app: events, responders and bricks
-Events as fun executions
-No lifecycle hooks, use change
-Negative priorities as nestedness
-Opaque and literal
-Trample and perflogs
-(Perhaps drop ev in "ev responder")
-
-- store
-- perform
-- respond
-
-gotoв uses an event system to structure all the *actions* that happen in your webapp. Events are how things happen in a gotoв application.
-
-
-The hard part of programming frontends is figuring out which parts should be updated when the data changes. The reason is the following: even in very simple webapps, different components influence and affect each other in subtle ways. This is the main reason, in my view, for the existence of frontend frameworks - otherwise, we'd just write straightforward code and be done with it!
-
-gotoв tackles this problem by 1) centralizing all the application data on a single object (called the *store*) and 2) using an event system to update both the store and the relevant parts of the interface.
-
-The *store* is a plain object on which you can put arbitrary data. What matters is that all the information that affects the interface should be placed there. From the perspective of the entire frontend, the *store* is the [single source of truth](https://en.wikipedia.org/wiki/Single_source_of_truth).
-
-By having all the information centralized in one place, we avoid having to retrieve information from multiple places (like DOM elements or loose variables) and instead retrieve it from the store directly. Even more importantly, by updating the store through events, we can elegantly solve the problem of when to update a certain part of the interface. Let's see how with an example.
-
-Let's consider an application with three components (C1, C2 and C3). These components depend on different parts of the state:
-- C1 depends on S1.
-- C2 depends on S1 and S3.
-- C3 depends on S1, S2 and S3.
-
-These components also modify parts of the state:
-- C1 can modify S1, S2 and S3.
-- C3 can modify S1 and S2.
-
-In a straightforward implementation, every time we modify S1, S2 and S3, we would have to keep track of which components depend on them, and update them. So we'd need functions to modify every part of the state and make sure we call them from the components that can modify those parts of the state.
-
-Real life applications (even very simple ones), can easily have a dozen components and two dozen pieces of information on which they depend. Things can get entangled very, very quickly.
-
-An event system is a way out of this pickle. Instead of having dedicated functions to update the store and then certain components, we simply trigger an event when modifying a part of the store. Then, all the components that rely on that part of the store *respond* to that event and automatically update themselves.
-
-When a component (or an action coming from a different place, perhaps a timer or a notification from the server) wants to update the state, it does it **through an event**. What's so special about performing actions through an event? Glad you asked: when an operation is done through an event, all the concerned parties are notified automatically and they react in consequence. If your code uses events, there can be functions that get automatically notified/updated when a certain type of event is triggered. The difference in effort is the same between staffing a sit-down restaurant vs a buffet: in the sit-down restaurant, you need to take orders and fulfill them for each of the persons sitting down. In the buffet, you just bring the food to the common areas with hot plates and trays, and the patrons get up and get it themselves.
-
-The store where we keep all the data is an object located at `B.store`. The function for triggering events is `B.call`. This function takes a `verb`, a `path` and optional arguments. Why do we call this function `B.call` and not `B.trigger` or `B.fire`? To emphasize the key point: an event system is about *communication* between parts of a program. The event system is a channel of communcation, where some functions *call events* and some functions *respond to them*.
-
-Before going deeper into the event system, let's see how we can create bricks that will be automatically updated when the state changes. Events are quite abstract, so having something as concrete as a brick can help us see it more clearly.
-
-To get started, let's call an event to update the store. We'll set the `counter` property to `1` and jump to our first brick that is automatically updated.
-
-```javascript
-// Initially, `B.store` is an empty object.
-
-B.call ('set', 'counter', 0)
-
-// Now, `B.store` is `{counter: 0}`
-```
+- B.view
+- B.ev
+- Change event directly
+- Passing context & logs
+- Errors
+- Advanced topics
+   - opaque & literal
+   - negative priorities & nestedness
+   - production mode
+   - trample & perflogs
 
 ### Introduction to `B.view`
 
-Let's create our first *reactive* brick. What does *reactive* mean? It means that it automatically updates itself when the information on which it depends has changed - in other words, it *reacts* to relevant changes on the store.
+Let's create our first *reactive* view. What does *reactive* mean? It means that it automatically updates itself when the information on which it depends has changed - in other words, it *reacts* to relevant changes on the store.
 
-So far, we have set `B.store.counter` to `0`. Let's create a brick that shows us the counter:
+So far, we have set `B.store.counter` to `0`. Let's create a view that shows us the counter:
 
 ```javascript
 var counter = function () {
@@ -573,7 +798,7 @@ var counter = function () {
 B.mount ('body', counter);
 ```
 
-The problem with the brick above is that it will never change on its own, no matter what we do with `counter`. To create bricks that react to changes in the store, we use the function `B.view`:
+The problem with the view above is that it will never change on its own, no matter what we do with `counter`. To create views that react to changes in the store, we use the function `B.view`:
 
 ```javascript
 var counter = function () {
@@ -587,18 +812,18 @@ var counter = function () {
 B.mount ('body', counter);
 ```
 
-If you enter the following command on the developer console to update the store: `B.call ('set', 'counter', 1)`, you will notice that the brick gets automatically updated!
+If you enter the following command on the developer console to update the store: `B.call ('set', 'counter', 1)`, you will notice that the view gets automatically updated!
 
 If you, however, try to update `B.store.counter` directly by entering `B.store.counter = 2`, you'll notice that... nothing happens! This is because you changed the store directly instead of using an event. Most of the time, you'll change the store through events - though by the end of this guide, we'll cover some cases where you can sidestep the event system to update the store.
 
-`B.view` takes a `path` and a `brick` as arguments. The `path` can be any of the following:
+`B.view` takes a `path` and a `view` as arguments. The `path` can be any of the following:
 - A string: `counter`.
 - An array of strings and integers: `['Data', 'counter']`.
 - An array of arrays of strings and integers: `[['Data', 'counter'], ['State', 'page']]`.
 
-If the `path` is `counter`, then the brick will be updated when `B.store.counter` changes. If the path is instead `['Data', 'counter']`, then the brick will be updated when `B.store.Data.counter` changes.
+If the `path` is `counter`, then the view will be updated when `B.store.counter` changes. If the path is instead `['Data', 'counter']`, then the view will be updated when `B.store.Data.counter` changes.
 
-If the `path` is a list of `paths`, as `[['Data', 'counter'], ['State', 'page']]`, then the brick will be updated when *either* `Data.counter` or `State.page` change.
+If the `path` is a list of `paths`, as `[['Data', 'counter'], ['State', 'page']]`, then the view will be updated when *either* `Data.counter` or `State.page` change.
 
 We'll explore mutiple `paths` soon. For now, let's go with the simpler example:
 
@@ -614,11 +839,11 @@ var counter = function () {
 B.mount ('body', counter);
 ```
 
-Notice that the value of `counter` is directly passed to the brick as its first argument.
+Notice that the value of `counter` is directly passed to the view as its first argument.
 
 By the way, if you passed `['counter']` instead of `'counter'` as the path, the result would be the same: `B.view ('counter', ...` is the same as `B.view (['counter'], ...`.
 
-This brick not very useful, unless you expect your user to update the app through the developer console. To complete the counter, let's add a button that when clicked, will execute a function that updates the counter.
+This view not very useful, unless you expect your user to update the app through the developer console. To complete the counter, let's add a button that when clicked, will execute a function that updates the counter.
 
 ```javascript
 var counter = function () {
@@ -683,7 +908,7 @@ B.mount ('body', counter);
 
 When `counter` is 0, the call to `B.ev` will generate a string that looks like this: `"B.call ('set', 'counter', 1)"`.
 
-If the user clicks on the button, `counter` will be updated, the brick function will be updated, and then the button's event handler will look like this: `"B.call ('set', 'counter', 2)"`.
+If the user clicks on the button, `counter` will be updated, the view function will be updated, and then the button's event handler will look like this: `"B.call ('set', 'counter', 2)"`.
 
 Let's now see another example, to illustrate other aspects of `B.ev`: we'll create a button that, when clicked, will call an event with verb `submit` and path `data`.
 
@@ -751,7 +976,7 @@ Now that we have covered the main elements of gotoв, let's go back to see the e
 
 gotoв's event sytem is provided by [recalc](https://github.com/fpereiro/recalc), a library that implements the basic functions of the event system. We won't, however, be using recalc's functions directly - rather, we'll use event functions provided by gotoв.
 
-The two main operations of an event system are 1) calling an event; and 2) setting event responders that get notified when certain events are said.
+The two main operations of an event system are 1) calling an event; and 2) setting event responders that get notified when certain events are called.
 
 To call an event, we use the function [`B.call`](https://github.com/fpereiro/recalc#rcall). This function takes the following arguments:
 
@@ -761,199 +986,6 @@ To call an event, we use the function [`B.call`](https://github.com/fpereiro/rec
 - You can pass unlimited additional arguments when you call an event. These arguments can be of any type.
 
 You might ask: why use a combination of `verb` and `path` instead of just having a single event name instead? The answer is: too often we see event names like `toggleFooter`, `updateUser`, `savePosition`. By splitting an event name into a verb and a path, we achieve more clarity and versatility; very often, actions like `toggle`, `update`, `save` can be generalized. A great example of this are *data verbs*, which we already saw in the examples above and we'll describe now.
-
-### Data verbs
-
-gotoв sets event responders for three data verbs: `add`, `rem` and `set`. Whenever an event is said that has one of these three verbs, these responders will be executed and they will do two things:
-
-1. Update the store.
-2. call a `change` event.
-
-`change` events are very important, because these are the ones that update the page! In fact, `B.view`, the function for creating reactive elements, creates event responders that are executed when `change` events are said.
-
-Let's see now how each of these events operate:
-
-#### `set`
-
-The first data *verb* is `set`. This verb sets data into a particular location inside `B.store`. It takes a `path` and a `value`. `path` can be an integer, a string, or an array containing integers and strings; `path` represents *where* we want to set the value inside `B.store`.
-
-Let's see now a set of examples. In each of these examples, I'll consider that we start with an empty `B.store` so that we don't carry data from one example to the other.
-
-```javascript
-B.call ('set', 'title', 'Hello!');
-
-// B.store is now {title: 'Hello!'}
-```
-
-As you can see, we pass `'set'` as the first argument; then we pass the `path` (`'title'`) and finally the value (`'Hello!'`). `set` also allows you to set nested properties:
-
-```javascript
-B.call ('set', ['user', 'username'], 'mono');
-
-// B.store is now {user: {username: 'mono'}}
-```
-
-Notice how `B.store.user` was initialized to an empty object. Because the second element of the path is a string (`username`), the `set` data verb knows that `B.store.user` must be initialized to an object. Contrast this to the following example:
-
-```javascript
-B.call ('set', ['users', 0], 'mono');
-
-// B.store is now {users: ['mono']}
-```
-
-In the example above, `B.store.users` is initialized to an array instead, since `0` is an integer and integers can only be the keys of arrays, not objects.
-
-If your `path` has length 1, you can use a single integer or object as `path`:
-
-```javascript
-B.call ('set', 'foo', 'bar');
-
-// B.store is now {foo: 'bar'}
-```
-
-If you pass an empty `path`, you will overwrite the entire `B.store`. In this case, `value` can only be an array or object, otherwise an error will be printed and no change will happen to `B.store`.
-
-```javascript
-B.call ('set', [], []);
-
-// B.store is now []
-
-B.call ('set', [], 'hello');
-
-// B.store still is [], the invocation above will report an error and do nothing else.
-
-B.call ('set', [], {});
-
-// B.store is now {}
-```
-
-`set` will overwrite whatever part of the existing store stands in its way. Let's see an example:
-
-```javascript
-B.call ('set', ['Data', 'items'], [0, 1, 2]);
-
-// B.store is now {Data: {items: [0, 1, 2]}}
-
-B.call ('set', ['Data', 'key'], 'val');
-
-// B.store is now {Data: {items: [0, 1, 2], key: 'val'}}
-
-B.call ('set', ['Data', 0], 1);
-
-// B.store is now {Data: [1]}
-```
-
-In the example above, when we set `['Data', 'key']`, `['Data', 'items']` is left untouched. However, when we set `['Data', 0]` to `1`, that assertion requires that `Data` be an array. Because it is an object, it will be overwritten completely and set to an array. This would also happen if `Data` were an array and a subsequent assertion required it being an object.
-
-In summary, `set` will preserve the existing keys on the store unless there is a type mismatch, in which case it will overwrite the required keys with the necessary arrays/objects.
-
-#### `add`
-
-The second data verb is `add`. This verb puts elements at the end of an array. It takes a `path`, plus zero or more elements that will be placed in the array. These elements can be of any type.
-
-```javascript
-B.call ('set', ['Data', 'items'], []);
-
-// B.store is now {Data: {items: []}}
-
-B.call ('add', ['Data', 'items'], 0, 1, 2);
-
-// B.store is now {Data: {items: [0, 1, 2]}}
-
-B.call ('add', ['Data', 'items']);
-
-// B.store is still {Data: {items: [0, 1, 2]}}
-```
-
-If `path` points to `undefined`, the array will be created automatically:
-
-```javascript
-// B.store is now {}
-
-B.call ('add', ['Data', 'items'], 0, 1, 2);
-
-// B.store is now {Data: {items: [0, 1, 2]}}
-```
-
-If no elements are passed to `add` but `path` points to an undefined value, the containing array will still be created.
-
-```javascript
-// B.store is now {}
-
-B.call ('add', ['Data', 'items']);
-
-// B.store is now {Data: {items: []}}
-```
-
-#### `rem`
-
-The third and final data verb is `rem`. This verb removes keys from either an array or an object within the store. Like the other data verbs, it receives a `path`, plus zero or more keys that will be removed.
-
-```javascript
-B.call ('add', ['Data', 'items'], 'a', 'b', 'c');
-
-// B.store is now {Data: {items: ['a', 'b', 'c']}}
-
-B.call ('rem', ['Data', 'items'], 1);
-
-// B.store is now {Data: {items: ['a', 'c']}}
-
-B.call ('rem', 'Data', 'items');
-
-// B.store is now {Data: {}}
-
-B.call ('rem', [], 'Data');
-
-// B.store is now {}
-```
-
-If `path` points to an array, the keys must all be integers. If `path` points to an object, the keys must instead be all strings. If `path` points to neither an array nor an object, `rem` will report an error and do nothing.
-
-```javascript
-B.call ('add', ['Data', 'items'], 'a', 'b', 'c');
-
-// B.store is now {Data: {items: ['a', 'b', 'c']}}
-
-B.call ('rem', ['Data', 'items'], 'a');
-
-// The last invocation will report an error and make no change on B.store
-
-B.call ('rem', 'Data', 0);
-
-// The last invocation will also report an error and make no change on B.store
-
-B.call ('rem', ['Data', 'items', 0], 'foo');
-
-// The last invocation will also report an error and make no change on B.store
-```
-
-If `path` points to `undefined`, `rem` will not produce any effect but no error will be printed.
-
-```javascript
-B.call ('rem', ['Data', 'foo'], 'bar');
-
-// Nothing will happen.
-```
-
-Nothing will happen also if you pass no keys to remove.
-
-```javascript
-B.call ('rem', ['Data', 'items']);
-
-// Nothing will happen.
-```
-
-Instead of passing the keys as arguments, you can also pass them all together as an array of keys.
-
-```javascript
-// These two invocations are equivalent:
-B.call ('rem', ['Data', 'items'], 'a');
-B.call ('rem', ['Data', 'items'], ['a']);
-
-// These two invocations are equivalent:
-B.call ('rem', [], 'Data', 'State');
-B.call ('rem', [], ['Data', 'State']);
-```
 
 #### The `change` event and calling the data functions directly
 
@@ -1027,9 +1059,9 @@ Instead of lifecycle hooks: events with very negative priority.
 
 ### `B.view` in detail
 
-As we said above, `B.view` takes two elements: a `path` (or `paths`) and a brick function.
+As we said above, `B.view` takes two elements: a `path` (or `paths`) and a view function.
 
-If you pass multiple `paths` to `B.view`, the brick will be updated when any of the corresponding store elements change:
+If you pass multiple `paths` to `B.view`, the view will be updated when any of the corresponding store elements change:
 
 ```javascript
 var dashboard = function () {
@@ -1054,35 +1086,35 @@ B.call ('set', 'stockPrice', 140);
 // Now the dashboard will print both an username and a stock price.
 ```
 
-Bricks must return a single lith, not a lithbag. For example:
+Views must return a single lith, not a lithbag. For example:
 
 ```javascript
-var validBrick1 = function () {
+var validView1 = function () {
    return ['h1', 'Hello'];
 }
 
-var validBrick2 = function () {
+var validView2 = function () {
    return ['div', [
       ['h2'],
       ['h3']
    ]];
 }
 
-// This brick is invalid because it returns a lithbag.
-var invalidBrick1 = function () {
+// This view is invalid because it returns a lithbag.
+var invalidView1 = function () {
    return [
       ['h2'],
       ['h3']
    ];
 }
 
-// The brick is invalid because it returns `undefined`.
-var invalidBrick2 = function () {
+// The view is invalid because it returns `undefined`.
+var invalidView2 = function () {
    return;
 }
 ```
 
-By requiring every brick to return a lith, there's a 1:1 relationship between a brick and a DOM element. This makes both debugging and the implementation of the library simpler. (Why is the simplicity of the implementation important? Because gotoв is also meant to be understood, not just used. Simple implementations are easier to understand).
+By requiring every view to return a lith, there's a 1:1 relationship between a view and a DOM element. This makes both debugging and the implementation of the library simpler. (Why is the simplicity of the implementation important? Because gotoв is also meant to be understood, not just used. Simple implementations are easier to understand).
 
 `B.view` will generate two outputs:
 - A lith structure with a DOM element.
@@ -1112,9 +1144,19 @@ redraw error: 1) modified something not-opaque; or 2) invalid markup. Or 3) actu
 
 if you put values on inputs without gotoв, then you should clear them out if you don't want them popping up elsewhere.
 
-### Internals
+## Internals
 
 TODO
+
+### General architecture
+
+- comparison to other libraries:
+   - no compilation
+   - all global
+   - no automatic lifecycle of responders
+   - no components and no classes; instead, namespace in events/responders & store
+   - very see through, DOM & global object
+   - self-contained
 
 - debugging: `node build dev`
 Change event
@@ -1122,65 +1164,6 @@ Elem stashing things and redraw, use shallow of the stashed only
 Flatten and reference
 Diff
 Apply diff but give up
-
-## FAQ
-
-### Why did you write another javascript framework?!?
-
-I experience two difficulties with existing javascript frontend frameworks:
-
-1. They are hard to understand, at least for me.
-2. They are constantly changing.
-
-The combination of these two characteristics mean that I must constantly spend an enormous amount of time and effort to remain an effective frontend developer. Which makes me unhappy, because complex things frustrate me and I am quite lazy when it comes to things I don't enjoy.
-
-Rather than submit to this grind or reject it altogether (and missing out the possibility of creating my webapps), I took a third way out, by deciding to write a frontend framework that:
-
-1. Is optimized for understanding.
-2. Built on fundamentals, so that the framework will change [less and less as times goes by](https://en.wikipedia.org/wiki/Asymptote).
-
-And, of course, gotoв must be very useful for building a real webapp.
-
-### Is gotoв for me?
-
-**gotoв is for you if:**
-
-- You have freedom to decide the technology you use.
-- Complexity is a massive turn-off for you.
-- You like ES5 javascript.
-- You miss not having to compile your javascript.
-- You enjoy understanding the internals of a tool, so that you can then use it with precision and confidence.
-- You like technology that's a bit strange.
-- You want to build a community together with me.
-
-**gotoв is *not* for you if**:
-
-- You need to support browsers without javascript.
-- You need a widely supported framework, with a large community of devs and tools.
-- You are looking for a framework that is similar to Angular, Ember or React.
-- You need a very fast framework; gotoв chooses simplicity over performance in a couple of critical and permanent respects.
-
-### What does gotoв care about?
-
-- **Ease of use**: 90% of the functionality you need is contained in three functions (one for calling an event (`B.call`), one for stringifying an event call into a DOM attribute (`B.ev`) and one for creating dynamic elements which are updated automatically (`B.view`)). There's also three more events for performing data changes that you'll use often. But that's pretty much it.
-- **Fast reload**: the edit-reload cycle should take under two seconds. No need to wait until no bundle is completed.
-- **Smallness**: gotoв and its dependencies are < 2k lines of consistent, annotated javascript. In other words, it is less than 2048 lines on top of [vanilla.js](http://vanilla-js.com/).
-- **Batteries included**: the core functionality for building a webapp is all provided. Whatever libraries you add on top will probably be for specific things (nice CSS, a calendar widget, etc.)
-- **Trivial to set up**: add `<script src="https://cdn.jsdelivr.net/gh/fpereiro/gotob@/gotoB.min.js"></script>` at the top of the `<body>`.
-- **Everything in plain sight**: all properties and state are directly accessible from the javascript console of the browser. DOM elements have stringified event handlers that can be inspected with any modern browser.
-- **Performance**: gotoв itself is small (~13kb when minified and gzipped, including all dependencies) so it is loaded and parsed quickly. Its view redrawing mechanism is reasonably fast.
-- **Cross-browser compatibility**: gotoв is intended to work on virtually all the browsers you may encounter. See browser current compatibility above in the *Installation* section.
-
-### What does gotoв *not* care about?
-
-- **Browsers without javascript**: gotoв is 100% reliant on client-side javascript - if you want to create webapps that don't require javascript, gotoв cannot possibly help you create them.
-- **Post-2009 javascript**: everything's written in a subset of ES5 javascript. This means no transpilation, no different syntaxes, and no type declarations. You can of course write your application in ES6 or above and gotoв will still work.
-- **Module loading**: gotoв and its dependencies happily and unavoidably bind to the global object. No CommonJS or AMD.
-- **Build/toolchain integration**: there's no integration with any standard tool for compiling HTML, CSS and js. gotoв itself is pre-built with a 70-line javascript file.
-- **Hot-reloading**: better get that refresh finger ready!
-- **Plugin system**: gotoв tries to give provide you all the essentials out of the box, without installation or configuration.
-- **Object-oriented programming**: gotoв uses objects mostly as namespaces. There's no inheritance and no use of `bind`. Classes are nowhere to be found.
-- **Pure functional programming**: in gotoв, [side-effects are expressed as events](https://github.com/fpereiro/recalc). The return values from event handlers are ignored, and every function has access to the global store. There's no immutability; the global state is modified through functions that update it in place.
 
 ## Source code
 
@@ -2102,7 +2085,7 @@ If any of these conditions is not met, an error will be notified through `B.erro
       })) return false;
 ```
 
-
+TODO
 
 
 

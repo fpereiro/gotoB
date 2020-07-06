@@ -268,17 +268,17 @@ Please refer to readme.md to read the annotated source.
 
    // *** B.ELEM ***
 
-   B.elem = function (paths, fun) {
+   B.view = function (paths, fun) {
 
       if (type (paths) === 'array' && type (paths [0]) !== 'array') paths = [paths];
 
-      if (! B.prod && teishi.stop ('B.elem', [
+      if (! B.prod && teishi.stop ('B.view', [
          dale.stopNot (paths, false, function (path) {
-            return r.isPath (path) ? true : B.error ('B.elem', 'Invalid path:', path, 'Arguments', {paths: paths, options: options, fun: fun});
+            return r.isPath (path) ? true : B.error ('B.view', 'Invalid path:', path, 'Arguments', {paths: paths, options: options, fun: fun});
          }),
          ['fun', fun, 'function']
       ], function (error) {
-         B.error ('B.elem', error, {paths: paths});
+         B.error ('B.view', error, {paths: paths});
       })) return false;
 
       var id = B.B + B.internal.count++;
@@ -286,23 +286,20 @@ Please refer to readme.md to read the annotated source.
       var makeElement = function () {
          var count = B.internal.count, children = [];
          var elem = fun.apply (null, dale.go (paths, B.get));
-         // TODO: don't allow undefined, we always need a placeholder!
-         if (elem !== undefined) {
-            if (! B.prod && B.validateLith (elem) !== 'Lith') return B.error ('B.elem', 'Function must return a lith element but instead is:', elem, 'Arguments:', {paths: paths, fun: fun});
+         if (! B.prod && B.validateLith (elem) !== 'Lith') return B.error ('B.view', 'Function must return a lith element but instead is:', elem, 'Arguments:', {paths: paths, fun: fun});
 
-            dale.go (dale.times (B.internal.count - count, 1), function (k) {
-               var responder = B.responders [B.B + count + k];
-               responder.priority--;
-               if (! responder.parent) {
-                  children.push (responder.id);
-                  responder.parent = id;
-               }
-            });
+         dale.go (dale.times (B.internal.count - count, 1), function (k) {
+            var responder = B.responders [B.B + count + k];
+            responder.priority--;
+            if (! responder.parent) {
+               children.push (responder.id);
+               responder.parent = id;
+            }
+         });
 
-            if (type (elem [1]) !== 'object') elem.splice (1, 0, {});
-            elem [1].id    = id;
-            elem [1].paths = dale.go (paths, function (path) {return path.join (':')}).join (', ');
-         }
+         if (type (elem [1]) !== 'object') elem.splice (1, 0, {});
+         elem [1].id    = id;
+         elem [1].paths = dale.go (paths, function (path) {return path.join (':')}).join (', ');
          B.responders [id].elem     = elem;
          B.responders [id].children = children;
          return elem;
@@ -324,7 +321,6 @@ Please refer to readme.md to read the annotated source.
 
    B.internal = {count: 1, timeout: 200, queue: [], redrawing: false}
 
-   // returns Lith, Lithbag or error.
    B.validateLith = function (input) {
       var v = lith.v (input, true);
       if (v !== 'Lith' && v !== 'Lithbag') return v;

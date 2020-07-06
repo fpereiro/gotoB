@@ -654,7 +654,7 @@
                B.eventlog ();
 
                // TODO uncomment to proceed
-               //B.call (x, 'test', 'B.elem');
+               //B.call (x, 'test', 'B.view');
             });
 
 
@@ -667,10 +667,10 @@
 
             // *** B.ELEM ***
 
-            B.respond ('test', 'B.elem', {burn: true}, function (x) {
+            B.respond ('test', 'B.view', {burn: true}, function (x) {
 
                B.mount ('body', function () {
-                  return B.elem (['Data', 'sabe'], function (sabe) {
+                  return B.view (['Data', 'sabe'], function (sabe) {
                      clog ('debug redrawing', arguments);
                      return ['p', ['ya tu sabe:', sabe]];
                   });
@@ -687,13 +687,13 @@
 
 
             // mount/unmount: test with id="B ... that it doesn't get matched
-            // same with B.elem, see if old one blows up
+            // same with B.view, see if old one blows up
 
             var e = function () {};
             var f = function () {};
             var getid = function () {return B.B + (B.count - 1)}
 
-            B.respond ('test', 'old B.elem', {burn: true}, function (x) {
+            B.respond ('test', 'old B.view', {burn: true}, function (x) {
 
                Test ('B.view validation', function () {
                   var responders = dale.keys (B.responders);

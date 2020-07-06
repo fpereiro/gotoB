@@ -221,7 +221,7 @@ The following are examples of what can (and should!) be contained on the store:
 
 gotoв structures all operations [through events](https://github.com/fpereiro/recalc). All actions to be performed on the webapp can be modeled as events. This includes updating `B.store`, which is updated by gotoв's event system instead of being modified directly.
 
-The function for **triggering** an event is `B.call`. We prefer the term *call* instead of other terms normally used with events (such as *trigger* or *fire*) because events really are about communication. An event is a call to one or more parts of your code that might in turn *respond* to that call.
+The function for **triggering** an event is `B.call`. We prefer the term *call* instead of other terms normally used with events (such as *trigger* or *fire*) because we see events as a process of communication. An event is a call to one or more parts of your code that might in turn *respond* to that call.
 
 Going back to `B.call`, it receives as arguments a `verb`, a `path` and optional extra `arguments`.
 
@@ -302,7 +302,7 @@ B.call ('set', 'counter', 2);
 
 ### Updating the state from the page
 
-You might be wondering: how can we trigger events from the DOM itself? The example above doesn't show how to put a button that could increase the counter. One way of doing it would be the following:
+You might be wondering: how can we trigger events from the DOM itself? The example above doesn't show how to place a button that could increase the counter. One way of doing it would be the following:
 
 ```javascript
 var counter = function () {
@@ -346,7 +346,7 @@ And that, in a nutshell, is how gotoв works:
 4. Views depend on parts of the store and are automatically updated whenever the relevant part of the store changes.
 5. Views can contain DOM elements that can call events.
 
-An app written with gotoв will mostly consist of *views* and *responders* (responders are functions that are executed by events).
+An app written with gotoв will mostly consist of *views* and *responders*, and most of its logic will live in `vfuns` (view functions) and `rfuns` (responder functions).
 
 ## FAQ
 
@@ -409,9 +409,9 @@ And, of course, gotoв must be very useful for building a real webapp.
 
 ## API reference
 
-Before reading this section, it is recommended that you read the [introduction](#introduction).
+Before reading this section, it is highly recommended that you read the [introduction](#introduction) to have a conceptual overview of gotoв.
 
-### The gotoв object
+### The gotoв object: `B`
 
 gotoв is automatically loaded on the global variable `B`.
 
@@ -484,7 +484,7 @@ B.unmount ('#container');
 
 `B.mount` nor `B.unmount` will both return `undefined` if the operation is successful.
 
-### Introduction to the event system
+### Introduction to the event system: `B.call`, `B.respond`, `B.responders`, `B.forget`
 
 gotoв is built around events. Its [event system](https://github.com/fpereiro/recalc) considers events as *communication* between different parts of the app with each other. Some parts of the program perform *calls* and other parts of the program *respond* to those calls.
 
@@ -576,7 +576,7 @@ Regarding the optional `options` object passed to `B.respond`, please check [rec
 
 Responders are stored in `B.responders`. To remove a responder, invoke `B.forget`, passing the `id` of the responder. The `id` of the responder will be that provided by you when creating it (if you passed it as an option), or the automatically generated `id` which will be returned if the invocation to `B.respond` was successful.
 
-### Data: the `store` and data verbs
+### Data: `B.store` and the data responders (`'set'`, `'add'` and `'rem'`)
 
 As we saw in the introduction, all the state and data that is relevant to the frontend should be stored inside `B.store`, which is a plain object where all the data is contained.
 
@@ -767,148 +767,23 @@ B.call ('rem', [], 'Data', 'State');
 B.call ('rem', [], ['Data', 'State']);
 ```
 
-###
+### Event calls from the DOM: `B.ev`
 
-TODO
-
-- B.view
-- B.ev
-- Change event directly
-- Passing context & logs
-- Errors
-- Advanced topics
-   - opaque & literal
-   - negative priorities & nestedness
-   - production mode
-   - trample & perflogs
-
-### Introduction to `B.view`
-
-Let's create our first *reactive* view. What does *reactive* mean? It means that it automatically updates itself when the information on which it depends has changed - in other words, it *reacts* to relevant changes on the store.
-
-So far, we have set `B.store.counter` to `0`. Let's create a view that shows us the counter:
+Since gotoв applications are structured around events and responders, user interactions must call events. This means that certain DOM elements need to call events. For this purpose, you can use the function `B.ev`, which creates stringified event handlers that we can pass to DOM elements, in order to trigger events from them. Let's see an example:
 
 ```javascript
-var counter = function () {
-   return ['div', [
-      ['h2', 'The counter is ' + counter],
-   ]];
+var button = function () {
+   return ['button', {
+      onclick: B.ev ('do', 'it');
+   }, 'Do it!'],
 }
 
-B.mount ('body', counter);
+B.mount ('body', button);
 ```
 
-The problem with the view above is that it will never change on its own, no matter what we do with `counter`. To create views that react to changes in the store, we use the function `B.view`:
-
-```javascript
-var counter = function () {
-   return B.view ('counter', function (counter) {
-      return ['div', [
-         ['h2', 'The counter is ' + counter],
-      ]];
-   });
-}
-
-B.mount ('body', counter);
-```
-
-If you enter the following command on the developer console to update the store: `B.call ('set', 'counter', 1)`, you will notice that the view gets automatically updated!
-
-If you, however, try to update `B.store.counter` directly by entering `B.store.counter = 2`, you'll notice that... nothing happens! This is because you changed the store directly instead of using an event. Most of the time, you'll change the store through events - though by the end of this guide, we'll cover some cases where you can sidestep the event system to update the store.
-
-`B.view` takes a `path` and a `view` as arguments. The `path` can be any of the following:
-- A string: `counter`.
-- An array of strings and integers: `['Data', 'counter']`.
-- An array of arrays of strings and integers: `[['Data', 'counter'], ['State', 'page']]`.
-
-If the `path` is `counter`, then the view will be updated when `B.store.counter` changes. If the path is instead `['Data', 'counter']`, then the view will be updated when `B.store.Data.counter` changes.
-
-If the `path` is a list of `paths`, as `[['Data', 'counter'], ['State', 'page']]`, then the view will be updated when *either* `Data.counter` or `State.page` change.
-
-We'll explore mutiple `paths` soon. For now, let's go with the simpler example:
-
-```javascript
-var counter = function () {
-   return B.view ('counter', function (counter) {
-      return ['div', [
-         ['h2', 'The counter is ' + counter],
-      ]];
-   });
-}
-
-B.mount ('body', counter);
-```
-
-Notice that the value of `counter` is directly passed to the view as its first argument.
-
-By the way, if you passed `['counter']` instead of `'counter'` as the path, the result would be the same: `B.view ('counter', ...` is the same as `B.view (['counter'], ...`.
-
-This view not very useful, unless you expect your user to update the app through the developer console. To complete the counter, let's add a button that when clicked, will execute a function that updates the counter.
-
-```javascript
-var counter = function () {
-   return B.view ('counter', function (counter) {
-      return ['div', [
-         ['h2', 'The counter is ' + counter],
-         ['button', {
-            onclick: 'incrementCounter ()'
-         }, 'Increment counter'],
-      ]];
-   });
-}
-
-window.incrementCounter = function () {
-   B.call ('set', 'counter', B.store.counter + 1);
-}
-
-B.mount ('body', counter);
-```
-
-This will work, but it's not a good solution because it requires creating a global function for that particular purpose. This function is doing no more than firing an event through `B.call` to update `B.store.counter`. We could just pass the call to `B.call` within the event handler for `onclick`:
-
-```javascript
-var counter = function () {
-   return B.view ('counter', function (counter) {
-      return ['div', [
-         ['h2', 'The counter is ' + counter],
-         ['button', {
-            onclick: 'B.ev ("set", "counter", ' + (counter + 1) + ')'
-         }, 'Increment counter'],
-      ]];
-   });
-}
-
-B.mount ('body', counter);
-```
-
-This is better, but still error prone, because you need to quote and unquote things properly. If we had to pass multiple arguments or arrays or objects, it would be even trickier.
-
-For this reason, gotoв provides `B.ev`, a function to stringify calls to `B.call` so we can put them in the DOM.
-
-### `B.ev`
-
-As we just said, `B.ev` creates stringified event handlers that we can pass to DOM elements, in order to trigger events from them. Let's go back to our previous example:
-
-```javascript
-var counter = function () {
-   return B.view ('counter', function (counter) {
-      return ['div', [
-         ['h2', 'The counter is ' + counter],
-         ['button', {
-            onclick: B.ev ('set', 'counter', counter + 1)
-         }, 'Increment counter'],
-      ]];
-   });
-}
-
-B.mount ('body', counter);
-```
+When the `button` above is placed in the DOM, clicking on it will call an event with `verb` `do` and `path` `it` - in other words, it's the equivalent of running `B.call ('do', 'it')`.
 
 `B.ev` takes as arguments a `verb`, a `path`, and optional further arguments. In fact, it takes the same arguments as `B.call`! This is not a coincidence, since `B.ev` generates a string that, when executed by a javascript event, will perform a call to `B.call` with the same arguments.
-
-When `counter` is 0, the call to `B.ev` will generate a string that looks like this: `"B.call ('set', 'counter', 1)"`.
-
-If the user clicks on the button, `counter` will be updated, the view function will be updated, and then the button's event handler will look like this: `"B.call ('set', 'counter', 2)"`.
 
 Let's now see another example, to illustrate other aspects of `B.ev`: we'll create a button that, when clicked, will call an event with verb `submit` and path `data`.
 
@@ -942,7 +817,7 @@ If you need to access properties that are within the event handler (like `event`
 
 These are called `raw` arguments, because they are passed as they are, without stringifying them.
 
-In the example above, the event linstener will receive `this.value`, instead of the string `'this.value'`. You could also pass the event instead:
+Any responder matched by this event will `this.value` as its first argument, instead of the string `'this.value'`. You could also pass the event instead:
 
 ```javascript
 ['button', {onclick: B.ev ('submit', 'data', {raw: 'event'})}]
@@ -970,24 +845,187 @@ If you pass an object with a `raw` key that contains a string, other keys within
 
 If invalid inputs are passed to `B.ev`, the function will report an error and return `false`.
 
-Now that we have covered the main elements of gotoв, let's go back to see the event system in detail.
+### Reactive views: `B.view`
 
-### The event system in detail
+An essential part of gotoв (or of any frontend framework, really) is the ability to write *reactive* views. What does *reactive* mean? It means that it automatically updates itself when the information on which it depends has changed - in other words, it *reacts* to relevant changes on the store.
 
-gotoв's event sytem is provided by [recalc](https://github.com/fpereiro/recalc), a library that implements the basic functions of the event system. We won't, however, be using recalc's functions directly - rather, we'll use event functions provided by gotoв.
+Let's go back to the `counter` example we saw earlier:
 
-The two main operations of an event system are 1) calling an event; and 2) setting event responders that get notified when certain events are called.
+```javascript
+var counter = function () {
+   return B.view ('counter', function (counter) {
+      return ['div', [
+         ['h3', ['Counter is: ', counter || 0]],
+         ['button', {
+            onclick: B.ev ('set', 'counter', (counter || 0) + 1)
+         }, 'Increment counter']
+      ]];
+   });
+}
 
-To call an event, we use the function [`B.call`](https://github.com/fpereiro/recalc#rcall). This function takes the following arguments:
+B.mount ('body', counter);
+```
+
+As you can see, `B.view` takes two arguments:
+
+- A `path`.
+- A `vfun` (view function). Recall that `vfuns` are functions that return liths. This function receives as argument the value of the relevant part of the store. This function must always return a lith.
+
+When `B.store.counter` is updated, the `vfun` will be executed again and the view updated.
+
+If you enter the following command on the developer console to update the store: `B.call ('set', 'counter', 1)`, you will notice that the view gets automatically updated!
+
+If you, however, try to update `B.store.counter` directly by entering `B.store.counter = 2`, you'll notice that... nothing happens! This is because you changed the store directly instead of using an event. Most of the time, you'll change the store through events - though by the end of this guide, we'll cover some cases where you can sidestep the event system to update the store.
+
+`B.view` takes a `path` and a `vfun` as arguments. The `path` is exactly like the `path` passed to `B.call`, `B.listen` and `B.ev` and can be any of the following:
+
+- A string: `counter`.
+- An array of strings and integers: `['Data', 'counter']`.
+- An array of arrays of strings and integers: `[['Data', 'counter'], ['State', 'page']]`.
+
+If the `path` is `counter`, then the view will be updated when `B.store.counter` changes. If the path is instead `['Data', 'counter']`, then the view will be updated when `B.store.Data.counter` changes.
+
+By the way, if you passed `['counter']` instead of `'counter'` as the path, the result would be the same: `B.view ('counter', ...` is the same as `B.view (['counter'], ...`.
+
+If the `path` is a list of `paths`, as `[['Data', 'counter'], ['State', 'page']]`, then the view will be updated when *either* `Data.counter` or `State.page` change. If you pass multiple paths, the `vfun` will receive multiple arguments, one per path passed, each of them with the value of the relevant part of the store.
+
+If you pass multiple `paths` to `B.view`, the view will be updated when any of the corresponding store elements change:
+
+```javascript
+var dashboard = function () {
+   return B.view ([['stockPrice'], ['username']], function (stockPrice, username) {
+      return ['div', [
+         ['h3', ['Hi ', username]],
+         ['h4', ['The current stock price is: ', stockPrice, 'EUR']]
+      ]];
+   });
+}
+
+B.mount ('body', dashboard);
+
+// Here, the dashboard will have neither a name nor a stock price.
+
+B.call ('set', 'username', 'Oom Dagobert');
+
+// The dashboard now will display an username printed, but no stock price.
+
+B.call ('set', 'stockPrice', 140);
+
+// Now the dashboard will print both an username and a stock price.
+```
+
+The `vfuns` must return a single lith, not a lithbag. For example:
+
+```javascript
+var validVfun1 = function () {
+   return ['h1', 'Hello'];
+}
+
+var validVfun2 = function () {
+   return ['div', [
+      ['h2'],
+      ['h3']
+   ]];
+}
+
+// This view is invalid because it returns a lithbag.
+var invalidVfun1 = function () {
+   return [
+      ['h2'],
+      ['h3']
+   ];
+}
+
+// The view is invalid because it returns `undefined`.
+var invalidVfun2 = function () {
+   return;
+}
+```
+
+By requiring every view to return a lith, there's a 1:1 relationship between a view and a DOM element. This makes both debugging and the implementation of the library simpler. (Why is the simplicity of the implementation important? Because gotoв is also meant to be understood, not just used. Simple implementations are easier to understand).
+
+If its inputs are valid, `B.view` returns the lith produced by the `vfun` passed as its second argument. Besides that, it sets up a responder that will be matched when a `change` event is fired with a `path` that was passed to `B.view`.
+
+If it receives invalid inputs, or the `vfun` doesn't return a lith, `B.view` will report an error and return `false`.
+
+If you want to encapsulate a view in a variable for later reuse in multiple places, do it as a function that returns an invocation to `B.view`, instead of storing the invocation to `B.view`:
+
+```javascript
+
+// Please don't do this
+var counter = B.view ('counter', function (counter) {
+   return ['h1', 'Counter is ' + counter];
+});
+
+// Instead, do this
+var counter = function () {
+   return B.view ('counter', function (counter) {
+      return ['h1', 'Counter is ' + counter];
+   });
+}
+
+// Then, you can use it like this
+B.mount ('body', counter);
+
+// Or instead, you can use it like this
+
+var app = function () {
+   return [
+      ['h1', 'App'],
+      counter ();
+   ];
+}
+
+B.mount ('body', app);
+```
+
+The reason for this restriction is explained in the [internals](#internals) section. It is particularly important to be aware of this, since using an invocation to `B.view` in multiple places or multiple times can trigger errors that are not immediate and that cannot be detected by gotoв.
+
+If you pass an `id` to the lith returned by a `vfun`, it will be overwritten. `B.view` uses specific ids to track which DOM elements are reactive. `B.view` adds also a `paths` attribute to the DOM elements, simply to help debugging; the `paths` attribute will contain a stringified list of the `paths` passed to the reactive view.
+
+It is highly discouraged to call events from inside a `vfun`, unless you really know what you're doing. `vfuns` make much more sense as pure functions. Events should be called from `rfuns` rather than `vfuns`.
+
+### Writing your own responders & tracking execution chains: `x`, `B.get`, `B.mrespond`, `B.eventlog`
+
+TODO
 
 - An [optional context object](https://github.com/fpereiro/recalc#tracking-event-chains) (`x`), to keep track of what previous events (if any) triggered this event. We'll see more about this object below.
-- A `verb`, which is a string. For example: `'add'`, `'set'` or `'someverb'`.
-- A `path`, which can be either a string, an integer, or an array with zero or more strings or integers. For example, `'hello'`, `1`, or `['hello', '1']`. If you pass a single string or integer, it will be interpreted as an array containing that element (for example, `'hello'` is considered to be `['hello']` and `0` is considered to be `[0]`).
-- You can pass unlimited additional arguments when you call an event. These arguments can be of any type.
 
-You might ask: why use a combination of `verb` and `path` instead of just having a single event name instead? The answer is: too often we see event names like `toggleFooter`, `updateUser`, `savePosition`. By splitting an event name into a verb and a path, we achieve more clarity and versatility; very often, actions like `toggle`, `update`, `save` can be generalized. A great example of this are *data verbs*, which we already saw in the examples above and we'll describe now.
+`B.get` is a function for retrieving data from `B.store`. You can directly access data from `B.store` without it. However, `B.get` is useful to access properties in the store in case they haven't been defined yet.
 
-#### The `change` event and calling the data functions directly
+For example, if `B.store.user.username` is not defined, if you try to do something like `var username = B.store.user.username` and `B.store.user` is not present yet, your program will throw an error.
+
+If, instead, you write `var username = B.get ('user', 'username')`, if `B.store.user` is not present yet then `username` will be `undefined`.
+
+Using this function is completely optional - it is just provided for your convenience.
+
+`B.get` takes either a list of integers and strings or a single array containing integers and strings. These integers and strings represent the *path* to the part of the store you're trying to access. This `path` is the same `path` that `B.call` (the event calling function) takes as an argument.
+
+If you pass invalid arguments to `B.get`, it will return `undefined` and report an error to the console.
+
+If you pass an empty `path` to `B.get` (by passing either an empty array or no arguments), you'll get back `B.store` in its entirety.
+
+Change responders: common patterns: check if matching is precise; and get value. Show function doing this and think about whether to include it. `B.changeresponder`
+lifecycle hooks
+
+responders vs events
+server: routes vs requests
+code: function definition vs function call
+
+interaction of events with the store. everything represented like this.
+store events.
+
+Instead of logging to the console, emit events and then see them in B.debug! Very useful also for environments where there's no console, like mobile browsers.
+
+Two things in error reporting: visibility, and once you see it, identifiability, which means to track it quickly and certainly to which part of the code is making it. For the second, we put valuable info (including the `from` in some cases), but not more than necessary.
+
+`B.mrespond`.
+
+Instead of lifecycle hooks: events with very negative priority.
+
+### The `change` event and the data functions: `B.set`, `B.add`, `B.rem`
+
+TODO
 
 When you call any of the data verbs through `B.call`, a `change` event with the same `path` will be called. More precisely, a `change` event will be called whenever you call a data verb with 1) valid arguments; and 2) when your invocation actually modifies the store. If the event is called with incorrect arguments or it doesn't modify the store, no `change` event will be triggered.
 
@@ -1019,117 +1057,11 @@ var updateItems = function (items) {
 
 Most of the time, this will not be necessary (the example above, in fact, is a bit artificial: you could perfectly create a new `items` array and then `set` it as one operation). A good approach is to not update the store directly unless a particular situation calls for it on the grounds of performance.
 
-#### `B.store` & `B.get`
-
-As we saw earlier, gotoв uses a global store to hold all the information that is relevant to your frontend app. This store is a simple object, which you can find at `B.store`.
-
-`B.get` is a function for retrieving data from `B.store`. You can directly access data from `B.store` without it. However, `B.get` is useful to access properties in the store in case they haven't been defined yet.
-
-For example, if `B.store.user.username` is not defined, if you try to do something like `var username = B.store.user.username` and `B.store.user` is not present yet, your program will throw an error.
-
-If, instead, you write `var username = B.get ('user', 'username')`, if `B.store.user` is not present yet then `username` will be `undefined`.
-
-Using this function is completely optional - it is just provided for your convenience.
-
-`B.get` takes either a list of integers and strings or a single array containing integers and strings. These integers and strings represent the *path* to the part of the store you're trying to access. This `path` is the same `path` that `B.call` (the event calling function) takes as an argument.
-
-If you pass invalid arguments to `B.get`, it will return `undefined` and report an error to the console.
-
-If you pass an empty `path` to `B.get` (by passing either an empty array or no arguments), you'll get back `B.store` in its entirety.
-
-#### Writing your own event responders
-
-Change responders: common patterns: check if matching is precise; and get value. Show function doing this and think about whether to include it. `B.changeresponder`
-lifecycle hooks
-
-responders vs events
-server: routes vs requests
-code: function definition vs function call
-
-interaction of events with the store. everything represented like this.
-store events.
-
-Instead of logging to the console, emit events and then see them in B.debug! Very useful also for environments where there's no console, like mobile browsers.
-
-Two things in error reporting: visibility, and once you see it, identifiability, which means to track it quickly and certainly to which part of the code is making it. For the second, we put valuable info (including the `from` in some cases), but not more than necessary.
-
-`B.mrespond`.
-
-Instead of lifecycle hooks: events with very negative priority.
-
-### `B.view` in detail
-
-As we said above, `B.view` takes two elements: a `path` (or `paths`) and a view function.
-
-If you pass multiple `paths` to `B.view`, the view will be updated when any of the corresponding store elements change:
-
-```javascript
-var dashboard = function () {
-   return B.view ([['stockPrice'], ['username']], function (stockPrice, username) {
-      return ['div', [
-         ['h3', ['Hi ', username]],
-         ['h4', ['The current stock price is: ', stockPrice, 'EUR']]
-      ]];
-   });
-}
-
-B.mount ('body', dashboard);
-
-// Here, the dashboard will have neither a name nor a stock price.
-
-B.call ('set', 'username', 'Oom Dagobert');
-
-// The dashboard now will display an username printed, but no stock price.
-
-B.call ('set', 'stockPrice', 140);
-
-// Now the dashboard will print both an username and a stock price.
-```
-
-Views must return a single lith, not a lithbag. For example:
-
-```javascript
-var validView1 = function () {
-   return ['h1', 'Hello'];
-}
-
-var validView2 = function () {
-   return ['div', [
-      ['h2'],
-      ['h3']
-   ]];
-}
-
-// This view is invalid because it returns a lithbag.
-var invalidView1 = function () {
-   return [
-      ['h2'],
-      ['h3']
-   ];
-}
-
-// The view is invalid because it returns `undefined`.
-var invalidView2 = function () {
-   return;
-}
-```
-
-By requiring every view to return a lith, there's a 1:1 relationship between a view and a DOM element. This makes both debugging and the implementation of the library simpler. (Why is the simplicity of the implementation important? Because gotoв is also meant to be understood, not just used. Simple implementations are easier to understand).
-
-`B.view` will generate two outputs:
-- A lith structure with a DOM element.
-- Set up an event responder that .
+### Debugging & production mode: `B.error`, `B.prod`
 
 TODO
-- cannot pass id, will be overwritten.
-- to debug, use paths attribute.
-- don't reference if outer is redrawn
-
-### Production mode
 
 If you set `B.prod` to `true`, you'll turn on *production mode*. When production mode is on, gotoв's functions will stop validating inputs. This will make your application faster, but if any of these functions is invoked with invalid arguments, you will either experience silent errors or your application will throw an exception. It is recommended that you only set this variable on a production environment once your application has been mostly debugged.
-
-### Debugging
 
 gotoв stores a list of all the events called into `B.log`. Since gotoв applications are built around events, This can be extremely useful for debugging an app. Instead of inspecting `B.log` with the browser console, you can invoke `B.eventlog`, which will add an HTML table to the page where you can see all the information about the events.
 
@@ -1143,6 +1075,14 @@ B.r.log, turn off if needed.
 redraw error: 1) modified something not-opaque; or 2) invalid markup. Or 3) actual gotoв bug.
 
 if you put values on inputs without gotoв, then you should clear them out if you don't want them popping up elsewhere.
+
+### Advanced topics
+
+TODO
+
+- opaque & literal
+- negative priorities & nestedness
+- trample & perflogs
 
 ## Internals
 

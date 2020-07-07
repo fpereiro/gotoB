@@ -139,7 +139,7 @@ Besides generating HTML, we need also to keep track of the products and quantiti
 The HTML and the state are deeply interlocked. They interact in a yin-yang manner:
 
 - The state determines how the HTML will look.
-- Certain elements in the HTML (buttons, inputs) will perform changes in the state.
+- Certain elements in the HTML (buttons, inputs) will perform changes to the state.
 
 For example:
 - When the user loads the shopping cart for the first time, the HTML shows an empty cart (state -> HTML).
@@ -526,7 +526,7 @@ Responders are created with the function `B.respond`, which takes the following 
 - `verb`, which can be a string or a regex.
 - `path`, which can be a string, an integer, a regex, or an array containing those types of elements.
 - `options`, an optional object with additional options.
-- `rfun`, the function that will be executed when the responder is matched. `rfun` is short for `responder function`.
+- `rfun`, the function that will be executed when the responder is matched. `rfun` is short for `responder function`. The responder receives a context object `x` as its first argument and optional extra arguments (`args`). We'll see what's inside `x` in a later section.
 
 If invalid parameters are passed to `B.respond`, the function will report an error and return `false`.
 
@@ -866,7 +866,7 @@ var counter = function () {
 B.mount ('body', counter);
 ```
 
-As you can see, `B.view` takes two arguments:
+As you can see above, `B.view` takes two arguments:
 
 - A `path`.
 - A `vfun` (view function). Recall that `vfuns` are functions that return liths. This function receives as argument the value of the relevant part of the store. This function must always return a lith.
@@ -875,7 +875,7 @@ When `B.store.counter` is updated, the `vfun` will be executed again and the vie
 
 If you enter the following command on the developer console to update the store: `B.call ('set', 'counter', 1)`, you will notice that the view gets automatically updated!
 
-If you, however, try to update `B.store.counter` directly by entering `B.store.counter = 2`, you'll notice that... nothing happens! This is because you changed the store directly instead of using an event. Most of the time, you'll change the store through events - though by the end of this guide, we'll cover some cases where you can sidestep the event system to update the store.
+If you, however, try to update `B.store.counter` directly by entering `B.store.counter = 2`, you'll notice that... nothing happens! This is because you changed the store directly instead of using an event. Most of the time, you'll change the store through events - though later we'll see how you can sidestep the event system to update the store directly.
 
 `B.view` takes a `path` and a `vfun` as arguments. The `path` is exactly like the `path` passed to `B.call`, `B.listen` and `B.ev` and can be any of the following:
 
@@ -968,7 +968,6 @@ var counter = function () {
 B.mount ('body', counter);
 
 // Or instead, you can use it like this
-
 var app = function () {
    return [
       ['h1', 'App'],
@@ -981,23 +980,61 @@ B.mount ('body', app);
 
 The reason for this restriction is explained in the [internals](#internals) section. It is particularly important to be aware of this, since using an invocation to `B.view` in multiple places or multiple times can trigger errors that are not immediate and that cannot be detected by gotoв.
 
+It is perfectly possible to nest reactive views:
+
+```javascript
+var app = function () {
+   B.view ('username', function (username) {
+      return [
+         ['h1', username],
+         B.view ('counter', function (counter) {
+            return ['h2', ['Counter is ', counter]];
+         })
+      ];
+   })
+}
+
+B.mount ('body', app);
+```
+
 If you pass an `id` to the lith returned by a `vfun`, it will be overwritten. `B.view` uses specific ids to track which DOM elements are reactive. `B.view` adds also a `paths` attribute to the DOM elements, simply to help debugging; the `paths` attribute will contain a stringified list of the `paths` passed to the reactive view.
 
 It is highly discouraged to call events from inside a `vfun`, unless you really know what you're doing. `vfuns` make much more sense as pure functions. Events should be called from `rfuns` rather than `vfuns`.
 
-### Writing your own responders & tracking execution chains: `x`, `B.get`, `B.mrespond`, `B.eventlog`
+### Writing your own responders & tracking execution chains: `x`, `B.log`, `B.eventlog`, `B.get`, `B.mrespond`
 
-TODO
+Most of the logic of a gotoв application will be contained in responders that you yourself write; while you'll still be using the built-in responders (those with verbs `set`, `add` and `rem`), your app will require custom responders. In fact, many events will be called from inside responders (with the rest of the events being called directly by user interactions with the DOM).
 
-- An [optional context object](https://github.com/fpereiro/recalc#tracking-event-chains) (`x`), to keep track of what previous events (if any) triggered this event. We'll see more about this object below.
+As we noted above, responders are created with `B.respond` and are *matched* when an event with a matching `verb` and `path` is called. The logic for a responder goes in the `rfun` (*responder function*). This function receives `x` (a *context object*) as its first argument; it optionally receives further arguments if the matching event was called with extra arguments. `x` is always passed to each `rfun` and contains the following:
 
-`B.get` is a function for retrieving data from `B.store`. You can directly access data from `B.store` without it. However, `B.get` is useful to access properties in the store in case they haven't been defined yet.
+- `verb`, the verb of the event that matched the responder.
+- `path`, the path of the event that matched the responder.
+- `args`, an array with extra arguments passed to the event. If no extra arguments were passed, this element will be undefined.
+- `from`, the id of the event that matched this responder (which is the same value returned by the corresponding `r.call` invocation).
+- `cb`, a callback function which you only need to use if your responder function is asynchronous.
+- `responder`, the matched responder.
 
-For example, if `B.store.user.username` is not defined, if you try to do something like `var username = B.store.user.username` and `B.store.user` is not present yet, your program will throw an error.
+Most of these keys are there for completeness sake and are not really necessary most of the time; in fact, `args` actually redundant, since they are also passed as extra arguments directly to `rfun`. A full description of the context object is available [here](https://github.com/fpereiro/recalc#responder-functions).
+
+The most useful key of `x` is `from`. It will contain the id of the event that was called and that in turned matched the responder. This allows to track *event chains*, namely: event X matches responder Y, then responder Y calls event Z.
+
+To track event chains, *pass `x` as the first argument to calls to `B.call` that you do from inside the `rfun`*. For example:
+
+```javascript
+B.respond ('foo', 'bar', function (x) {
+   B.call (x, 'do', 'something');
+});
+```
+
+The event call `do something` will contain the id of the listener and in this way it will be possible to track where the call came from.
+
+gotoв stores a list of all the events called and all responders matched into `B.log`. Since gotoв applications are built around events, This can be extremely useful for debugging an app. Instead of inspecting `B.log` with the browser console, you can invoke `B.eventlog`, a function which will add an HTML table to the page where you can see all the information about the events.
+
+The table presented by `B.eventlog` is ordered by time (so you can see what happened first and what later), it allows to track dependencies between events (if the context is passed in nested calls, see below) and it shows the time when the event was called relative to the initial loading of the application (which allows for performance benchmarking).
+
+A function you will probably use quite a bit inside responders is `B.get`, which retrieves data from `B.store`. While you can directly access data from `B.store` without it, `B.get` is useful to access properties in the store in case they haven't been defined yet. For example, if `B.store.user.username` is not defined, if you try to do something like `var username = B.store.user.username` and `B.store.user` is not present yet, your program will throw an error.
 
 If, instead, you write `var username = B.get ('user', 'username')`, if `B.store.user` is not present yet then `username` will be `undefined`.
-
-Using this function is completely optional - it is just provided for your convenience.
 
 `B.get` takes either a list of integers and strings or a single array containing integers and strings. These integers and strings represent the *path* to the part of the store you're trying to access. This `path` is the same `path` that `B.call` (the event calling function) takes as an argument.
 
@@ -1005,29 +1042,43 @@ If you pass invalid arguments to `B.get`, it will return `undefined` and report 
 
 If you pass an empty `path` to `B.get` (by passing either an empty array or no arguments), you'll get back `B.store` in its entirety.
 
-Change responders: common patterns: check if matching is precise; and get value. Show function doing this and think about whether to include it. `B.changeresponder`
-lifecycle hooks
+Responders are active from the moment you create them (with `B.respond`) until you remove them with `B.forget` (with the exceptions of responders created with the `burn` flag, which will be forgotten after being matched once). There's no concept of lifecycle, and most responders will be active for the entire lifetime of you app.
 
-responders vs events
-server: routes vs requests
-code: function definition vs function call
+To create multiple responders at once, you can use `B.mrespond`, which takes an array of arrays, where each internal array contains the arguments to be passed to `B.respond`:
 
-interaction of events with the store. everything represented like this.
-store events.
+```javascript
+B.mrespond ([
+   ['verb1', 'path1', function (x) {...}],
+   ['verb2', ['another', 'path'], function (x) {...}],
+   ...
+]);
+```
 
-Instead of logging to the console, emit events and then see them in B.debug! Very useful also for environments where there's no console, like mobile browsers.
+You can use regexes on both the `verb` and the `path` of a responder. For example, if you want to create a responder that is matched by events with `verbs` `get` and `post` you can write it as follows:
 
-Two things in error reporting: visibility, and once you see it, identifiability, which means to track it quickly and certainly to which part of the code is making it. For the second, we put valuable info (including the `from` in some cases), but not more than necessary.
+```javascript
+B.respond (/^get|post$/, 'bar', function (x) {...});
+```
 
-`B.mrespond`.
+This responder, however, will only be matched by events with `verb` `get` or `post` and a `path` equal to `bar`. To make it match all events with a path of length 1, you can use a wildcard for the path:
 
-Instead of lifecycle hooks: events with very negative priority.
+```javascript
+B.respond (/^get|post$/, '*', function (x) {...});
+```
+
+To make a responder match *all* events with verbs `get` or `post`, you need to use the `match` property of the responder. For example:
+
+```javascript
+B.respond (/^get|post$/, [], {match: function (ev, responder) {
+   if (ev.verb === 'get' || ev.verb === 'post') return true;
+});
+```
+
+The responder above will be matched by any event with verb `get` or `post`. The `match` parameter effectively supersedes the `verb` and `path` of the responder. If `match` function returns `true`, the responder will match the called event.
 
 ### The `change` event and the data functions: `B.set`, `B.add`, `B.rem`
 
-TODO
-
-When you call any of the data verbs through `B.call`, a `change` event with the same `path` will be called. More precisely, a `change` event will be called whenever you call a data verb with 1) valid arguments; and 2) when your invocation actually modifies the store. If the event is called with incorrect arguments or it doesn't modify the store, no `change` event will be triggered.
+As we saw before, when you call an event with any of the built-in data verbs (`set`, `add` and `rem`), a `change` event with the same `path` will be called. More precisely, a `change` event will be called whenever you call a data verb with 1) valid arguments; and 2) when your invocation actually modifies the store. If the event is called with incorrect arguments or it doesn't modify the store, no `change` event will be triggered.
 
 gotoв's function for creating reactive elements (`B.view`), relies on the `change` event to know when it should redraw a view. `B.view` essentially creates a responder function on the `change` event on a given path. This means that views are redrawn when a `change` event is emitted.
 
@@ -1057,15 +1108,25 @@ var updateItems = function (items) {
 
 Most of the time, this will not be necessary (the example above, in fact, is a bit artificial: you could perfectly create a new `items` array and then `set` it as one operation). A good approach is to not update the store directly unless a particular situation calls for it on the grounds of performance.
 
+TODO
+
+change with B.view: change only when data changes, path logic.
+
+change responders
+   - receive new & old value
+   - changeresponder (used internally by B.view)
+   - If you need `afterdraw`, see advanced.
+
 ### Debugging & production mode: `B.error`, `B.prod`
 
 TODO
 
+Instead of logging to the console, call events! Very useful also for environments where there's no console, like mobile browsers.
+
+Two things in error reporting: visibility, and once you see it, identifiability, which means to track it quickly and certainly to which part of the code is making it. For the second, we put valuable info (including the `from` in some cases), but not more than necessary.
+
+
 If you set `B.prod` to `true`, you'll turn on *production mode*. When production mode is on, gotoв's functions will stop validating inputs. This will make your application faster, but if any of these functions is invoked with invalid arguments, you will either experience silent errors or your application will throw an exception. It is recommended that you only set this variable on a production environment once your application has been mostly debugged.
-
-gotoв stores a list of all the events called into `B.log`. Since gotoв applications are built around events, This can be extremely useful for debugging an app. Instead of inspecting `B.log` with the browser console, you can invoke `B.eventlog`, which will add an HTML table to the page where you can see all the information about the events.
-
-The table presented by `B.eventlog` is ordered by time (so you can see what happened first and what later), it allows to track dependencies between events (if the context is passed in nested calls, see below) and it shows the time when the event was called relative to the initial loading of the application (which allows for performance benchmarking).
 
 If one of gotoв's functions is invoked with invalid arguments, an `error` event will be emitted. There's an `error` event responder that will report an error message, plus an invocation to `B.eventlog`. The end result is that you'll see the error as the last row of the `eventlog` immediately after the error happens. Note that this won't happen if `B.prod` is enabled. If you wish to turn off this behavior, run this command at the top of your application: `B.forget ('error')`.
 

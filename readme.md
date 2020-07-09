@@ -1348,10 +1348,10 @@ We iterate the entries of `B.log`, an array that contains a list of all the even
          dale.go (B.log, function (entry, k) {
 ```
 
-We set an entry in `index` to associate the event with element `id` with the position of this event or responder on the log. This will be accurate only for events, not responders, since responders can appear more than once on the log (since they can be matched multiple times).
+We set an entry in `index` to associate the event with element `id` with the position of this event or responder on the log. In the case of responders, we associate the entry with the string `responderId/eventId`. This will be accurate only for events, not responders, since responders can appear more than once on the log (since they can be matched multiple times).
 
 ```javascript
-            index [entry.id] = k;
+            index [(entry.from && entry.from.match (/^E\d+$/)) ? (entry.id + '/' + entry.from) : entry.id] = k;
 ```
 
 We prepare the row on which we'll print the details of either the event or responder. We alternate a background color (with two types of grays).
@@ -1372,10 +1372,10 @@ For all columns that are not the second, third or fourth, we merely print the co
                if (k2 !== 2 && k2 !== 3) return ['td', value];
 ```
 
-For the `entry` and `from` columns (which contain references to events called), we add an `onclick` event to jump to that event on the table. We also apply a color taken from `colors` and based on the position of the event in the list. We however don't add an `onclick` if the `id` belongs to a responder; this is because we cannot be sure of which entry of the log matches to a given match of a responder, since there can be multiple entries. This could be improved in the future.
+For the `entry` and `from` columns (which contain references to events called), we add an `onclick` event to jump to that event on the table. We also apply a color taken from `colors` and based on the position of the event in the list.
 
 ```javascript
-               var onclick = (value === undefined || ! value.match (/^E\d/)) ? '' : ('c ("tr") [' + (index [value] + 1) + '].scrollIntoView ()');
+               var onclick = value === undefined ? '' : ('c ("tr") [' + (index [value] + 1) + '].scrollIntoView ()');
                return ['td', {onclick: onclick, style: lith.css.style ({cursor: 'pointer', 'font-weight': 'bold', color: colors [parseInt (index [value]) % colors.length]})}, value === undefined ? '' : value];
             })];
 ```

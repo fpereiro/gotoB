@@ -75,8 +75,8 @@
                      {from: undefined, id: 'E1', verb: 'log',   path: ['test OK'], args: ['initial setup']},
                      {from: undefined, id: 'E2', verb: 'test',  path: ['log'],     args: undefined},
                      {from: 'E2',      id: 'R5', verb: 'test',  path: ['log'],     args: undefined},
-                     {from: 'R5',      id: 'E3', verb: 'verb1', path: ['a path'],  args: ['booyah']},
-                     {from: 'R5',      id: 'E4', verb: 'verb2', path: ['a path'],  args: undefined}
+                     {from: 'R5/E2',   id: 'E3', verb: 'verb1', path: ['a path'],  args: ['booyah']},
+                     {from: 'R5/E2',   id: 'E4', verb: 'verb2', path: ['a path'],  args: undefined}
                   ], undefined, function (v, k) {
                      var log = teishi.copy (B.log [k]);
                      delete log.t;
@@ -277,7 +277,7 @@
                   if (incrementOnChange !== 0) return 'change event fired with a data event receiving invalid arguments #3.';
 
                   var llog = last (B.log);
-                  if (! eq ({verb: llog.verb, path: llog.path, from: llog.from}, {verb: 'error', path: ['B.rem'], from: last (B.log, 2).id})) return 'error event not fired or fired improperly.';
+                  if (! eq ({verb: llog.verb, path: llog.path, from: llog.from}, {verb: 'error', path: ['B.rem'], from: last (B.log, 2).id + '/' + last (B.log, 3).id})) return 'error event not fired or fired improperly.';
 
                   // no-ops
                   dale.go ([['set', ['Data', 'items'], teishi.copy (B.get ('Data', 'items'))], ['set', [], teishi.copy (B.store)], ['set', 'foo', undefined], ['set', 'Data', B.get ('Data')], ['set', 'Data', teishi.copy (B.get ('Data'))], ['add', ['Data', 'items']], ['rem', ['Data', 'items'], 3, 4], ['rem', ['Data', 'items'], [3, 4]], ['rem', 'foo', 'bar'], ['rem', ['Data', 'items'], []], ['rem', ['Data', 'items']]], function (v, k) {

@@ -50,11 +50,11 @@ Please refer to readme.md to read the annotated source.
             return ['th', {style: lith.css.style ({'background-color': '#efefef'})}, header];
          })],
          dale.go (B.log, function (entry, k) {
-            index [entry.id] = k;
+            index [(entry.from && entry.from.match (/^E\d+$/)) ? (entry.id + '/' + entry.from) : entry.id] = k;
             return ['tr', {style: lith.css.style ({'background-color': {0: '#fcfcfc', 1: '#efefef'} [k % 2]})}, dale.go (['#' + (k + 1), entry.t - B.t, entry.id, entry.from, entry.verb, entry.path.join (':'), dale.go (entry.args, B.str).join (', ')], function (value, k2) {
                if (k2 === 1) return ['td', (value / 1000) + (! (value % 1000) ? '.0' : '') + (! (value % 100) ? '0' : '') + (! (value % 10) ? '0' : '') + 's'];
                if (k2 !== 2 && k2 !== 3) return ['td', value];
-               var onclick = (value === undefined || ! value.match (/^E\d/)) ? '' : ('c ("tr") [' + (index [value] + 1) + '].scrollIntoView ()');
+               var onclick = value === undefined ? '' : ('c ("tr") [' + (index [value] + 1) + '].scrollIntoView ()');
                return ['td', {onclick: onclick, style: lith.css.style ({cursor: 'pointer', 'font-weight': 'bold', color: colors [parseInt (index [value]) % colors.length]})}, value === undefined ? '' : value];
             })];
          }),

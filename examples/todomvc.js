@@ -14,17 +14,16 @@
    var Views = {};
 
    Views.style = [
-      ['html, body, button, .todo-list', {'margin, padding': 0}],
+      ['html, body', {'margin, padding': 0}],
       ['button', {
-         border: 0,
+         'margin, padding, border': 0,
          background: 'none',
          'font-size': 1,
          'vertical-align': 'baseline',
          'font-family, font-weight, color': 'inherit',
          '-webkit-appearance, appearance': 'none',
-      }],
-      ['button, body, .new-todo, .edit', {
-         'font-smoothing, -webkit-font-smoothing, -moz-osx-font-smoothing': 'antialiased'
+         '-webkit-font-smoothing': 'antialiased',
+         '-moz-osx-font-smoothing': 'grayscale'
       }],
       ['body', {
          font: '14px \'Helvetica Neue\', Helvetica, Arial, sans-serif',
@@ -34,9 +33,11 @@
          'min-width': 230,
          'max-width': 550,
          margin: '0 auto',
+         '-webkit-font-smoothing': 'antialiased',
+         '-moz-osx-font-smoothing': 'grayscale',
          'font-weight': '300'
       }],
-      ['button, input[type="checkbox"]', {outline: 'none'}],
+      [':focus', {outline: 0}],
       ['.hidden', {display: 'none'}],
       ['.todoapp', {
          background: '#fff',
@@ -61,39 +62,48 @@
             color: 'rgba(175, 47, 47, 0.15)',
             '-webkit-text-rendering, -moz-text-rendering, text-rendering': 'optimizeLegibility'
          }],
-         ['.new-todo, .edit', {
-            position: 'relative',
-            'margin': 0,
-            width: 1,
-            'font-size': 24,
-            'font-family, font-weight': 'inherit',
-            'line-height': '1.4em',
-            outline: 'none',
-            'box-sizing': 'border-box',
-
-         }],
-         ['.edit', {padding: 6, border: 'solid 1px #999', 'box-shadow': 'inset 0 -1px 5px 0 rgba(0, 0, 0, 0.2)', color: 'inherit'}]
       ]],
+      ['.new-todo, .edit', {
+         position: 'relative',
+         'margin': 0,
+         width: 1,
+         'font-size': 24,
+         'font-family, font-weight': 'inherit',
+         'line-height': '1.4em',
+         border: 0,
+         color: 'inherit',
+         padding: 6,
+         border: '1px solid #999',
+         'box-shadow': 'inset 0 -1px 5px 0 rgba(0, 0, 0, 0.2)',
+         'box-sizing': 'border-box',
+         '-webkit-font-smoothing': 'antialiased',
+         '-moz-osx-font-smoothing': 'grayscale'
+      }],
       ['.new-todo', {
          padding: '16px 16px 16px 60px',
          border: 'none',
          background: 'rgba(0, 0, 0, 0.003)',
-         'box-shadow': 'inset 0 -2px 1px rgba(0,0,0,0.03)',
+         'box-shadow': 'inset 0 -2px 1px rgba(0,0,0,0.03)'
       }],
       ['.main', {
          position: 'relative',
          'z-index': '2',
-         'border-top': '1px solid #e6e6e6',
+         'border-top': '1px solid #e6e6e6'
       }],
-      ['label[for="toggle-all"]', {display: 'none'}],
       ['.toggle-all', {
-         'position': 'absolute',
-         top: -55,
-         left: -12,
+         'text-align': 'center',
+         border: 'none',
+         opacity: 0,
+         position: 'absolute'
+      }],
+      ['.toggle-all + label', {
          width: 60,
          height: 34,
-         'text-align': 'center',
-         border: 'none'
+         'font-size': 0,
+         position: 'absolute',
+         top: -52,
+         left: -13,
+         '-webkit-transform, transform': 'rotate(90deg)'
       }, [
          ['&:before', {
             content: '"❯"',
@@ -101,16 +111,16 @@
             color: '#e6e6e6',
             padding: '10px 27px 10px 27px',
          }],
-         ['&:checked:before', {color: '#737373'}],
       ]],
-      ['.todo-list', {'list-style': 'none'}, [
+      ['.toggle-all:checked + label:before', {color: '#737373'}],
+      ['.todo-list', {'margin, padding': 0, 'list-style': 'none'}, [
          ['li', {
             position: 'relative',
             'font-size': 24,
             'border-bottom': '1px solid #ededed'
          }, [
-            ['&:last-child, &.editing', {'border-bottom': 'none'}],
-            ['&.editing', {padding: 0}, [
+            ['&:last-child', {'border-bottom': 'none'}],
+            ['&.editing', {'border-bottom': 'none', padding: 0}, [
                ['.edit', {
                   display: 'block',
                   width: 506,
@@ -126,19 +136,21 @@
                position: 'absolute',
                'top, bottom': 0,
                margin: 'auto 0',
-               'border, appearance, -webkit-appearance': 'none',
+               'border, -webkit-appearance, appearance': 'none',
+               opacity: 0
             }, [
-               ['&:after', {
-                  content: 'url(\'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="-10 -18 100 135"><circle cx="50" cy="50" r="50" fill="none" stroke="#ededed" stroke-width="3"/></svg>\')'
+               ['+ label', {
+                  'background-image': 'url(\'data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%2240%22%20height%3D%2240%22%20viewBox%3D%22-10%20-18%20100%20135%22%3E%3Ccircle%20cx%3D%2250%22%20cy%3D%2250%22%20r%3D%2250%22%20fill%3D%22none%22%20stroke%3D%22%23ededed%22%20stroke-width%3D%223%22/%3E%3C/svg%3E\')',
+                  'background-repeat': 'no-repeat',
+                  'background-position': 'center left'
                }],
-               ['&:checked:after', {
-                  content: 'url(\'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="-10 -18 100 135"><circle cx="50" cy="50" r="50" fill="none" stroke="#bddad5" stroke-width="3"/><path fill="#5dc2af" d="M72 25L42 71 27 56l-4 4 20 20 34-52z"/></svg>\')'
+               ['&:checked + label', {
+                  'background-image': 'url(\'data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%2240%22%20height%3D%2240%22%20viewBox%3D%22-10%20-18%20100%20135%22%3E%3Ccircle%20cx%3D%2250%22%20cy%3D%2250%22%20r%3D%2250%22%20fill%3D%22none%22%20stroke%3D%22%23bddad5%22%20stroke-width%3D%223%22/%3E%3Cpath%20fill%3D%22%235dc2af%22%20d%3D%22M72%2025L42%2071%2027%2056l-4%204%2020%2020%2034-52z%22/%3E%3C/svg%3E\')'
                }]
             ]],
             ['label', {
                'word-break': 'break-all',
-               padding: '15px 60px 15px 15px',
-               'margin-left': 45,
+               padding: '15px 15px 15px 60px',
                display: 'block',
                'line-height': '1.2',
                transition: 'color 0.4s'
@@ -160,11 +172,11 @@
                transition: 'color 0.2s ease-out'
             }, [
                ['&:hover', {color: '#af5b5e'}],
-               ['&:after', {content: '"×"'}]
+               ['&:after', {content: '\'×\''}]
             ]],
             ['&:hover .destroy', {display: 'block'}],
             ['.edit', {display: 'none'}],
-            ['&:editing:last-child', {'margin-bottom': -1}]
+            ['&.editing:last-child', {'margin-bottom': -1}]
          ]]
       ]],
       ['.footer', {
@@ -217,7 +229,7 @@
          'text-shadow': '0 1px 0 rgba(255, 255, 255, 0.5)',
          'text-align': 'center'
       }, [
-         ['p', {'line-height': 1}],
+         ['p', {'line-height': '1'}],
          ['a', {
             color: 'inherit',
             'text-decoration': 'none',

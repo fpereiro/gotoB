@@ -152,8 +152,7 @@ Please refer to readme.md to read the annotated source.
       if (targetType === 'object') dale.go (keys, function (v) {delete target [v]});
 
       if (targetType === 'array') {
-         keys = teishi.copy (keys);
-         keys.sort (function (a, b) {return b - a});
+         keys = keys.slice ().sort (function (a, b) {return b - a});
          dale.go (keys, function (v) {target.splice (v, 1)})
       }
 
@@ -421,7 +420,7 @@ Please refer to readme.md to read the annotated source.
 
       dale.go (diff, function (v, k) {
          if (v [1].match (/^<opaque/)) return;
-         if (! v [1].match (/^>/)) diff [k] [2] = {el: find (dold, 'sequence', k), old: teishi.copy (dold), New: teishi.copy (dnew)};
+         if (! v [1].match (/^>/)) diff [k] [2] = {el: find (dold, 'sequence', k), old: dold.slice (), New: dnew.slice ()};
          if (v [1].match (/^</)) {
             diff [k] [2].active = diff [k] [2].el === document.activeElement;
             var tag  = v [1].match (/[^\s]+/g) [0];
@@ -488,13 +487,13 @@ Please refer to readme.md to read the annotated source.
             if (v [1].match (/<.+ {.*"opaque":true.*}/)) v [2].el.innerHTML = '';
 
             // This if is because of the way IE/Edge treat text elements (they simply bring text instead of a textNode).
-            if (! v [2].el) insert (document.createTextNode (v [1]), v [2].New, k);
+            if (! v [2].el) insert (document.createTextNode (v [1]), v [2].New, v [2].New [v [2].New.length - 1]);
             else {
                if (v [1].match (/<option/)) {
                   var attrs = JSON.parse (v [1].match (/{.+/) || '{}');
                   if (attrs.selected) selected.push (v [2].el);
                }
-               insert (v [2].el.parentNode.removeChild (v [2].el), v [2].New, k);
+               insert (v [2].el.parentNode.removeChild (v [2].el), v [2].New, v [2].New [v [2].New.length - 1]);
 
                if (v [2].active && v [1].match (/[^<\s]+/g) [0] !== 'a') active = v [2].el;
             }
@@ -535,7 +534,7 @@ Please refer to readme.md to read the annotated source.
                      if (v || v === '' || v === 0) el.setAttribute (k, v);
                   });
                }
-               insert (el, v [2].New, k);
+               insert (el, v [2].New, v [2].New [v [2].New.length - 1]);
                v [2].el = el;
                if (old && old [2].active && v [1].match (/[^<\s]+/g) [0] !== 'a') active = el;
             }
@@ -549,7 +548,7 @@ Please refer to readme.md to read the annotated source.
                   .replace (/&quot;/g, '"')
                   .replace (/&#39;/g,  "'")
                   .replace (/&#96;/g,  '`');
-               insert (document.createTextNode (v [1]), v [2].New, k);
+               insert (document.createTextNode (v [1]), v [2].New, v [2].New [v [2].New.length - 1]);
             }
             else {
                if (v [2].el) v [2].el.parentNode.removeChild (v [2].el);

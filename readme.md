@@ -1137,6 +1137,12 @@ redraw error: 1) modified something not-opaque; or 2) invalid markup. Or 3) actu
 
 if you put values on inputs without gotoв, then you should clear them out if you don't want them popping up elsewhere.
 
+common errors:
+- not returning lith from vfun
+- using the same result of B.view twice
+- Creating a B.view that is not placed in the DOM (dangling)
+- Modifying the DOM of a B.view without using opaque
+
 ### Advanced topics
 
 TODO

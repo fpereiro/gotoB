@@ -1,5 +1,5 @@
 /*
-gotoB - v1.2.4
+gotoB - v1.2.5
 
 Written by Federico Pereiro (fpereiro@gmail.com) and released into the public domain.
 
@@ -17,7 +17,7 @@ Please refer to readme.md to read the annotated source (but not yet!).
    var type = teishi.t, log = teishi.l;
 
    var r = window.R ();
-   var B = window.B = {v: '1.2.4', B: 'в', r: r, routes: r.routes, store: r.store, do: r.do, listen: r.listen, forget: r.forget};
+   var B = window.B = {v: '1.2.5', B: 'в', r: r, routes: r.routes, store: r.store, do: r.do, listen: r.listen, forget: r.forget};
 
    // *** B.EVENTLOG ***
 
@@ -60,7 +60,7 @@ Please refer to readme.md to read the annotated source (but not yet!).
       ])) return false;
 
       if (targetType === 'array') {
-         keys.sort (function (a, b) {return b - a});
+         keys = keys.slice ().sort (function (a, b) {return b - a});
          dale.do (keys, function (v) {target.splice (v, 1)})
       }
       else dale.do (keys, function (v) {delete target [v]});
@@ -427,7 +427,7 @@ Please refer to readme.md to read the annotated source (but not yet!).
 
          dale.do (diff, function (v, k) {
             if (v [1].match (/^<opaque/)) return;
-            if (! v [1].match (/^>/)) diff [k] [2] = {el: find (dold, 'sequence', k), old: teishi.c (dold), New: teishi.c (dnew)};
+            if (! v [1].match (/^>/)) diff [k] [2] = {el: find (dold, 'sequence', k), old: dold.slice (), New: dnew.slice ()};
             if (v [1].match (/^</)) {
                diff [k] [2].active = diff [k] [2].el === document.activeElement;
                var tag  = v [1].match (/[^\s]+/g) [0];
@@ -494,13 +494,13 @@ Please refer to readme.md to read the annotated source (but not yet!).
                if (v [1].match (/<.+ {.*"opaque":true.*}/)) v [2].el.innerHTML = '';
 
                // This if is because of the way IE/Edge treat text elements (they simply bring text instead of a textNode).
-               if (! v [2].el) insert (document.createTextNode (v [1]), v [2].New, k);
+               if (! v [2].el) insert (document.createTextNode (v [1]), v [2].New, v [2].New [v [2].New.length - 1]);
                else {
                   if (v [1].match (/<option/)) {
                      var attrs = JSON.parse (v [1].match (/{.+/) || '{}');
                      if (attrs.selected) selected.push (v [2].el);
                   }
-                  insert (v [2].el.parentNode.removeChild (v [2].el), v [2].New, k);
+                  insert (v [2].el.parentNode.removeChild (v [2].el), v [2].New, v [2].New [v [2].New.length - 1]);
 
                   if (v [2].active && v [1].match (/[^<\s]+/g) [0] !== 'a') active = v [2].el;
                }
@@ -555,7 +555,7 @@ Please refer to readme.md to read the annotated source (but not yet!).
                      .replace (/&quot;/g, '"')
                      .replace (/&#39;/g,  "'")
                      .replace (/&#96;/g,  '`');
-                  insert (document.createTextNode (v [1]), v [2].New, k);
+                  insert (document.createTextNode (v [1]), v [2].New, v [2].New [v [2].New.length - 1]);
                }
                else {
                   if (v [2].el) v [2].el.parentNode.removeChild (v [2].el);

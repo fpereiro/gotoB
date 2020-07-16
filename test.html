@@ -200,6 +200,10 @@
                   if (Data.items [0] !== 'four') return 'B.rem didn\'t modify array when receiving out of range index.';
                   if (Data.items [1] !== 'seven') return 'B.rem didn\'t modify array when receiving out of range index.';
 
+                  var keys = [0, 2];
+                  B.rem (['Data', 'items'], keys);
+                  if (! teishi.eq (keys, [0, 2])) return 'B.rem modified keys array.';
+
                   if (B.rem (['Data', 'obj'], 'last') !== true) return 'B.rem didn\'t return true.';
                   if (dale.keys (Data.obj).length !== 0) return 'B.rem didn\'t remove keys from object.';
                   if (B.rem ('Data', 'obj') !== true) return 'B.rem didn\'t return true.';

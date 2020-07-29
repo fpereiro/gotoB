@@ -16,7 +16,7 @@ Please refer to readme.md to read the annotated source.
 
    var type = teishi.type;
 
-   var B = window.B = {v: '2.0.0', B: 'в', t: teishi.time (), r: r, responders: r.responders, store: r.store, log: r.log, call: r.call, respond: r.respond, forget: r.forget};
+   var B = window.B = {v: '2.0.0', B: 'в', t: new Date ().getTime (), r: r, responders: r.responders, store: r.store, log: r.log, call: r.call, respond: r.respond, forget: r.forget};
 
    // *** ERROR REPORTING ***
 
@@ -273,7 +273,7 @@ Please refer to readme.md to read the annotated source.
 
       if (! B.prod && teishi.stop ('B.view', [
          dale.stopNot (paths, false, function (path) {
-            return r.isPath (path) ? true : B.error ('B.view', 'Invalid path:', path, 'Arguments', {paths: paths, options: options, fun: fun});
+            return r.isPath (path) ? true : B.error ('B.view', 'Invalid path:', path, 'Arguments', {paths: paths});
          }),
          ['fun', fun, 'function']
       ], function (error) {
@@ -285,10 +285,10 @@ Please refer to readme.md to read the annotated source.
       var makeElement = function () {
          var count = B.internal.count, children = [];
          var elem = fun.apply (null, dale.go (paths, B.get));
-         if (! B.prod && B.validateLith (elem) !== 'Lith') return B.error ('B.view', 'Function must return a lith element but instead is:', elem, 'Arguments:', {paths: paths, fun: fun});
+         if (! B.prod && B.validateLith (elem) !== 'Lith') return B.error ('B.view', 'Function must return a lith element but instead is:', elem, 'Arguments:', {paths: paths});
 
-         dale.go (dale.times (B.internal.count - count, 1), function (k) {
-            var responder = B.responders [B.B + count + k];
+         dale.go (dale.times (B.internal.count - count, count), function (k) {
+            var responder = B.responders [B.B + k];
             responder.priority--;
             if (! responder.parent) {
                children.push (responder.id);
@@ -324,36 +324,32 @@ Please refer to readme.md to read the annotated source.
       var v = lith.v (input, true);
       if (v !== 'Lith' && v !== 'Lithbag') return v;
       if (v === 'Lith') {
-         if (type (teishi.last (input)) !== 'array') return v;
-         var result = input [0] === 'style' ? lith.css.v (teishi.last (input), true) : B.validateLith (teishi.last (input));
+         if (type (teishi.last (input)) !== 'array') return 'Lith';
+         var result = input [0] === 'style' ? B.validateLitc (teishi.last (input)) : B.validateLith (teishi.last (input));
          return (result === 'Lith' || result === 'Lithbag' || result === true) ? 'Lith' : result;
       }
-      var error = dale.stopNot (input, undefined, function (v) {
+      return dale.stopNot (input, undefined, function (v) {
          if (type (v) !== 'array') return;
          var result = B.validateLith (v);
          if (result !== 'Lith' && result !== 'Lithbag') return result;
-      });
-      return error || v;
+      }) || 'Lithbag';
    }
 
-   B.redraw = function (x, id, oldElement, oldChildren, rec) {
+   B.validateLitc = function (input) {
+      var result = lith.css.v (input, true);
+      if (result !== true) return result;
+      if (type (input [0]) === 'array') return dale.stopNot (input, true, B.validateLitc);
+      if (type (teishi.last (input)) !== 'array') return true;
+      return B.validateLitc (teishi.last (input));
+   }
 
-      if (B.internal.redrawing && ! rec) return B.internal.queue.push ([x, id, oldElement, oldChildren]);
+   B.redraw = function (x, id, oldElement, oldChildren, fromQueue) {
+
+      if (B.internal.redrawing && ! fromQueue) return B.internal.queue.push ([x, id, oldElement, oldChildren]);
 
       B.internal.redrawing = true;
 
-      var done = function () {
-         var next = dale.stopNot (B.internal.queue, undefined, function (v, k) {
-            var next = B.internal.queue.shift ();
-            // responder might be absent because of it being deleted by a previous redraw
-            if (B.responders [next [1]]) return next;
-         });
-
-         if (next) B.redraw.apply (null, next.concat (true));
-         else      B.internal.redrawing = false;
-      }
-
-      var responder = B.responders [id], element = document.getElementById (id);
+      var responder = B.responders [id], element = document.getElementById (id), t = new Date ().getTime ();
 
       if (! B.prod && ! element) {
          B.forget (id);
@@ -362,19 +358,70 @@ Please refer to readme.md to read the annotated source.
 
       var diff = B.diff (B.prediff (oldElement), B.prediff (responder.elem));
 
-      // we delete the old children after we do the prediff, to know what's actually there on the DOM! oldELement's nested reactive children might not be accurate if they were redrawn after the parent was redrawn.
       dale.go (oldChildren, function (id) {B.forget (id)});
 
-      if (diff) B.applyDiff (x, responder, element, diff);
-      else {
-         if (! B.prod) B.call (x, 'trample', {timeout: B.internal.timeout, responder: responder});
-         document.getElementById (id).innerHTML = lith.g (responder.elem);
-      }
+      if (diff === false) document.getElementById (id).innerHTML = lith.g (responder.elem, true);
+      else                B.applyDiff (x, responder, element, diff);
 
-      done ();
+      B.call (x, 'redraw', {responder: responder, t: new Date ().getTime () - t, diffLength: diff === false ? false : diff.length});
+
+      var nextRedraw = dale.stopNot (B.internal.queue, undefined, function () {
+         var next = B.internal.queue.shift ();
+         if (B.responders [next [1]]) return next;
+      });
+
+      if (nextRedraw) B.redraw.apply (null, next.concat (true));
+      else            B.internal.redrawing = false;
    }
 
-   B.applyDiff = function (x, id, element, diff) {
+   B.prediff = function (input, output) {
+
+      if (type (input) !== 'array' || input [0] === 'LITERAL') {
+         if (input === undefined || input === '') return;
+         if (output [output.length - 1] [0] !== 'L') return output.push ('L ' + lith.g (input, true));
+         return output [output.length - 1] += lith.g (input, true);
+      }
+
+      output = output || [];
+
+      if (lith.k.tags.indexOf (input [0]) === -1) return dale.go (input, function (v) {B.prediff (v, output)});
+
+      if (input [1] && input [1].id && (input [1].id + '').match (/^в[0-9a-f]+$/g)) input = B.responders [input [1].id].elem;
+
+      var attributes = type (input [1]) !== 'object' ? undefined : dale.obj (input [1], function (v, k) {
+         if (v !== undefined && v !== null && v !== '') return [k, v];
+      });
+      var contents = input [attributes ? 2 : 1];
+
+      output.push ('O ' + input [0]);
+      if (attributes) output [output.length - 1] += ' ' + JSON.stringify (attributes);
+
+      if (attributes && attributes.opaque) {
+         output.push ('Q ' + lith.g (contents, true), 'C ' + input [0]);
+         return output;
+      }
+
+      if (input [0] === 'table') var tableIndex = output.length;
+      B.prediff (contents, output);
+      if (input [0] === 'table' && output [tableIndex]) {
+         if (output [tableIndex].match (/^O thead/)) {
+            var depth = 0;
+            dale.stopNot (dale.times (output.length - tableIndex, tableIndex), undefined, function (k) {
+               if (output [k] [0] === 'O') depth++;
+               if (output [k] [0] === 'C') depth--;
+               if (depth === 0) return tableIndex = k + 1;
+            });
+         }
+         if (output [tableIndex] && ! output [tableIndex].match (/^O tbody/)) {
+            output.splice (tableIndex, 0, 'O tbody');
+            output.push ('C tbody');
+         }
+      }
+      output.push ('C ' + input [0]);
+      return output;
+   }
+
+   B.applyDiff = function (x, responder, element, diff) {
       var insert = function (el, where, position) {
          var p = find (where, 'insert1', position);
          if (p) p.parentNode.insertBefore (el, p);
@@ -408,8 +455,8 @@ Please refer to readme.md to read the annotated source.
          return cur;
       }
 
-      var initialPosition = dale.stopNot (element.parentNode, undefined, function (el, k) {
-         if (el === element) return k;
+      var elementPosition = dale.stopNot (element.parentNode.childNodes, undefined, function (v, k) {
+         if (v === element) return k;
       });
 
       //var dold = [0], dnew = [0], match = {
@@ -577,66 +624,9 @@ Please refer to readme.md to read the annotated source.
       });
    }
 
-   B.prediff = function (input, output) {
-
-      if (teishi.simple (input)) {
-         if (input === undefined || input === '') return output ? undefined : [];
-         if (! output) return [lith.g (input)];
-         if (output.length === 0) output.push ('');
-         if (output [output.length - 1].match (/^(<|>)/)) output.push ('');
-         return output [output.length - 1] += lith.g (input);
-      }
-
-      output = output || [];
-
-      if (lith.k.tags.indexOf (input [0]) > -1) {
-
-         // TODO: LITERAL
-
-         if (input [1] && input [1].id && (input [1].id + '').match (/^в[0-9a-f]+$/g)) input = B.responders [input [1].id].elem;
-
-         var attrs = type (input [1]) !== 'object' ? undefined : dale.obj (input [1], function (v, k) {
-            if (v || v === 0) return [k, v];
-         });
-
-         output.push ('<' + input [0]);
-
-         var conts = input [attrs ? 2 : 1];
-         if (attrs) {
-            output [output.length - 1] += ' ' + JSON.stringify (attrs);
-            if (attrs.opaque) output.push ('<opaque' + lith.g (conts, true));
-         }
-
-         var mark = output.length;
-         if (! attrs || ! attrs.opaque) B.prediff (conts, output);
-         // This inserts thead and tbody on table if necesssary
-         if (input [0] === 'table' && output [mark]) {
-            if (output [mark].match (/<thead/)) {
-               var deep = 0;
-               var index = dale.stopNot (dale.times (output.length - mark, mark), undefined, function (k) {
-                  if (output [k].match (/</)) deep++;
-                  if (output [k].match (/>/)) deep--;
-                  if (deep === 0) return mark = k + 1;
-               });
-            }
-            if (output [mark] && output [mark].match (/<tbody/) === null) {
-               output.splice (mark, 0, '<tbody');
-               output.push ('>');
-            }
-         }
-         output.push ('>');
-      }
-      else {
-         dale.go (input, function (v) {
-            B.prediff (v, output);
-         });
-      }
-      return output;
-   }
-
    B.diff = function (s1, s2) {
 
-      var V = [], sol, d = 0, vl, vc, k, out, y, point, diff, v, last, t = teishi.time ();
+      var V = [], sol, d = 0, vl, vc, k, out, y, point, diff, v, last, t = new Date ().getTime ();
 
       while (d < s1.length + s2.length + 1) {
 

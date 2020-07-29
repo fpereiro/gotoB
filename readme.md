@@ -1172,6 +1172,8 @@ Flatten and reference
 Diff
 Apply diff but give up
 
+deterministic diff, deterministic id assignation.
+
 ## Source code
 
 The complete source code is contained in `gotoB.js`. gotoв itself is about XXX lines long; its dependencies are about 1320 lines; the whole thing is about XXX lines.
@@ -1239,7 +1241,7 @@ The remaining seven keys of the main object map to recalc entities. The first on
 - `r.forget`, the function for deleting an event responder.
 
 ```javascript
-   var B = window.B = {v: '2.0.0', B: 'в', t: teishi.time (), r: r, responders: r.responders, store: r.store, log: r.log, call: r.call, respond: r.respond, forget: r.forget};
+   var B = window.B = {v: '2.0.0', B: 'в', t: new Date ().getTime (), r: r, responders: r.responders, store: r.store, log: r.log, call: r.call, respond: r.respond, forget: r.forget};
 ```
 
 gotoв is essentially a set of functions built on top of recalc. The last six keys are meant as shorthands to the corresponding recalc objects for quicker debugging from the browser console. If it wasn't for these shorthands, instead of writing `B.call`, for example, we'd have to write `B.r.call`, which is longer and doesn't look as nice.
@@ -1766,14 +1768,14 @@ There's nothing else to do, so we close the responder and the iterating function
    });
 ```
 
-We now define `B.changeresponder`, a helper function meant to be passed as a `match` paramter to certain responders on the `change` event.
+We now define `B.changeResponder`, a helper function meant to be passed as a `match` paramter to certain responders on the `change` event.
 
 This function solves the following problem: if a certain reactive element depends on a path `a.b.c`, it shouldn't only be redrawn when `a.b.c` is changed; it should also be redrawn when `a.b`, `a` and even the root path changes. It should also be redrawn when any path starting with `a.b.c` is changed as well. This is what this function will do.
 
 This function is meant to be used as a `match` parameter passed to a responder. Those parameters are functions that receive two elements, an `event` and a `responder`.
 
 ```javascript
-   B.changeresponder = function (ev, responder) {
+   B.changeResponder = function (ev, responder) {
 ```
 
 If the verb of both the event and the responder don't match, we return `false` to indicate there's no match. Notice we use `r.compare` to perform the comparisons, instead of a mere equality. `r.compare` contains logic to support wildcards and regexes.
@@ -2037,28 +2039,15 @@ We overwrite the `innerHTML` of `element` with an empty string and close the fun
    }
 ```
 
+### `B.view`
 
-
-
-
-
-
-
-
-
-
-
-
-
-### `B.elem`
-
-We now define the main function of the library, `B.elem`. This function returns DOM elements that are updated when a certain part of the store is updated. The function takes two arguments: `paths` and `fun`.
+We now define the main function of the library, `B.view`. This function returns DOM viewents that are updated when a certain part of the store is updated. The function takes two arguments: `paths` and `fun`.
 
 ```javascript
-   B.elem = function (paths, fun) {
+   B.view = function (paths, fun) {
 ```
 
-If `paths` is an array whose first element is not an array, then it must be a single path. If this is the case, we wrap it in an array so that `paths` represents a list of paths.
+If `paths` is an array whose first element is not an array, then it must be a path (instead of an array of paths). If this is the case, we wrap it in an array so that `paths` represents a list of paths.
 
 ```javascript
       if (type (paths) === 'array' && type (paths [0]) !== 'array') paths = [paths];
@@ -2067,14 +2056,14 @@ If `paths` is an array whose first element is not an array, then it must be a si
 If we're not in production mode, we perform validations on the input.
 
 ```javascript
-      if (! B.prod && teishi.stop ('B.elem', [
+      if (! B.prod && teishi.stop ('B.view', [
 ```
 
-We iterate `paths` and apply `r.isPath` to determine whether they are valid paths. If any of these validations fail, an error will be notified.
+We iterate `paths` and apply `r.isPath` to determine whether they are valid paths. If any of these validations fail, an error will be notified through `B.error`.
 
 ```javascript
          dale.stopNot (paths, false, function (path) {
-            return r.isPath (path) ? true : B.error ('B.elem', 'Invalid path:', path, 'Arguments', {paths: paths, options: options, fun: fun});
+            return r.isPath (path) ? true : B.error ('B.view', 'Invalid path:', path, 'Arguments', {paths: paths});
          }),
 ```
 
@@ -2084,20 +2073,575 @@ We iterate `paths` and apply `r.isPath` to determine whether they are valid path
          ['fun', fun, 'function']
 ```
 
-If any of these conditions is not met, an error will be notified through `B.error` and `B.elem` will return `false`.
+If any of these conditions is not met, an error will be notified through `B.error` and `B.view` will return `false`.
 
 ```javascript
       }), function (error) {
-         B.error ('B.elem', error, {paths: paths});
+         B.error ('B.view', error, {paths: paths});
       })) return false;
+```
+
+We define `id`, a variable that will hold the id for the element that will contain the produced view. The id will start with `B.B` (`в`) and will be appended with a counter (that is stored on `B.internal.count`). gotoв expects the container elements of its reactive views to have ids comprised of `в` followed by digits.
+
+```javascript
+      var id = B.B + B.internal.count++;
+```
+
+We define `makeElement`, a function that will contain most of the implementation logic for `B.view`; we put this logic inside a function because we will invoke it more than once within `B.view`.
+
+```javascript
+      var makeElement = function () {
+```
+
+We copy the current value of `B.internal.count` and define an empty array `children`.
+
+```javascript
+         var count = B.internal.count, children = [];
+```
+
+We invoke `fun`, passing the current values of each of `paths` as an argument (we fetch the values through `B.get`). We store the result in a variable `elem`.
+
+```javascript
+         var elem = fun.apply (null, dale.go (paths, B.get));
+```
+
+If we're not in production mode, we validate `elem` with `B.validateLith` (which is defined below). If `elem` is not a lith, we report an error through `B.error` and return `false`.
+
+```javascript
+         if (! B.prod && B.validateLith (elem) !== 'Lith') return B.error ('B.view', 'Function must return a lith element but instead is:', elem, 'Arguments:', {paths: paths});
+```
+
+We now find the reactive views that are children of the current one (if any). To do this, we make use of the fact that all reactive views have as id `в` followed by a number. Nested calls to `B.view` will by now have been executed, so `B.internal.count` will be updated.
+
+For example, if this invocation to `B.view` has id `в1`, and it has two nested reactive views (`в2` and `в3`), `count` will be 2 and `B.internal.count` will be 4. We create a list of integers, starting with `count` and continuing until the number of the last reactive view. For each of the children:
+
+```javascript
+         dale.go (dale.times (B.internal.count - count - 1, count), function (k) {
+```
+
+As we'll see in a moment, reactive views are implemented as responders. We store the responder into a variable. Note that the id of the responder is the same as the id of the view.
+
+```javascript
+            var responder = B.responders [B.B + k];
+```
+
+We reduce the `priority` of the responder by one. This will ensure that in case that two reactive views are matched with the same event, outermost routes will be redrawn first.
+
+```javascript
+            responder.priority--;
+```
+
+If the `responder` has no parent, we add the responder to `children` and set the `parent` of the responder to the `id` of the current view. Note that `children` will only contain nested views that are only one level deep; doubly nested views will not be in the `children` array for the current view.
+
+```javascript
+            if (! responder.parent) {
+               children.push (responder.id);
+               responder.parent = id;
+            }
+```
+
+We are done iterating the nested reactive views.
+
+```javascript
+         });
+```
+
+If the returned lith has no attributes, we add an empty object in its second position. We use `splice` instead of `push` since the element might include contents, and attributes must go between the tag and the contents.
+
+```javascript
+         if (type (elem [1]) !== 'object') elem.splice (1, 0, {});
+```
+
+We set the `id` of the element.
+
+```javascript
+         elem [1].id    = id;
+```
+
+We set a `paths` property to the element, consisting of all the `paths`, stringified and joined by `, `. This provides a quick way to identify the path(s) of a reactive view from the DOM inspector.
+
+```javascript
+         elem [1].paths = dale.go (paths, function (path) {return path.join (':')}).join (', ');
+```
+
+We update the `responder` with two properties: the element itself (`elem`) and the array with its topmost nested reactive views (`children`). This will be necessary for redraws.
+
+```javascript
+         B.responders [id].elem     = elem;
+         B.responders [id].children = children;
+```
+
+We return `elem` and close `makeElement`.
+
+```javascript
+         return elem;
+      }
+```
+
+We register a responder for the reactive view. The responder has the following properties:
+
+- It will match only events with verb `change`.
+- Its path is set to `[]`, but this is just a placeholder. It is in fact overridden by the `match` function, which we'll see in a moment.
+- Its `id` is the id we defined above.
+- Its priority is -1; this means that redraw elements will be matched after all responders with no priority or positive priority. In this way, redraws are executed as late as possible within the sequence of execution.
+
+```javascript
+      B.respond ('change', [], {id: id, priority: -1, match: function (ev) {
+```
+
+The `match` function iterates all the `paths` and uses `B.changeResponder` to determine whether a `change` event has a path that will match this view. When the first path is found that fulfills this condition, we stop iterating the `paths` and will consider this responder matched by the incoming event.
+
+```javascript
+         return dale.stop (paths, true, function (path) {
+            return B.changeResponder (ev, {verb: 'change', path: path});
+         });
+```
+
+The responder function itself performs three actions:
+
+- Save a copy of the `elem` and the `children` stored inside the responder.
+- Invoke `makeElement`.
+- If `makeElement` is successful (which means that its output is a valid lith), the responder will invoke `B.redraw` with four arguments:
+   - The context (`x`).
+   - The id of the view.
+   - The old version of the element.
+   - The old list of children.
+
+```javascript
+      }}, function (x) {
+         var oldElement = B.responders [id].elem, oldChildren = B.responders [id].children;
+         if (makeElement ()) B.redraw (x, id, oldElement, oldChildren);
+```
+
+We close the responder.
+
+```javascript
+      });
+```
+
+After defining the responder, we invoke `makeElement` once (which will create the element and return a lith). We return the lith and close the function.
+
+Note that `B.view` operates both with return values and side effects: it returns a lith, but it also registers a responder and stores its output inside the responder for future reference.
+
+```javascript
+      return makeElement ();
+   }
+```
+
+### Internals
+
+We define `B.internal`, an object with the following keys:
+
+- `count`, for counting the reactive views already generated - this is used by `B.view`.
+- `timeout`, for specifying the maximum allowed duration for a diff; this is used by `B.diff`.
+- `queue`, for holding a list of views that have to be redrawn; this is used by `B.redraw`.
+- `redrawing`, to determine whether a view is currently being redrawn; this is used by `B.redraw`.
+
+```javascript
+   B.internal = {count: 1, timeout: 200, queue: [], redrawing: false}
+```
+
+We define `B.validateLith`, a helper function to determine the validity of a lith or lithbag (which will be the first argument, `input`). This function is a wrapper around `lith.v` and `lith.css.v`. This wrapper is needed to 1) perform a deep validation on the lith/lithbag; and 2) return the error instead of reporting it directly to the console.
+
+This function will return `'Lith'` if the input is a lith, `'Lithbag'` if its a lithbag, and a string with an error if the input is invalid.
+
+```javascript
+   B.validateLith = function (input) {
+```
+
+We invoke `lith.v`, passing `true` as a second argument, and store it in a variable `v`; if `input` is invalid, this will make `lith.v` return an error instead of printing it directly to the console.
+
+```javascript
+      var v = lith.v (input, true);
+```
+
+If `v` is neither `'Lith'` nor `'Lithbag'`, we return the error.
+
+```javascript
+      if (v !== 'Lith' && v !== 'Lithbag') return v;
+```
+
+If the input is a lith:
+
+```javascript
+      if (v === 'Lith') {
+```
+
+If the last element of `input` is not an array, we don't need to perform a validation on its contents, so we return `'Lith'`.
+
+```javascript
+         if (type (teishi.last (input)) !== 'array') return 'Lith';
+```
+
+If the last element of `input` is an array, we need to validate its contents. If this is a `style` tag, we invoke `B.validateLitc` on the contents of the lith (we'll define this function in a moment). If it's not a `style` tag, then we perform a recursive call to `B.validateLith`. In either case, we store the result of this validation in a variable `result`.
+
+```javascript
+         var result = input [0] === 'style' ? B.validateLitc (teishi.last (input)) : B.validateLith (teishi.last (input));
+```
+
+If we're dealing with a valid litc, `B.validateLitc` will return `true`; if we're dealing with a valid lith or lithbag, `B.validateLith` will return either `'Lith'` or `'Lithbag'`. If this is the case, `input` is then a valid lith, so we return `Lith`. But if `input` is invalid on account of its contents, then we return `result`, which will contain a detailed error.
+
+```javascript
+         return (result === 'Lith' || result === 'Lithbag' || result === true) ? 'Lith' : result;
+```
+
+We're done with the case of a lith. Let's see now the case of the lithbag.
+
+```javascript
+      }
+```
+
+We iterate the element of the lithbag to see if we can find an invalid one. The simple elements (anything but an array) have already been validated, so we ignore them.
+
+```javascript
+      return dale.stopNot (input, undefined, function (v) {
+         if (type (v) !== 'array') return;
+```
+
+If we find a nested element, we validate it with a recursive call. If its either a lith or a lithbag, `input` is valid; but if it's not, then input is invalid, in which case we return an error.
+
+```javascript
+         var result = B.validateLith (v);
+         if (result !== 'Lith' && result !== 'Lithbag') return result;
+```
+
+If our iteration over the elements of the lithbag returned an error, we return an error; otherwise we return `'Lithbag'` to denote that `input` is a valid lithbag. We then close the function.
+
+```javascript
+      }) || 'Lithbag';
+   }
+```
+
+We define `B.validateLitc`, a function to perform a deep validation of a litc. This function will return either `true` or a string with an error.
+
+```javascript
+   B.validateLitc = function (input) {
+```
+
+We validate `input` through `lith.css.v`. If it's not valid, we return the error.
+
+```javascript
+      var result = lith.css.v (input, true);
+      if (result !== true) return result;
+```
+
+If the first element in the `input` is an array, we're dealing with a litcbag. We iterate the elements of `input`, apply `B.validateLitc` and return the first value not to be `true` (which will represent an error); if all of them are valid, the function will return `true`.
+
+```javascript
+      if (type (input [0]) === 'array') return dale.stopNot (input, true, B.validateLitc);
+```
+
+If this is a litc and not a litcbag, and its contents are not an array, we return `true`.
+
+```javascript
+      if (type (teishi.last (input)) !== 'array') return true;
+```
+
+If the contents are an array (another litc), we invoke `B.validateLitc` recursively and return the result. We then close the function.
+
+```javascript
+      return B.validateLitc (teishi.last (input));
+   }
+```
+
+We define `B.redraw`, the main internal function of gotoв. This function is only invoked by the responder functions of reactive views and is in charge of updating the views.
+
+It takes five arguments: a context object (`x`), the `id` of the view to redraw, the lith of the old version of the view (`oldElement`), a list of the toplevel nested reactive views before the redraw (`oldChildren`) and a boolean flag `fromQueue` (which we'll see in a moment).
+
+```javascript
+   B.redraw = function (x, id, oldElement, oldChildren, fromQueue) {
+```
+
+As a central design decision, gotoв only updates one view at a time. This helps keep things simple and understandable, even if it might make them somewhat slower sometimes.
+
+Despite both the event system and the redraws being fully synchronous (performing no calls to `setTimeout` or `setInterval`), we still need to add queuing logic to prevent overlapping redraws. This can happen when (for example) a user interacts with a DOM element and an event is called that triggers a redraw, all while another view is being redrawn.
+
+We use the `B.internal.redrawing` variable to determine whether a redraw is taking place already. If it does, and `fromQueue` is not `true` (which means that the function was called from a responder function), we wrap the arguments into an array and push them on `B.internal.queue`, to queue this redraw for later. We also `return` to stop the execution flow. The return value of this function, by the way, is meaningless, since this function operates fully through side-effects.
+
+```javascript
+      if (B.internal.redrawing && ! fromQueue) return B.internal.queue.push ([x, id, oldElement, oldChildren]);
+```
+
+If we're here, there was either no redraw taking place, or this redraw was triggered by the queuing logic. In case its the former, we set `B.internal.redrawing` to `true`, to denote that a redraw is taking place.
+
+```javascript
+      B.internal.redrawing = true;
+```
+
+We find the corresponding `responder` and `element` to the view and assign them to corresponding local variables. We also store the current time in a timestamp `t`.
+
+```javascript
+      var responder = B.responders [id], element = document.getElementById (id), t = new Date ().getTime ();
+```
+
+If we're not in production mode and there's no corresponding DOM element for the view, we have encountered a *dangling view* error: gotoв requires views to be placed in the DOM after being generated - if they're not placed, they are said to be *dangling*.
+
+If this is the case, the responder is removed through `B.forget`, and an error is reported. No further action will take place. Also, no more views will be redrawn, since `B.internal.redrawing` will still be set to `true`, and the other redraws in the queue (if any) will also not be executed. This is an embodiment of *auto-activation*, in that abnormal behavior stops the normal flow and is brought to the attention of the operator.
+
+```javascript
+      if (! B.prod && ! element) {
+         B.forget (id);
+         return B.error (x, 'B.redraw', 'Attempted to redraw dangling element, omitting redraw & deleting responder.', {responder: responder});
+      }
+```
+
+We compute the diff between the old lith and the new lith. The old lith has been passed to `B.redraw` as `oldElement`, whereas the new is already stored at `responder.elem` - when the responder was matched, it already executed `makeElement` and placed its result inside `responder.elem`. This, by the way, is the reason we pass `oldElement` as an argument, since if we don't, the old `responder.elem` will be overwritten by the new one.
+
+The diff is computed by the function `B.diff`. Instead of passing the liths directly, we invoke `B.prediff` on each of them, to perform some processing. We'll see these functions below.
+
+```javascript
+      var diff = B.diff (B.prediff (oldElement), B.prediff (responder.elem));
+```
+
+We now delete the responders for the reactive views nested inside the old version of the view; they are no longer needed, and will become dangling views after we apply the changes to the DOM. It is for this reason that we pass `oldChildren` as an argument.
+
+We delete the responders *after* computing the diff because `B.prediff` makes use of the them.
+
+Nested reactive views that are doubly nested (or more) are deleted recursively through `B.forget` itself, so we only need to delete the top-level ones, contained in `oldChildren`.
+
+```javascript
+      dale.go (oldChildren, function (id) {B.forget (id)});
+```
+
+If the diff takes too long, `B.diff` will return `false`.  In this case, we generate the lith for the responder with `lith.g`, passing a `true` flag to prevent lith validation (since validations, if production mode is not enabled, will already have happened when creating the element in the responder). The resulting HTML is placed inside the corresponding DOM element for the view, replacing any existing contents. This is what we call a *trample*, where all the HTML inside the view is replaced wholesale. This should not happen often, only when the old and the new views are very different, or when they are very large.
+
+```javascript
+      if (diff === false) document.getElementById (id).innerHTML = lith.g (responder.elem, true);
+```
+
+If the diff was computed, we apply it through a function `B.applyDiff`, passing the context, `responder`, `element` and `diff`.
+
+```javascript
+      else                B.applyDiff (x, responder, element, diff);
+```
+
+We call an event with verb `redraw`, `x.path` as its path (which will be the path of the event that triggered the redraw in the first place) and an object with three fields: the `responder` proper, the amount of time in milliseconds that the redraw took (`t`) and `diffLength` (the number of items computed in the diff, which is a measure of its complexity), which will be `false` in case of a trample.
+
+```javascript
+      B.call (x, 'redraw', x.path, {responder: responder, t: new Date ().getTime () - t, diffLength: diff === false ? false : diff.length});
+```
+
+We iterate the queue to find the next queued redraw, if any. If the queue is empty, nothing will happen.
+
+```javascript
+      var nextRedraw = dale.stopNot (B.internal.queue, undefined, function () {
+```
+
+We pull the first element out of the queue and assign it to a local variable `next`.
+
+```javascript
+         var next = B.internal.queue.shift ();
+```
+
+We check whether the responder associated with the queued view still exists. Why do we check for this? If it is a nested reactive view, and one of its parents (direct or indirect) was redrawn while this view was in the queue, the view will no longer exist, so nothing should be done. If the responder still exists, we return it as the next view to be redrawn.
+
+```javascript
+         if (B.responders [next [1]]) return next;
+      });
+```
+
+If there was a view in the queue that wasn't deleted, we invoke `B.redraw` recursively. Note we pass `true` as its fifth argument (after the original four arguments from the original call) to tell `B.redraw` to proceed with this redraw, despite the fact that `B.internal.redrawing` is still `true`. We keep `B.internal.redrawing` as `true` without modifying it, to ensure that queued elements are processed before any new incoming redraws.
+
+```javascript
+      if (nextRedraw) B.redraw.apply (null, next.concat (true));
+```
+
+If there's no pending views to be redrawn, we merely set `B.internal.redrawing` to `false` to enable further redraws in the future.
+
+```javascript
+      else            B.internal.redrawing = false;
+```
+
+We close the function.
+
+```javascript
+   }
+```
+
+We define `B.prediff`, a function that will take a lith and output a list of items that can be diffed by `B.diff`. The function is invoked with one argument (the `input`, or lith) by `B.redraw`, but it invokes itself recursively, passing to itself an `output` array where the diff elements will be placed.
+
+The `input` is assumed to be a valid lith - if we're not in production mode, the chain of execution will have already validated the lith.
+
+The `output` will be an array of strings of the form:
+- `L ...`, for literal HTML fragments.
+- `O ...`, for the opening of a tag.
+- `C ...`, for the closing of a tag.
+- `Q ...`, for literal HTML fragments that are opaque (which means that they shouldn't be reused when redrawing views).
+
+```javascript
+   B.prediff = function (input, output) {
+```
+
+If `input` is not an array:
+
+```javascript
+      if (type (input) !== 'array') {
+```
+
+If `input` is either `undefined` or an empty string, no HTML will be generated from it. If this is the case, `output` must already present (because `B.prediff` will be invoked for the first time with a lith, which is an array, and this call then must be a recursive one). We merely return `undefined`. Note: the return value on recursive calls will be ignored.
+
+```javascript
+         if (input === undefined || input === '') return;
+```
+
+If the previous element of the `output` is not a literal, we push a literal element to the output; note that it will be a string starting with `L `, with the resulting HTML appended to it. We pass `true` to `lith.g`, since this should be a valid lith. We don't check for the existence of at least one element in the output since there must be already at least an element for opening the tag, since the `input` to the first call of `B.prediff` must be a tag.
+
+```javascript
+         if (output [output.length - 1] [0] !== 'L') return output.push ('L ' + lith.g (input, true));
+```
+
+If the previous element of `output` is a literal, we merely append the HTML for this element to it. This concludes the recursive case of a simple `input`
+
+```javascript
+         return output [output.length - 1] += lith.g (input, true);
+      }
+```
+
+If we're in the first (non-recursive) call to `B.prediff`, we initialize `output` to an empty array.
+
+```javascript
+      output = output || [];
+```
+
+If `input` is a lithbag, we iterate its element and invoke `B.prediff` recursively on them. Note we pass `output` as the second parameter to each call, which will enable the recursive calls to append their outputs to `output`. There's nothing else in this case but to return. The return value is irrelevant, since the outermost call to `B.prediff` is on a lith, not a lithbag, and it's only on the outermost case that the return value of the function is useful.
+
+```javascript
+      if (lith.k.tags.indexOf (input [0]) === -1) return dale.go (input, function (v) {B.prediff (v, output)});
+```
+
+If we're here, we're dealing with a tag. The rest of the function will be dedicated to this case.
+
+If the tag has attributes and an `id` comprised of `в` followed by hexadecimal digits (`0-9`, `a-f`), it is a reactive view. In this case, we reference the lith stored inside the corresponding responder (which also has the same `id`). The reason is subtle: if this nested reactive view was redrawn after its parent (with the parent being the view currently being redrawn), the parent's representation of its nested view might be stale! For this reason, we reference the fresh version of the lith, contained inside the responder, and we ignore that of the parent.
+
+Because the outermost view being redrawn is also a reactive view, instead of using `input`, we will use the copy of the lith stored at the responder's `elem` property as well; but since they should be equivalent, this will represent no problem.
+
+The reason we need a precise representation of the nested views is that they are a representation of the DOM as it stands before the redraw. This allows gotoв to know what's in the DOM without having to query it directly, which is complex to implement and slow.
+
+Note that in case `input [1].id` is present, we convert it to a string before matching it; this is because, while being truthy, it could also be a number or a boolean.
+
+```javascript
+      if (input [1] && input [1].id && (input [1].id + '').match (/^в[0-9a-f]+$/g)) input = B.responders [input [1].id].elem;
+```
+
+We create a local variable `attributes` to hold the attributes of the lith, if any. If the second element of `input` is not an object, they will be undefined. Otherwise, we iterate them and build a new object, filtering out those attributes that have a value of `undefined`, `null` or an empty string (which all represent the absence of the attribute).
+
+Note that in case this is the lith of a reactive view, we do this *after* referencing the lith inside the corresponding responder. If we didn't do this, and the reactive view was nested and changed its own class, this change would not be reflected in the `attributes`. Another interesting observation is that the id of the nested reactive view would not change - indeed, this is one of the reasons for which we overwrite the ids of reactive views in `B.view`.
+
+```javascript
+      var attributes = type (input [1]) !== 'object' ? undefined : dale.obj (input [1], function (v, k) {
+         if (v !== undefined && v !== null && v !== '') return [k, v];
+      });
+```
+
+We create a local variable `contents` to point to the contents of the lith, which will be either the second or third element of `input`, depending on whether `attributes` are present or not.
+
+```javascript
+      var contents = input [attributes ? 2 : 1];
+```
+
+We append a new element to `output`, comprised of `O `, followed by the tag itself.
+
+```javascript
+      output.push ('O ' + input [0]);
+```
+
+If there are `attributes`, we stringify them and append them (after a single space) to the element we just created above.
+
+
+A more precise way of listing the attributes would be as an array of the shape `[[key1, value1], [key2, value2], ...]`, where the keys are sorted. This would allow for two objects with the keys in different order to be considered the same element; however, this is probably overkill, since objects for the same views are written usually in the same order. So we'll stick to the object representation, even though it might consider two equivalent `attributes` as different.
+
+```javascript
+      if (attributes) output [output.length - 1] += ' ' + JSON.stringify (attributes);
+```
+
+If the lith is `opaque`, we push a new element to `output`, starting with the letter `Q`, followed by a space and by the HTML of the contents. Note we pass `true` to `lith.g`, since the lith is already validated. The resulting HTML might be empty, it might be a text node, or it may be a tag (or multiple tags). gotoв will accept it wholesale.
+
+In this case, there's nothing else to do except to push another element to denote the closing of the tag (`C ` plus the tag itself) and return `output`.
+
+```javascript
+      if (attributes && attributes.opaque) {
+         output.push ('Q ' + lith.g (contents, true), 'C ' + input [0]);
+         return output;
+      }
+```
+
+If the element is a `<table>`, we store the current length of `output` in a variable `tableIndex`. We'll see why shortly.
+
+```javascript
+      if (input [0] === 'table') var tableIndex = output.length;
+```
+
+We invoke recursively the function on the `contents`, taking care to pass `output` as its second argument (so that the outputs of the recursive call are appended to `output`).
+
+```javascript
+      B.prediff (contents, output);
+```
+
+We now check whether the current element is a `<table>` with contents. If so, we must take care to enter a `<tbody>` element in the right place, if the `<tbody>` is not specified on the `contents`. The reason for this is that the browser will automatically insert a `<tbody>` on non-empty tables if they don't have one, so we need to account for in our representation of the DOM.
+
+`output [tableIndex]` will represent the first element inside the `<table>`, if any, which will be already in `output` after the recursive call we just did to `B.prediff`. Note we saved `tableIndex` just before invoking `B.prediff` recursively, to know what the index was before appending the contents of `<table>` to `output`.
+
+```javascript
+      if (input [0] === 'table' && output [tableIndex]) {
+```
+
+If a `<thead>` is present in the lith, we iterate the elements of `output` starting on the one at `tableIndex`. The purpose of this block of code is to find the end of the `<thead>`. It would be simpler to just find an element of the form `C thead`, but this `<table>` might contain another `<table>` inside, so we need to track the depth of the tags being opened and closed.
+
+```javascript
+         if (output [tableIndex].match (/^O thead/)) {
+            var depth = 0;
+```
+
+If we open a tag (including that of the `<thead>`), we increment `depth`; if we close a tag, we decrement `depth`. When `depth` is 0, we've reached the end of the outermost `<thead>`. We set `tableIndex` to the current index plus 1 (to start at the next element) and return a non-undefined value to stop the iteration.
+
+```javascript
+            var index = dale.stopNot (dale.times (output.length - tableIndex, tableIndex), undefined, function (k) {
+               if (output [k] [0] === 'O') depth++;
+               if (output [k] [0] === 'C') depth--;
+               if (depth === 0) return tableIndex = k + 1;
+            });
+         }
+```
+
+If there's still contents inside `<table>`, but there is not a `<tbody>`, then we add it:
+
+```javascript
+         if (output [tableIndex] && ! output [tableIndex].match (/^O tbody/)) {
+            output.splice (tableIndex, 0, 'O tbody');
+```
+
+We assume there's nothing in the `<table>` after the `<tbody>`, so we push an element to mark the closing of the `<tbody>` we just added. This would be incorrect if the user would use a [`<tfoot>` element](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/tfoot), but I have never seen an instance of this use case; unless required by someone, this case will be ignored - if we had to implement support for this, we would have to scan the depth of `output` like we did with `<thead>` and add this element in the right place (when `depth` is 0), instead of at the end of `output`.
+
+```javascript
+            output.push ('C tbody');
+```
+
+This closes the case of a `<table>`.
+
+```javascript
+         }
+      }
+```
+
+Finally, we push an element to `output` to denote the closing of the tag. We return `output` and close the function.
+
+```javascript
+      output.push ('C ' + input [0]);
+      return output;
+   }
 ```
 
 TODO
 
+We define `B.applyDiff`, the function in charge of applying a diff to the DOM. This function is only called by `B.redraw`. It takes four arguments: `x`, `responder`, `element` and `diff`.
+
+```javascript
+   B.applyDiff = function (x, responder, element, diff) {
+```
 
 
 
-
+TODO
 
 ## License
 

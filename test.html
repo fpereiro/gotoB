@@ -503,9 +503,45 @@
                      ['p', NaN],
                      [NaN],
                      ['style', ['not', 'a', 'litc']],
+                     ['style', ['ok', {}, ['not', 'a', 'litc']]],
+                     ['style', [
+                        ['not', 'a', 'litc']
+                     ]],
+                     ['style', [
+                        ['ok', {}],
+                        ['not', 'a', 'litc']
+                     ]],
+                     ['style', [
+                        ['ok', {}, ['not', 'a', 'litc']]
+                     ]],
+                     [1, 2, /bam/],
+                     [1, 2, [/bam/], 4],
                      ['div', [
                         ['style', [2]],
                         ['p', 'something']
+                     ]],
+                     ['div', [
+                        ['p', 'something'],
+                        ['style', [
+                           ['ok', {}],
+                           ['not', 'a', 'litc']
+                        ]]
+                     ]],
+                     ['div', [
+                        ['p', 'something'],
+                        ['style', [
+                           ['ok', {}],
+                           ['ok', {}, ['not', 'a', 'litc']]
+                        ]]
+                     ]],
+                     ['div', [
+                        ['LITERAL', ['nope']]
+                     ]],
+                     ['div', [
+                        ['style', [
+                           ['ok', {}],
+                           ['LITERAL', ['nope']]
+                        ]]
                      ]]
                   ], undefined, function (v) {
                      var validation = B.validateLith (v);
@@ -537,6 +573,8 @@
                            ['div']
                         ]
                      ]],
+                     [false, ['c', 'c']],
+                     [false, [1, 2, ['bam'], 4]],
                      [true, (function () {
                         var dataset = [{id: 1, name: 'a'}, {id: 2, name: 'b'}];
 
@@ -567,7 +605,8 @@
                      ]]],
                      [true, ['script', {src: 'scripts.js', charset: 'utf-8'}]],
                      [true, ['style', ['span.action', {color: 'blue'}]]],
-                     [true, ['style', lith.css.g (['span.action', {color: 'blue'}])]]
+                     [true, ['style', lith.css.g (['span.action', {color: 'blue'}])]],
+                     [true, ['style', ['a', ['a', {}, ['a']]]]],
                   ], undefined, function (v) {
                      var validation = B.validateLith (v [1]);
                      if (v [0]   && validation !== 'Lith')    return 'B.validateLith error with valid input: ' + JSON.stringify (v [1]) + ' ' + validation;
@@ -652,6 +691,55 @@
 
                B.call (x, 'ok', 'ok');
                B.eventlog ();
+
+               B.call (x, 'test', 'B.prediff');
+            });
+
+            // *** B.PREDIFF ***
+
+            B.respond ('test', 'B.prediff', {burn: true}, function (x) {
+
+               Test ('B.prediff', function () {
+                  var error = dale.stopNot ([
+                     [['a'], ["O a","C a"]],
+                     [['a', {}], ["O a {}","C a"]],
+                     [['table'], ["O table","C table"]],
+                     [['table', ['tr']], ["O table","O tbody","O tr","C tr","C tbody","C table"]],
+                     [['table', ['tr', ['td', ['table', ['tr']]]]], ["O table","O tbody","O tr","O td","O table","O tbody","O tr","C tr","C tbody","C table","C td","C tr","C tbody","C table"]],
+                     [['table', ['thead', ['tr']]], ["O table","O thead","O tr","C tr","C thead","C table"]],
+                     [['table', [['thead', ['tr']], ['tr']]], ["O table","O thead","O tr","C tr","C thead","O tbody","O tr","C tr","C tbody","C table"]],
+                     [['a', undefined], ["O a","C a"]],
+                     [['a', ''], ["O a","C a"]],
+                     [['a', ['']], ["O a","C a"]],
+                     [['a', 'a'], ["O a","L a","C a"]],
+                     [['a', ['z', '']], ["O a","L z","C a"]],
+                     [['a', ['z', 'b']], ["O a","L zb","C a"]],
+                     [['a', ['z', ' b']], ["O a","L z b","C a"]],
+                     [['a', [1, 'z', ' b']], ["O a","L 1z b","C a"]],
+                     [['a', [[[['z']]], 'b']], ["O a","L zb","C a"]],
+                     [['a', {b: 'c'}], ['O a {"b":"c"}','C a']],
+                     [['a', {b: null}], ['O a {}','C a']],
+                     [['a', {b: ''}], ['O a {}','C a']],
+                     [['a', {b: undefined}], ['O a {}','C a']],
+                     [['a', {b: 0}], ['O a {"b":0}','C a']],
+                     [['a', {b: 'c'}, 'd'], ['O a {"b":"c"}','L d','C a']],
+                     [['a', {b: 'c'}, ['d', 'e']], ['O a {"b":"c"}','L de','C a']],
+                     [['a', ['LITERAL', '<svg></svg>']], ["O a","L <svg></svg>","C a"]],
+                     [['a', {opaque: true}, ['LITERAL', '<svg></svg>']], ['O a {"opaque":true}',"Q <svg></svg>","C a"]],
+                     [['a', {opaque: true}, '<svg></svg>'], ["O a {\"opaque\":true}","Q &lt;svg&gt;&lt;/svg&gt;","C a"]],
+                     [['a', '<svg></svg>'], ["O a", "L &lt;svg&gt;&lt;/svg&gt;","C a"]],
+                     [['div', [['a', {href: 'c'}], ['p', 2]]], ["O div",'O a {"href":"c"}',"C a","O p","L 2","C p","C div"]]
+                  ], undefined, function (v) {
+                     clog (JSON.stringify (B.prediff (v [0])));
+                     if (! eq (B.prediff (v [0]), v [1])) return 'B.prediff mismatch: ' + JSON.stringify (v);
+                  });
+
+                  if (error) return error;
+
+                  B.responders [B.B + 1000] = {elem: ['a', {id: B.B + 1000}, 'z']};
+                  if (! eq (B.prediff (['a', {id: B.B + 1000}, 'u']), ['O a {"id":"' + B.B + 1000 + '"}', 'L z', 'C a'])) return 'Mismatch when looking up reactive view #1.';
+                  if (! eq (B.prediff (['div', ['a', {id: B.B + 1000}, 'u']]), ['O div', 'O a {"id":"' + B.B + 1000 + '"}', 'L z', 'C a', 'C div'])) return 'Mismatch when looking up reactive view #2.';
+               });
 
                // TODO uncomment to proceed
                //B.call (x, 'test', 'B.view');

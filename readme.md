@@ -123,7 +123,7 @@ You can find more examples [here](https://github.com/fpereiro/examples/list.md).
 
 ## Introduction
 
-gotoв is a framework for writing the [frontend](https://en.wikipedia.org/wiki/Front_end_and_back_end) of a webapp. In the case of a webapp, the frontend consists of an user interface implemented with HTML and (almost always) some js that runs in the browser.
+gotoв is a framework for writing the [frontend](https://en.wikipedia.org/wiki/Front_end_and_back_end) of a webapp. In the case of a webapp, the frontend consists of an user interface implemented with HTML and (almost always) some js that runs on the browser.
 
 gotoв provides a solution to the [two main things](#a-brief-history-of-the-frontend) that a frontend framework must do:
 
@@ -1148,12 +1148,18 @@ common errors:
 TODO
 
 - opaque & literal
+   - if literal, just for nbsp, not for inserting tags. otherwise, you need opaque.
 - negative priorities & nestedness
 - trample & perflogs
+
 
 ## Internals
 
 TODO
+
+negative priority descending to redraw outermost first. more efficient, more intuitive. when one is redrawn, its priority stays the same; nested are deleted and recreated, with priority downgraded.
+
+negative priority to do all the changes first, then redraw. More fine-grained control, without an externally imposed cycle.
 
 ### General architecture
 
@@ -2125,12 +2131,6 @@ As we'll see in a moment, reactive views are implemented as responders. We store
             var responder = B.responders [B.B + k];
 ```
 
-We reduce the `priority` of the responder by one. This will ensure that in case that two reactive views are matched with the same event, outermost routes will be redrawn first.
-
-```javascript
-            responder.priority--;
-```
-
 If the `responder` has no parent, we add the responder to `children` and set the `parent` of the responder to the `id` of the current view. Note that `children` will only contain nested views that are only one level deep; doubly nested views will not be in the `children` array for the current view.
 
 ```javascript
@@ -2139,6 +2139,19 @@ If the `responder` has no parent, we add the responder to `children` and set the
                responder.parent = id;
             }
 ```
+
+We reduce the `priority` of the responder by the priority of the outermost view. This will ensure that in case that two reactive views are matched with the same event, outermost routes will be redrawn first. Our goal is to have a priority of -N-1 for reactive views that are N-deep nested into other reactive views, with the outermost reactive views having a priority of -1.
+
+This line requires more explanation. Once a redrawing takes place, the nested views are redrawn from the inside out - that's simply how the pattern works, a function A that calls a function B has to wait until function B is executed to finish its own execution. Let's cover a few cases:
+
+- An outermost nested view (priority -1) with a nested view is redrawn; the nested view is created from scratch with a responder with a priority of -1. Then, when we update the outermost nested view, we'll lower the nested view's priority by 1, so it will again have the proper priority, -2. We don't touch the responder of the outermost redrawn view.
+- An outermost nested view (priority -1) with a nested view with another nested view inside. The outermost view is redrawn; the execution starts with the innermost nested view, it gets a priority of -1. Then the middle nested view is redrawn, it gets a priority of -1 and it reduces the priority of the innermost view by -1, so it's now -2. Then the outermost view finishes and it reduces the priorities of both nested views by -1, to -2 and -3 respectively.
+- A non-outermost nested view (priority -3, say) with a nested view with another nested view inside. The outermost view is redrawn; the execution starts with the innermost nested view, it gets a priority of -1. Then the middle nested view is redrawn, it gets a priority of -1 and it reduces the priority of the innermost view by -1, so it's now -2. Then the outermost view finishes and it reduces the priorities of both nested views by -3, to -4 and -5 respectively.
+
+```javascript
+            responder.priority = responder.priority + B.responder [id].priority;
+```
+
 
 We are done iterating the nested reactive views.
 
@@ -2374,15 +2387,14 @@ We find the corresponding `responder` and `element` to the view and assign them 
       var responder = B.responders [id], element = document.getElementById (id), t = new Date ().getTime ();
 ```
 
-If we're not in production mode and there's no corresponding DOM element for the view, we have encountered a *dangling view* error: gotoв requires views to be placed in the DOM after being generated - if they're not placed, they are said to be *dangling*.
+If we're not in production mode and there's no corresponding DOM element for the view, or the element exists but it is not attached to the body of the document, we have encountered a *dangling view* error: gotoв requires views to be placed in the DOM after being generated - if they're not placed, they are said to be *dangling*.
 
-If this is the case, the responder is removed through `B.forget`, and an error is reported. No further action will take place. Also, no more views will be redrawn, since `B.internal.redrawing` will still be set to `true`, and the other redraws in the queue (if any) will also not be executed. This is an embodiment of *auto-activation*, in that abnormal behavior stops the normal flow and is brought to the attention of the operator.
+If this is the case, an error is reported through `B.error`. No further action will take place. Also, no more views will be redrawn, since `B.internal.redrawing` will still be set to `true`, and the other redraws in the queue (if any) will also not be executed. This is an embodiment of *auto-activation*, in that abnormal behavior stops the normal flow and is brought to the attention of the operator.
+
+Note that we check whether the element is attached to the body of the document through the [contains method](https://developer.mozilla.org/en-US/docs/Web/API/Node/contains), which performs a recursive search.
 
 ```javascript
-      if (! B.prod && ! element) {
-         B.forget (id);
-         return B.error (x, 'B.redraw', 'Attempted to redraw dangling element, omitting redraw & deleting responder.', {responder: responder});
-      }
+      if (! B.prod && (! element || ! document.body.contains (element))) return B.error (x, 'B.redraw', 'Attempt to redraw dangling element.', {responder: responder});
 ```
 
 We compute the diff between the old lith and the new lith. The old lith has been passed to `B.redraw` as `oldElement`, whereas the new is already stored at `responder.elem` - when the responder was matched, it already executed `makeElement` and placed its result inside `responder.elem`. This, by the way, is the reason we pass `oldElement` as an argument, since if we don't, the old `responder.elem` will be overwritten by the new one.
@@ -2409,16 +2421,21 @@ If the diff takes too long, `B.diff` will return `false`.  In this case, we gene
       if (diff === false) document.getElementById (id).innerHTML = lith.g (responder.elem, true);
 ```
 
-If the diff was computed, we apply it through a function `B.applyDiff`, passing the context, `responder`, `element` and `diff`.
+If the diff was computed, we apply it through a function `B.applyDiff`, passing the `element` and `diff` as arguments. If `B.applyDiff` returns an error and we're not in production mode, we report it through `B.error` and return `false`. As with the dangling element error, if there is an error during the redraw, no further action will take place. Also, no more views will be redrawn, since `B.internal.redrawing` will still be set to `true`, and the other redraws in the queue (if any) will also not be executed.
+
+If `B.applyDiff` doesn't return an error, the operation is successful.
 
 ```javascript
-      else                B.applyDiff (x, responder, element, diff);
+      else {
+         var error = B.applyDiff (element, diff);
+         if (error && ! B.prod) return B.error (x, 'B.redraw', 'DOM redraw error.', {error: error, responder: responder});
+      }
 ```
 
-We call an event with verb `redraw`, `x.path` as its path (which will be the path of the event that triggered the redraw in the first place) and an object with three fields: the `responder` proper, the amount of time in milliseconds that the redraw took (`t`) and `diffLength` (the number of items computed in the diff, which is a measure of its complexity), which will be `false` in case of a trample.
+We call an event with verb `redraw`, `x.path` as its path (which will be the path of the event that triggered the redraw in the first place) and an object with three fields: the `responder` proper, the amount of time in milliseconds that the redraw took (`ms`) and `diffLength` (the number of items computed in the diff, which is a measure of its complexity), which will be `false` in case of a trample.
 
 ```javascript
-      B.call (x, 'redraw', x.path, {responder: responder, t: new Date ().getTime () - t, diffLength: diff === false ? false : diff.length});
+      B.call (x, 'redraw', x.path, {responder: responder, ms: new Date ().getTime () - t, diffLength: diff === false ? false : diff.length});
 ```
 
 We iterate the queue to find the next queued redraw, if any. If the queue is empty, nothing will happen.
@@ -2463,10 +2480,10 @@ We define `B.prediff`, a function that will take a lith and output a list of ite
 The `input` is assumed to be a valid lith - if we're not in production mode, the chain of execution will have already validated the lith.
 
 The `output` will be an array of strings of the form:
-- `L ...`, for literal HTML fragments.
 - `O ...`, for the opening of a tag.
 - `C ...`, for the closing of a tag.
-- `Q ...`, for literal HTML fragments that are opaque (which means that they shouldn't be reused when redrawing views).
+- `L ...`, for literal HTML fragments.
+- `P ...`, for an opaque tag.
 
 ```javascript
    B.prediff = function (input, output) {
@@ -2519,8 +2536,10 @@ The reason we need a precise representation of the nested views is that they are
 
 Note that in case `input [1].id` is present, we convert it to a string before matching it; this is because, while being truthy, it could also be a number or a boolean.
 
+Note an exception: if `output` has no length, it means we're prediffing the first element of the input, which must be the outermost element of a reactive view; in this case, we want the *old* version of the element (the one passed to `B.prediff`) rather than the new one, which by the time that `B.prediff` is called, will be already stored in `responder.elem`. So, when processing an outermost reactive view, we don't reference its `elem`.
+
 ```javascript
-      if (input [1] && input [1].id && (input [1].id + '').match (/^в[0-9a-f]+$/g)) input = B.responders [input [1].id].elem;
+      if (input [1] && input [1].id && (input [1].id + '').match (/^в[0-9a-f]+$/g) && output.length) input = B.responders [input [1].id].elem;
 ```
 
 We create a local variable `attributes` to hold the attributes of the lith, if any. If the second element of `input` is not an object, they will be undefined. Otherwise, we iterate them and build a new object, filtering out those attributes that have a value of `undefined`, `null` or an empty string (which all represent the absence of the attribute).
@@ -2554,13 +2573,24 @@ A more precise way of listing the attributes would be as an array of the shape `
       if (attributes) output [output.length - 1] += ' ' + JSON.stringify (attributes);
 ```
 
-If the lith is `opaque`, we push a new element to `output`, starting with the letter `Q`, followed by a space and by the HTML of the contents. Note we pass `true` to `lith.g`, since the lith is already validated. The resulting HTML might be empty, it might be a text node, or it may be a tag (or multiple tags). gotoв will accept it wholesale.
+If the lith is `opaque`, we first note the length of the last element of `output`, which is of the form `O TAG {...}`, with the attributes being optional.
+
+```javascript
+      if (attributes && attributes.opaque) {
+         var length = output [output.length - 1];
+```
+
+We replace the last element of `output` with a string of the following form: `P LENGTH TAG {...} CONTENTS`. `length` will be included in this string so that the function that applies changes to the DOM can know where the attributes (if any) end and where the contents (if any) start.
+
+The contents of an opaque element may be raw HTML. Note we pass `true` to `lith.g`, since the lith is already validated. The resulting HTML might be empty, it might be a text node, or it may be a tag (or multiple tags). gotoв will accept it wholesale.
+
+```javascript
+         output [output.length - 1] = 'P ' + length + output [output.length - 1].slice (1) + ' ' + lith.g (contents, true);
+```
 
 In this case, there's nothing else to do except to push another element to denote the closing of the tag (`C ` plus the tag itself) and return `output`.
 
 ```javascript
-      if (attributes && attributes.opaque) {
-         output.push ('Q ' + lith.g (contents, true), 'C ' + input [0]);
          return output;
       }
 ```
@@ -2577,7 +2607,7 @@ We invoke recursively the function on the `contents`, taking care to pass `outpu
       B.prediff (contents, output);
 ```
 
-We now check whether the current element is a `<table>` with contents. If so, we must take care to enter a `<tbody>` element in the right place, if the `<tbody>` is not specified on the `contents`. The reason for this is that the browser will automatically insert a `<tbody>` on non-empty tables if they don't have one, so we need to account for in our representation of the DOM.
+We now check whether the current element is a `<table>` with contents. If so, we must take care to insert a `<tbody>` element in the right place, if the `<tbody>` is not specified on the `contents`. The reason for this is that the browser will automatically insert a `<tbody>` on non-empty tables if they don't have one; by inserting a `<tbody>` into the output of `B.prediff`, we can have an accurate representation of the DOM.
 
 `output [tableIndex]` will represent the first element inside the `<table>`, if any, which will be already in `output` after the recursive call we just did to `B.prediff`. Note we saved `tableIndex` just before invoking `B.prediff` recursively, to know what the index was before appending the contents of `<table>` to `output`.
 
@@ -2635,10 +2665,44 @@ TODO
 
 We define `B.applyDiff`, the function in charge of applying a diff to the DOM. This function is only called by `B.redraw`. It takes four arguments: `x`, `responder`, `element` and `diff`.
 
+This has been the hardest function to design of the entire library.
+
+The operations are per node, add/rem/keep.
+
+think only of the parent and the node itself. also the position.
+keep: a kept element can be either inside a kept parent (no change) or in a removed parent (in which case it should be moved to its new destination). it cannot be in an added parent, but it can be moved to one.
+rem: just rem, perhaps recycle.
+add: add in position, and that's it!
+
+keep: a kept
+
+Problem: with insertBefore, we don't know if the element is there yet. In the old design, we removed everything all the time, so in effect we were appending everything from scratch!
+
 ```javascript
-   B.applyDiff = function (x, responder, element, diff) {
+   B.applyDiff = function (x, element, diff) {
 ```
 
+
+
+
+
+
+
+https://blog.jcoglan.com/2017/02/12/the-myers-diff-algorithm-part-1/
+thanks for letting me understand the Myers' diff algorithm deeply.
+
+minimal edit script. deletions before additions. bunch of deletions, then bunch of insertions, instead of interleaving.
+greediness: keep on keeping stuff in a row, if you can.
+
+old string horizontal, new string vertical. going right is to remove, going down is to add, going in diagonal is to keep.
+diagonal paths are free.
+
+non-diagonal point: test going down and going right. none of those is a diagonal? keep those options open and proceed.
+is any of those the start of a diagonal? go to the end of the diagonal.
+
+if two paths take you to the same point in the same number of moves, priorize those that delete first (abandon the other one)
+
+deletion first means that we can recycle elements by seeing them first, storing them and then re-using them (rather than the alternative of having to do a lookahead)
 
 
 TODO
@@ -2657,7 +2721,7 @@ In this section, we'll go over the main problems and design decisions of a front
 
 The first step in our conceptual journey is to understand **the difference between a website and a webapp**. Websites started existing in the Christmas of 1990 when the World Wide Web was launched. A website is 1) a document composed of HTML; 2) that is identified by an Uniform Resource Locator (URL). A web browser, when visiting a given URL, will load and then display the document.
 
-The web was revolutionary because - ruthlessly summarizing - 1) HTML could be interpreted by different browsers to fit different screen sizes; and 2) there was a single information space (the web) on which every document could live, accessible under its own URL. A third crucial feature of the web are links. Links allow connecting one webpage to another. By doing so, the web space can be traversed in different ways, allowing all sorts of possibilities. As natural as the web seems to us in 2020, these were real innovations were not obvious in the least. They are the bedrock on which webapps are built.
+The web was revolutionary because - ruthlessly summarizing - 1) HTML could be interpreted by different browsers to fit different screen sizes; and 2) there was a single information space (the web) on which every document could live, accessible under its own URL. A third crucial feature of the web are links. Links allow connecting one webpage to another. By doing so, the web space can be traversed in different ways, allowing all sorts of possibilities. As natural as the web seems to us in 2020, these were real innovations, not obvious in the least. They are the bedrock on which webapps are built.
 
 Webpages are stored as files on a server, and are served as-is to a web browser that requested them. Webpages, thus, are *static*. The same URL yields the same HTML. If a webpage is updated, then the HTML will change, but it will change for everyone that requests the page since the update.
 

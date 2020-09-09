@@ -1,7 +1,5 @@
 # Tutorial
 
-TODO: Three parts: concepts, vanilla, gotoB
-
 This tutorial is conceived as a small book that gently explains how to develop the frontend of a web application (henceforth, *webapp*).
 
 This tutorial requires you to have some knowledge of HTML, CSS and js (Javascript) - but only a little bit!
@@ -10,15 +8,15 @@ This will be most useful for those just dipping their feet into developing webap
 
 This is the resource I wanted to find back when I started writing webapps back in 2009; ten years later, I'm writing it for those of you who are today starting out.
 
-## Part 1: fundamentals
+## Part 1: basic concepts
 
-### Why develop webapps
+### Why develop webapps?
 
 You're probably familiar with three types of applications:
 
 - Native mobile applications, both the ones that come preinstalled on a phone or tablet, plus those you can install from either Google's Play Store or Apple's App Store.
 - Native desktop applications, such as Microsoft's Office suite.
-- Webapps, which run on web browsers on both mobile and desktop devices, without requiring installation.
+- Webapps, which run on web browsers on both mobile and desktop devices, without requiring installation. For example: Google Docs (the one on your browser!).
 
 Webapps are different from native applications in a few ways:
 
@@ -26,19 +24,21 @@ Webapps are different from native applications in a few ways:
 - **One application for all devices**: if properly written, a webapp can be seamlessly used from both mobile and desktop devices.
 - **It is a service**: instead of storing most of its information on the users' device like native applications do, webapps retrieve and store information on a server that is accessible through an internet connection.
 
-By merely requiring a device with internet a web browser, and no installation, webapps allow you to reach billions of people with minimal friction. And by providing a service that stores information, webapps prevent users from losing data or being locked into a single device; webapps provide an ultimate level of access and mobility to their users.
+What are the benefits of webapps?
+- **No installation**. By merely requiring a device with internet and a web browser, webapps allow you to reach billions of people with minimal friction.
+- **Use the application from any device**. By providing a service that stores information, webapps prevent users from having their data locked into a single device.
 
 ### How does a webapp work?
 
-As we just saw, a webapp is an application that runs in a web browser. When you click on a link (or write an address in the URL bar of a browser), a webpage is loaded. This webpage contains HTML, CSS and usually some js.
+As we just saw, a webapp is an application that runs on a web browser. When you click on a link (or write an address in the URL bar of a browser), a webpage is loaded. This webpage contains HTML, CSS and usually some js.
 
-The HTML and CSS represent the actual content on the page. HTML is what is shown on the page, while the CSS changes the way that the HTML looks. js is usually there to produce some changes on the HTML and CSS, but it is not strictly necessary and it is actually possible to write webapps without js.
+The HTML and CSS represent the actual content of the page. HTML is what is shown on the page, while the CSS changes the way that the HTML looks. js is usually there to produce some changes on the HTML and CSS, but it is not strictly necessary and it is actually possible to write webapps without js.
 
 HTML, CSS and js are text files, really. They have to conform to certain rules (very strict ones in the case of js), but they are humanly readable and can be opened on any text editor.
 
 When you load a webpage, an HTML file (which is text that conforms to certain rules, nothing else) may contain further CSS or js inside of it. These CSS or js files are also text, also conforming to certain rules.
 
-The browser, while receiving HTML, CSS and js, starts putting things on the screen - and that's what you see when the page is fully loaded.
+The browser, when receiving HTML, CSS and js, starts putting things on the screen - and that's what you see when the page is fully loaded.
 
 ### The two sides of a webapp
 
@@ -50,7 +50,7 @@ The terms *backend* and *server* refer to the same thing: a program that provide
 
 The *frontend* and the *backend* - or the *client* and the *server*, if you prefer - interact with each other through the internet.
 
-**In essence, a webapp is two programs: one that runs in a web browser and another one that runs in a server**. Frontend and backend are the two sides of the coin of a webapp. To fully build a webapp, you need to do both.
+**In essence, a webapp is two programs: one that runs on a web browser and another one that runs on a server**. Frontend and backend are the two sides of the coin of a webapp. To fully build a webapp, you need to do both.
 
 This tutorial only covers the frontend aspect of webapp development. We will however learn how to make requests to the backend so that when you get around to write your server, your frontend will be ready for it!
 

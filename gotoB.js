@@ -14,9 +14,9 @@ Please refer to readme.md to read the annotated source.
 
    var dale = window.dale, teishi = window.teishi, lith = window.lith, r = window.R (), c = window.c;
 
-   var type = teishi.type;
+   var type = teishi.type, time = Date.now ? function () {return Date.now ()} : function () {return new Date ().getTime ()};
 
-   var B = window.B = {v: '2.0.0', B: 'в', t: new Date ().getTime (), r: r, responders: r.responders, store: r.store, log: r.log, call: r.call, respond: r.respond, forget: r.forget};
+   var B = window.B = {v: '2.0.0', B: 'в', t: time (), r: r, responders: r.responders, store: r.store, log: r.log, call: r.call, respond: r.respond, forget: r.forget};
 
    // *** ERROR REPORTING ***
 
@@ -267,38 +267,42 @@ Please refer to readme.md to read the annotated source.
 
    // *** B.ELEM ***
 
-   B.view = function (paths, fun) {
+   B.view = function (path, fun) {
 
-      if (type (paths) === 'array' && type (paths [0]) !== 'array') paths = [paths];
+      var paths;
+      if      (type (path) !== 'array')     paths = [[path]];
+      else if (type (path [0]) !== 'array') paths = [path];
 
       if (! B.prod && teishi.stop ('B.view', [
          dale.stopNot (paths, false, function (path) {
-            return r.isPath (path) ? true : B.error ('B.view', 'Invalid path:', path, 'Arguments', {paths: paths});
+            return r.isPath (path) ? true : B.error ('B.view', 'Invalid path:', path, 'Arguments', {path: path});
          }),
-         ['fun', fun, 'function']
+         function () {return ['fun', fun, 'function']}
       ], function (error) {
-         B.error ('B.view', error, {paths: paths});
+         B.error ('B.view', error, {path: path});
       })) return false;
 
       var id = B.B + B.internal.count++;
 
       var makeElement = function () {
          var count = B.internal.count, children = [];
-         var elem = fun.apply (null, dale.go (paths, B.get));
-         if (! B.prod && B.validateLith (elem) !== 'Lith') return B.error ('B.view', 'Function must return a lith element but instead is:', elem, 'Arguments:', {paths: paths});
+         var elem = fun.apply (null, dale.go (paths, function (path) {
+            return teishi.copy (B.get (path));
+         }));
+         if (! B.prod && B.validateLith (elem) !== 'Lith') return B.error ('B.view', 'View function must return a lith element but instead returned:', elem, 'Arguments:', {path: path});
 
          dale.go (dale.times (B.internal.count - count, count), function (k) {
             var responder = B.responders [B.B + k];
-            responder.priority--;
             if (! responder.parent) {
                children.push (responder.id);
                responder.parent = id;
             }
+            responder.priority = responder.priority + B.responder [id].priority;
          });
 
          if (type (elem [1]) !== 'object') elem.splice (1, 0, {});
-         elem [1].id    = id;
-         elem [1].paths = dale.go (paths, function (path) {return path.join (':')}).join (', ');
+         elem [1].id   = id;
+         elem [1].path = dale.go (paths, function (path) {return path.join (':')}).join (', ');
          B.responders [id].elem     = elem;
          B.responders [id].children = children;
          return elem;
@@ -309,8 +313,8 @@ Please refer to readme.md to read the annotated source.
             return B.changeResponder (ev, {verb: 'change', path: path});
          });
       }}, function (x) {
-         var oldElement = B.responders [id].elem, oldChildren = B.responders [id].children;
-         if (makeElement ()) B.redraw (x, id, oldElement, oldChildren);
+         var oldElement = B.responders [id].elem, oldChildren = B.responders [id].children, t = time ();
+         if (makeElement ()) B.redraw (x, id, oldElement, oldChildren, time () - t);
       });
 
       return makeElement ();
@@ -343,27 +347,39 @@ Please refer to readme.md to read the annotated source.
       return B.validateLitc (teishi.last (input));
    }
 
-   B.redraw = function (x, id, oldElement, oldChildren, fromQueue) {
+   B.redraw = function (x, id, oldElement, oldChildren, msCreate, fromQueue) {
 
       if (B.internal.redrawing && ! fromQueue) return B.internal.queue.push ([x, id, oldElement, oldChildren]);
 
       B.internal.redrawing = true;
 
-      var responder = B.responders [id], element = document.getElementById (id), t = new Date ().getTime ();
+      var responder = B.responders [id], element = document.getElementById (id), t0 = time ();
 
-      if (! B.prod && ! element) {
-         B.forget (id);
-         return B.error (x, 'B.redraw', 'Attempted to redraw dangling element, omitting redraw & deleting responder.', {responder: responder});
-      }
+      if (! B.prod && (! element || ! document.body.contains (element))) return B.error (x, 'B.redraw', 'Attempt to redraw dangling element.', {responder: responder});
 
-      var diff = B.diff (B.prediff (oldElement), B.prediff (responder.elem));
+      //console.log ('-----------------------');
+      //console.log ('DEBUG redraw', oldElement, responder.elem);
+      //console.log ('DEBUG prediff', B.prediff (oldElement), B.prediff (responder.elem));
+      var diff = B.diff (B.prediff (oldElement), B.prediff (responder.elem)), t1 = time ();
 
       dale.go (oldChildren, function (id) {B.forget (id)});
 
-      if (diff === false) document.getElementById (id).innerHTML = lith.g (responder.elem, true);
-      else                B.applyDiff (x, responder, element, diff);
+      if (diff === false) {
+         var element = document.getElementById (id), elementParent = element.parentNode, nextSibling = element.nextSibling || null;
+         var newElement = document.createElement (responder.elem [0]);
+         if (type (responder.elem [1]) === 'object') dale.go (responder.elem [1], function (v, k) {
+            if (v !== '' && v !== null && v !== undefined) newElement.setAttribute (k, v);
+         });
+         newElement.innerHTML = lith.g (responder.elem [2], true);
+         element.parentNode.removeChild (element);
+         elementParent.insertBefore (newElement, nextSibling);
+      }
+      else {
+         var errorIndex = B.applyDiff (element, diff);
+         if (! B.prod && errorIndex !== undefined) return B.error (x, 'B.redraw', 'Redraw error: DOM element missing.', {diffIndex: errorIndex, diffElement: diff [errorIndex], diff: diff, responder: responder.id});
+      }
 
-      B.call (x, 'redraw', {responder: responder, t: new Date ().getTime () - t, diffLength: diff === false ? false : diff.length});
+      B.call (x, 'redraw', x.path, {responder: responder.id, ms: {create: msCreate, diff: t1 - t0, DOM: time () - t1, total: time () - t0 + msCreate}, diffLength: diff === false ? false : diff.length});
 
       var nextRedraw = dale.stopNot (B.internal.queue, undefined, function () {
          var next = B.internal.queue.shift ();
@@ -386,7 +402,7 @@ Please refer to readme.md to read the annotated source.
 
       if (lith.k.tags.indexOf (input [0]) === -1) return dale.go (input, function (v) {B.prediff (v, output)});
 
-      if (input [1] && input [1].id && (input [1].id + '').match (/^в[0-9a-f]+$/g)) input = B.responders [input [1].id].elem;
+      if (input [1] && input [1].id && (input [1].id + '').match (/^в[0-9a-f]+$/g) && output.length) input = B.responders [input [1].id].elem;
 
       var attributes = type (input [1]) !== 'object' ? undefined : dale.obj (input [1], function (v, k) {
          if (v !== undefined && v !== null && v !== '') return [k, v];
@@ -397,7 +413,8 @@ Please refer to readme.md to read the annotated source.
       if (attributes) output [output.length - 1] += ' ' + JSON.stringify (attributes);
 
       if (attributes && attributes.opaque) {
-         output.push ('Q ' + lith.g (contents, true), 'C ' + input [0]);
+         var length = output [output.length - 1].length;
+         output [output.length - 1] = 'P ' + length + output [output.length - 1].slice (1) + ' ' + lith.g (contents, true);
          return output;
       }
 
@@ -421,216 +438,137 @@ Please refer to readme.md to read the annotated source.
       return output;
    }
 
-   B.applyDiff = function (x, responder, element, diff) {
-      var insert = function (el, where, position) {
-         var p = find (where, 'insert1', position);
-         if (p) p.parentNode.insertBefore (el, p);
-         else   find (where.slice (0, where.length - 1), 'insert2', position).appendChild (el);
-      }
+   B.applyDiff = function (rootElement, diff) {
 
-      var find = function (where, action, position) {
-         var cur = element;
-         dale.go (where, function (v, k) {
-            if (cur) return cur = cur.childNodes [v];
+      // parentNode.insertBefore not supported in IE<=8, make local polyfill with appendChlid
+      // insertBefore removes automatically, no need to remove from current position
+      // node.parentNode, node.previousSibling, node.nextSibling, node.firstChild, node.childNodes
 
-            if (! B.prod) B.error (x, 'redraw', {
-               // TODO
-               action: action,
-               position: position,
-               diffitem: diff [position].slice (0, 2).join (' '),
-               id: id,
-               where: where,
-               k: k,
-               innerHTML: element.innerHTML,
-               /*
-               expectedHTML: lith.g (view, lith.g (view)),
-               oldElement: responder.elem,
-               newElement: view,
-               diff: dale.obj (teishi.copy (diff), function (v2, k2) {return [k2, v2]})
-               */
-            });
-            throw new Error ('gotoB redraw error!');
-            // log ('gotoB redraw error! This could be caused by two things: 1) invalid markup; 2) a gotoB redraw bug. To eliminate the possibility of #1, check that the view being redrawn returns lith that represents valid HTML, taking particular care to not nest elements incorrectly (for example, an <h1> cannot go inside an <h1>). If you need help debugging the error, please open a pull request at http://github.com/fpereiro/gotoB/issues and paste the text below:\n', JSON.stringify (data, null, '   '));
-         });
-         return cur;
-      }
+      var elements = [], positions = [], references = {}, rootElementParent = rootElement.parentNode;
+      var tree = [rootElement, null], position = [];
 
-      var elementPosition = dale.stopNot (element.parentNode.childNodes, undefined, function (v, k) {
-         if (v === element) return k;
-      });
-
-      //var dold = [0], dnew = [0], match = {
-      var dold = [initialPosition], dnew = [initialPosition], match = {
-         add: {tag: null, index: null},
-         rem: {tag: null, index: null}
-      };
-
-      dale.go (diff, function (v, k) {
-         if (v [1].match (/^<opaque/)) return;
-         if (! v [1].match (/^>/)) diff [k] [2] = {el: find (dold, 'sequence', k), old: dold.slice (), New: dnew.slice ()};
-         if (v [1].match (/^</)) {
-            diff [k] [2].active = diff [k] [2].el === document.activeElement;
-            var tag  = v [1].match (/[^\s]+/g) [0];
-            var opaque = v [1].match (/<.+ {.*"opaque":true.*}/);
-            if (v [0] === 'add' && ! opaque) {
-               if (match.rem.tag === tag) {
-                  diff [k] [2].match = match.rem.index;
-                  diff [match.rem.index] [2].match = k;
-                  match.rem.tag = match.rem.index = null;
-               }
-               else {
-                  match.add.tag   = tag;
-                  match.add.index = k;
-               }
-            }
-            if (v [0] === 'rem' && ! opaque) {
-               if (match.add.tag === tag) {
-                  diff [k] [2].match = match.add.index;
-                  diff [match.add.index] [2].match = k;
-                  match.add.tag = match.add.index = null;
-               }
-               else {
-                  match.rem.tag   = tag;
-                  match.rem.index = k;
-               }
-            }
-
-            if (v [0] !== 'add') dold.push (0);
-            if (v [0] !== 'rem') dnew.push (0);
-         }
-         else if (v [1].match (/^>/)) {
-            if (v [0] !== 'add') {
-               dold.pop ();
-               dold [dold.length - 1]++;
-            }
+      // console.log ('DEBUG diff', diff);
+      var errorIndex = dale.stopNot (diff, undefined, function (v, k) {
+         if (v [1] [0] === 'C') {
             if (v [0] !== 'rem') {
-               dnew.pop ();
-               dnew [dnew.length - 1]++;
+               position.pop ();
+               position [position.length - 1]++;
             }
+            if (v [0] !== 'add') tree.pop ();
+            return;
          }
-         else {
-            if (v [0] !== 'add') dold [dold.length - 1]++;
-            if (v [0] !== 'rem') dnew [dnew.length - 1]++;
+         if (v [0] !== 'rem') {
+            positions [k] = position.slice ();
+            if (v [1] [0] === 'O') {
+               references [positions [k].join (',')] = k;
+               position.push (0);
+            }
+            else position [position.length - 1]++;
+         }
+         if (v [0] !== 'add') {
+            var element;
+            // how do we know? rem before add, and if it's keep it will be first. so k === 0 always refer to the existing rootElement.
+            if (k === 0)                       element = rootElement;
+            else if (! tree [tree.length - 1]) element = tree [tree.length - 2].firstChild;
+            else                               element = tree [tree.length - 1].nextSibling;
+
+            if (! B.prod && ! element) return k;
+
+            elements [k] = element;
+            tree [tree.length - 1] = element;
+            if (v [1] [0] === 'O') tree.push (null);
          }
       });
 
-      var detached = {}, active, selected = [], unselected = [], checked = [], textareas = [];
+      if (errorIndex !== undefined) return errorIndex;
+      //console.log ('DEBUG elements', elements);
+      //console.log ('DEBUG positions', positions);
+      //console.log ('DEBUG references', references);
+      //console.log ('DEBUG tree', tree);
+      //console.log ('DEBUG position', position);
 
-      dale.go (diff, function (v, k) {
-         if (v [1].match (/^>/)) return;
-         if (v [1].match (/^<opaque/)) {
-            if (v [0] === 'rem') return;
-            // previous might be n items behind if there are multiple `rem` operations
-            var previous = dale.stopNot (dale.times (k, k - 1, -1), undefined, function (k) {
-               if (diff [k] [0] !== 'rem') return diff [k];
-            });
-            return previous [2].el.innerHTML = v [1].slice (7);
-         }
-         if (v [1] [0] !== '<' && v [0] !== 'rem' && v [2].New.length > 1) {
-            var Parent = find (v [2].New.slice (0, -1));
-            if (Parent.tagName === 'TEXTAREA') textareas.push ([Parent, v [1]]);
-         }
-         if (v [0] === 'keep') {
-            if (v [1].match (/<.+ {.*"opaque":true.*}/)) v [2].el.innerHTML = '';
-
-            // This if is because of the way IE/Edge treat text elements (they simply bring text instead of a textNode).
-            if (! v [2].el) insert (document.createTextNode (v [1]), v [2].New, v [2].New [v [2].New.length - 1]);
-            else {
-               if (v [1].match (/<option/)) {
-                  var attrs = JSON.parse (v [1].match (/{.+/) || '{}');
-                  if (attrs.selected) selected.push (v [2].el);
-               }
-               insert (v [2].el.parentNode.removeChild (v [2].el), v [2].New, v [2].New [v [2].New.length - 1]);
-
-               if (v [2].active && v [1].match (/[^<\s]+/g) [0] !== 'a') active = v [2].el;
-            }
-         }
-         else if (v [1].match (/^</)) {
-            if (v [0] === 'rem') {
-               if (v [2].match === undefined || v [2].match > k) detached [v [2].old] = v [2].el.parentNode.removeChild (v [2].el);
-            }
-            if (v [0] === 'add') {
-               var el;
-               if (v [2].match !== undefined) {
-                  var old = diff [v [2].match];
-                  if (! detached [old [2].old]) detached [old [2].old] = old [2].el;
-                  el = old [2].el;
-                  var oldAttrs = dale.obj (el.attributes, function (v) {
-                     // The check for v is required in FF22, IE<=10 & Opera<=11.6
-                     if (v && v.specified) return [v.name, v.value];
-                  });
-                  var newAttrs = JSON.parse (v [1].match (/{.+/) || '{}');
-                  dale.go (dale.fil (oldAttrs, undefined, function (v, k) {
-                     if (type (v) === 'string') v = {name: k};
-                     if (newAttrs [v.name] === undefined) return v.name;
-                  }), function (k) {
-                     el.removeAttribute (k);
-                     if (['value', 'checked', 'selected'].indexOf (k) > -1) el [k] = k === 'value' ? '' : false;
-                     if (k === 'selected') unselected.push (el);
-                  });
-                  dale.go (newAttrs, function (v, k) {
-                     el.setAttribute (k, v);
-                     if (['value', 'checked', 'selected'].indexOf (k) > -1) el [k] = v;
-                  });
-                  if (el.attributes && el.attributes.selected) selected.push (el);
-                  if (el.attributes && el.attributes.checked)  checked.push  (el);
-               }
-               else {
-                  el = document.createElement (v [1].match (/[^<\s]+/g) [0]);
-                  dale.go (JSON.parse (v [1].match (/{.+/) || '{}'), function (v, k) {
-                     if (v || v === '' || v === 0) el.setAttribute (k, v);
-                  });
-               }
-               insert (el, v [2].New, v [2].New [v [2].New.length - 1]);
-               v [2].el = el;
-               if (old && old [2].active && v [1].match (/[^<\s]+/g) [0] !== 'a') active = el;
-            }
-         }
-         else {
-            if (v [0] === 'add') {
-               v [1] = v [1]
-                  .replace (/&amp;/g,  '\&')
-                  .replace (/&lt;/g,   '<')
-                  .replace (/&gt;/g,   '>')
-                  .replace (/&quot;/g, '"')
-                  .replace (/&#39;/g,  "'")
-                  .replace (/&#96;/g,  '`');
-               insert (document.createTextNode (v [1]), v [2].New, v [2].New [v [2].New.length - 1]);
-            }
-            else {
-               if (v [2].el) v [2].el.parentNode.removeChild (v [2].el);
-            }
-         }
-         if (v [1].match (/<textarea/) && v [0] !== 'rem') textareas.push ([v [2].el]);
-      });
-
-      if (active) {
-         active.focus ? active.focus () : active.setActive ();
-         active.blur ();
-         active.focus ? active.focus () : active.setActive ();
+      var extract = function (elementString, part) {
+         if (part === 'tag') return elementString.match (/(O|P) [^\s]+/) [0].replace (/(O|P) /, '')
+         else                return elementString.match ('{') ? JSON.parse (elementString.replace (/[^{]+/, '').replace (/ $/, '')) : {};
       }
 
-      dale.go (selected,   function (el) {el.selected = true});
-      dale.go (unselected, function (el) {el.selected = false});
-      dale.go (checked,    function (el) {el.checked  = true});
+      var place = function (operation, position, element) {
+         //console.log ('DEBUG place', operation, position, element);
+         var Parent = position.length === 0 ? rootElementParent : elements [references [position.slice (0, -1).join (',')]];
+         //console.log ('DEBUG place parent', Parent);
+         if (operation === 'keep' && Parent.children [position [position.length - 1]] === element) return;
+         var after = Parent.children [position [position.length - 1]] || null;
+         Parent.insertBefore (element, after);
+      }
 
-      var Textareas = dale.fil (textareas, undefined, function (v) {
-         if (v.length === 2) return v [0];
-      });
+      var make = function (elementString) {
+         //console.log ('DEBUG make', elementString);
+         if (elementString [0] === 'L') {
+            var container = document.createElement ('div');
+            container.innerHTML = elementString.slice (2);
+            return container.firstChild;
+         }
 
-      dale.go (textareas, function (v) {
-         if (v.length === 2) return v [0].value = v [1].replace (/&amp;/g, '&').replace (/&lt;/g, '<').replace (/&gt;/g, '>').replace (/&quot;/g, '"').replace (/&#39;/g, "'").replace (/&#96;/g, '`');
-         if (Textareas.indexOf (v [0]) === -1) v [0].value = '';
+         if (elementString [0] === 'P') {
+            var length = elementString.match (/ \d+ /) [0].replace (/\s/g, '');
+            // one extra for space for length number, another for space before contents
+            var contentsIndex = length + (length + '').length + 2;
+            var contents = elementString.replace (length + ' ', '').splice (contentsIndex, elementString.length - contentsIndex);
+         }
+         // done after splicing, in case contents contain {
+         var element = document.createElement (extract (elementString, 'tag'));
+         dale.go (extract (elementString, 'attributes'), function (v, k) {
+            if (v !== '' && v !== null) element.setAttribute (k, v);
+         });
+         if (elementString [0] === 'P') element.innerHTML = contents;
+         return element;
+      }
+
+      // only elements with the same tag
+      var recycle = function (element, old, New) {
+         var oldAttributes = extract (old, 'attributes'), newAttributes = extract (New, 'attributes');
+         dale.go (newAttributes, function (v, k) {
+            if (v !== '' && v !== null) element.setAttribute (k, v);
+         });
+         dale.go (oldAttributes, function (v, k) {
+            if (v === '' || v === null) return;
+            if (newAttributes [k] === '' || newAttributes [k] === null || newAttributes [k] === undefined) el.removeAttribute (k);
+         });
+         return element;
+      }
+
+      var recyclables = {};
+
+      dale.go (diff, function (v, k) {
+         if (v [1] [0] === 'C') return;
+         if (v [0] === 'keep') return place ('keep', positions [k], elements [k]);
+         if (v [0] === 'rem')  {
+            if (v [0] === 'O') recyclables [extract (v [1], 'tag')] = k;
+            return elements [k].parentNode.removeChild (elements [k]);
+         }
+
+         if (v [1] [0] !== 'O') return place ('add', positions [k], make (v [1]));
+         var tag = extract (v [1], 'tag'), recycleIndex = recyclables [tag], element;
+
+         if (recycleIndex === undefined) element = make (v [1]);
+         else {
+            element = recycle (elements [recycleIndex], diff [recycleIndex] [1], v [1]);
+            recyclables [tag] = undefined;
+         }
+         if (recycleIndex !== undefined) console.log ('DEBUG recycleIndex', recycleIndex, element);
+         elements [k] = element;
+         place ('add', positions [k], element);
       });
    }
 
    B.diff = function (s1, s2) {
 
-      var V = [], sol, d = 0, vl, vc, k, out, y, point, diff, v, last, t = new Date ().getTime ();
+      var V = [], sol, d = 0, vl, vc, k, out, y, point, diff, v, last, t = time ();
 
       while (d < s1.length + s2.length + 1) {
 
-         if (B.internal.timeout && (new Date ().getTime () - t > B.internal.timeout)) return false;
+         // TODO: count every n
+         if (B.internal.timeout && (time () - t > B.internal.timeout)) return false;
 
          vl = V [V.length - 1] || {1: [0, 0]};
          vc = {};

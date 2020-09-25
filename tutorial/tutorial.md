@@ -56,6 +56,32 @@ This tutorial only covers the frontend aspect of webapp development. We will how
 
 ### Is it a webpage or is it a webapp?
 
+In the beginning of the web, we only had webpages. Now, webpages are easy to understand: each webpage is a merely some HTML, CSS & js that gets loaded on the browser. Every time the user opens the page, that HTML, CSS & js gets loaded and the page is displayed. And, unless the owner of the webpage decides to change it, the webpage will be the same from here until the end of time.
+
+Because webpages are always the same (unless updated), we consider them to be **static**.
+
+An example of this is the homepage of a newspaper. Sure, it might be updated all the time, but between updates, the page is the same for everyone.
+
+Webapps are a different game, because the HTML, CSS & js depends on **the state of the application**.
+
+An example of a webapp is the inbox of your web email, such as Gmail or Outlook.com. It is still HTML, CSS & js, but it will depend on what emails you have in your inbox!
+
+State of the application: can be changed by user, it can also be changed by third party (someone sending you an email).
+
+Take the example of a shopping cart: the first time you load a shopping cart, it will be empty. If you add an item, the shopping cart will no longer be empty, and certain elements in the page will have changed, such as the list of products and the total amount.
+
+It is very important to understand the main difference between a webpage and a webapp.
+
+A webpage is static: this means that, at a given moment, two users that load the webpage will obtain an identical result.
+
+A webapp, in contrast, is dynamic: this means that two users that load the webapp will obtain a different result.
+
+Website: same URL, same HTML! Static, doesn't change.
+
+Webapp: can change.
+
+The first step in our conceptual journey is to understand **the difference between a website and a webapp**. Websites started existing in the Christmas of 1990 when the World Wide Web was launched. A website is 1) a document composed of HTML; 2) that is identified by an Uniform Resource Locator (URL). A web browser, when visiting a given URL, will load and then display the document.
+
 At the beginning, app loads a webpage! But are we creating webpages or webapps? Let's see this historically, to understand it and also because it is fun!
 
 webpage + user provided data = webapp.

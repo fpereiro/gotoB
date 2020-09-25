@@ -388,8 +388,8 @@
                });
 
                // We update the references since we've re-assigned Data and State during the above tests.
-               window.Data  = B.store.Data;
-               window.State = B.store.State;
+               window.Data  = B.store.Data  = {};
+               window.State = B.store.State = {};
 
                B.call (x, 'test', 'B.ev');
             });
@@ -685,12 +685,12 @@
                   B.unmount ('body');
                   if (B.responders [B.B + 1]) return 'B.unmount didn\'t remove event responder that corresponded to an element id.';
                   if (! B.responders [B.B + 2]) return 'B.unmount removed responder that didn\'t correspond to an element id.';
+                  B.forget (B.B + 2);
 
                   if (B.mount ('body', function () {}) !== undefined) return 'B.mount didn\'t accept empty element.';
                });
 
                B.call (x, 'ok', 'ok');
-               B.eventlog ();
 
                B.call (x, 'test', 'B.prediff');
             });
@@ -701,22 +701,22 @@
 
                Test ('B.prediff', function () {
                   var error = dale.stopNot ([
-                     [['a'], ["O a","C a"]],
-                     [['a', {}], ["O a {}","C a"]],
-                     [['table'], ["O table","C table"]],
-                     [['table', ['tr']], ["O table","O tbody","O tr","C tr","C tbody","C table"]],
-                     [['table', ['tr', ['td', ['table', ['tr']]]]], ["O table","O tbody","O tr","O td","O table","O tbody","O tr","C tr","C tbody","C table","C td","C tr","C tbody","C table"]],
-                     [['table', ['thead', ['tr']]], ["O table","O thead","O tr","C tr","C thead","C table"]],
-                     [['table', [['thead', ['tr']], ['tr']]], ["O table","O thead","O tr","C tr","C thead","O tbody","O tr","C tr","C tbody","C table"]],
-                     [['a', undefined], ["O a","C a"]],
-                     [['a', ''], ["O a","C a"]],
-                     [['a', ['']], ["O a","C a"]],
-                     [['a', 'a'], ["O a","L a","C a"]],
-                     [['a', ['z', '']], ["O a","L z","C a"]],
-                     [['a', ['z', 'b']], ["O a","L zb","C a"]],
-                     [['a', ['z', ' b']], ["O a","L z b","C a"]],
-                     [['a', [1, 'z', ' b']], ["O a","L 1z b","C a"]],
-                     [['a', [[[['z']]], 'b']], ["O a","L zb","C a"]],
+                     [['a'], ['O a','C a']],
+                     [['a', {}], ['O a {}','C a']],
+                     [['table'], ['O table','C table']],
+                     [['table', ['tr']], ['O table','O tbody','O tr','C tr','C tbody','C table']],
+                     [['table', ['tr', ['td', ['table', ['tr']]]]], ['O table','O tbody','O tr','O td','O table','O tbody','O tr','C tr','C tbody','C table','C td','C tr','C tbody','C table']],
+                     [['table', ['thead', ['tr']]], ['O table','O thead','O tr','C tr','C thead','C table']],
+                     [['table', [['thead', ['tr']], ['tr']]], ['O table','O thead','O tr','C tr','C thead','O tbody','O tr','C tr','C tbody','C table']],
+                     [['a', undefined], ['O a','C a']],
+                     [['a', ''], ['O a','C a']],
+                     [['a', ['']], ['O a','C a']],
+                     [['a', 'a'], ['O a','L a','C a']],
+                     [['a', ['z', '']], ['O a','L z','C a']],
+                     [['a', ['z', 'b']], ['O a','L zb','C a']],
+                     [['a', ['z', ' b']], ['O a','L z b','C a']],
+                     [['a', [1, 'z', ' b']], ['O a','L 1z b','C a']],
+                     [['a', [[[['z']]], 'b']], ['O a','L zb','C a']],
                      [['a', {b: 'c'}], ['O a {"b":"c"}','C a']],
                      [['a', {b: null}], ['O a {}','C a']],
                      [['a', {b: ''}], ['O a {}','C a']],
@@ -724,55 +724,179 @@
                      [['a', {b: 0}], ['O a {"b":0}','C a']],
                      [['a', {b: 'c'}, 'd'], ['O a {"b":"c"}','L d','C a']],
                      [['a', {b: 'c'}, ['d', 'e']], ['O a {"b":"c"}','L de','C a']],
-                     [['a', ['LITERAL', '<svg></svg>']], ["O a","L <svg></svg>","C a"]],
-                     [['a', {opaque: true}, ['LITERAL', '<svg></svg>']], ['O a {"opaque":true}',"Q <svg></svg>","C a"]],
-                     [['a', {opaque: true}, '<svg></svg>'], ["O a {\"opaque\":true}","Q &lt;svg&gt;&lt;/svg&gt;","C a"]],
-                     [['a', '<svg></svg>'], ["O a", "L &lt;svg&gt;&lt;/svg&gt;","C a"]],
-                     [['div', [['a', {href: 'c'}], ['p', 2]]], ["O div",'O a {"href":"c"}',"C a","O p","L 2","C p","C div"]]
+                     [['a', ['LITERAL', '<svg></svg>']], ['O a','L <svg></svg>','C a']],
+                     [['a', {opaque: true}, ['LITERAL', '<svg></svg>']], ['P 19 a {"opaque":true} <svg></svg>']],
+                     [['a', {opaque: true}, '<svg></svg>'], ['P 19 a {"opaque":true} &lt;svg&gt;&lt;/svg&gt;']],
+                     [['a', '<svg></svg>'], ['O a', 'L &lt;svg&gt;&lt;/svg&gt;','C a']],
+                     [['div', [['a', {href: 'c'}], ['p', 2]]], ['O div','O a {"href":"c"}','C a','O p','L 2','C p','C div']]
                   ], undefined, function (v) {
-                     clog (JSON.stringify (B.prediff (v [0])));
-                     if (! eq (B.prediff (v [0]), v [1])) return 'B.prediff mismatch: ' + JSON.stringify (v);
+                     if (! eq (B.prediff (v [0]), v [1])) return 'B.prediff mismatch: ' + JSON.stringify (v) + '   ' + B.prediff (v [0]);
                   });
 
                   if (error) return error;
 
                   B.responders [B.B + 1000] = {elem: ['a', {id: B.B + 1000}, 'z']};
-                  if (! eq (B.prediff (['a', {id: B.B + 1000}, 'u']), ['O a {"id":"' + B.B + 1000 + '"}', 'L z', 'C a'])) return 'Mismatch when looking up reactive view #1.';
-                  if (! eq (B.prediff (['div', ['a', {id: B.B + 1000}, 'u']]), ['O div', 'O a {"id":"' + B.B + 1000 + '"}', 'L z', 'C a', 'C div'])) return 'Mismatch when looking up reactive view #2.';
-               });
+                  if (! eq (B.prediff (['a', {id: B.B + 1000}, 'u']), ['O a {"id":"' + B.B + 1000 + '"}', 'L u', 'C a'])) return 'Mismatch when prediffing up top-level reactive view.';
+                  if (! eq (B.prediff (['div', ['a', {id: B.B + 1000}, 'u']]), ['O div', 'O a {"id":"' + B.B + 1000 + '"}', 'L z', 'C a', 'C div'])) return 'Mismatch when looking up nested reactive view #2.';
+                  B.forget (B.B + 1000);
 
-               // TODO uncomment to proceed
-               //B.call (x, 'test', 'B.view');
+               });
+               B.call (x, 'test', 'B.view');
             });
 
-
-
-
-
-
-
-
-
-            // *** B.ELEM ***
+            // *** B.VIEW ***
 
             B.respond ('test', 'B.view', {burn: true}, function (x) {
 
-               B.mount ('body', function () {
-                  return B.view (['Data', 'sabe'], function (sabe) {
-                     clog ('debug redrawing', arguments);
-                     return ['p', ['ya tu sabe:', sabe]];
-                  });
+               Test ('B.redraw', function () {
+                  var noElement = B.redraw ({}, 'nosuch');
+                  var lastLog = last (B.log);
+                  if (noElement !== false || ! eq ({verb: 'error', path: ['B.redraw'], error: 'Attempt to redraw dangling element.'}, {verb: lastLog.verb, path: lastLog.path, error: lastLog.args [0]})) return 'No such element error wasn\'t reported properly.';
+                  if (B.internal.redrawing !== true) return 'B.redraw didn\'t set redrawinf flag #1.';
+                  B.internal.redrawing = false;
+
+                  var el = document.createElement ('div');
+                  el.id = 'abc';
+
+                  var danglingElement = B.redraw ({}, 'abc');
+                  lastLog = last (B.log);
+                  if (noElement !== false || ! eq ({verb: 'error', path: ['B.redraw'], error: 'Attempt to redraw dangling element.'}, {verb: lastLog.verb, path: lastLog.path, error: lastLog.args [0]})) return 'Dangling element error wasn\'t reported properly.';
+
+                  if (B.internal.redrawing !== true) return 'B.redraw didn\'t set redrawinf flag #2.';
+                  B.internal.redrawing = false;
+
+                  // Error reporting of B.applyDiff errors is not tested here.
                });
-               B.call (x, 'set', ['Data', 'sabe'], 'anxious');
-               //B.call (x, 'set', ['Data', 'sabe'], 'anxious');
+
+               var logLength = B.log.length;
+
+               Test ('B.view invalid inputs', function () {
+                  var error = dale.stopNot ([
+                     {path: undefined, fun: function () {}},
+                     {path: / /, fun: function () {}},
+                     {path: function () {}, fun: function () {}},
+                     {path: [null], fun: function () {}},
+                     {path: 'a', fun: undefined},
+                     {path: 'a', fun: / /},
+                     {path: 'a', fun: null},
+                     {path: 'a', fun: ''},
+                     {path: 'a', fun: []}
+                  ], undefined, function (args, k) {
+                     if (B.view (args.path, args.fun) !== false) return 'B.view - invalid arguments accepted as valid: ' + B.str (args);
+                     if (B.log.length !== logLength + k + 1) return 'Error not reported: ' + B.str (args);
+                     var lastLog = last (B.log);
+                     if (lastLog.verb !== 'error' || lastLog.path [0] !== 'B.view' || ! lastLog.args.length || type (lastLog.args [0]) !== 'string') return 'Error reported incorrectly: ' + B.str (args);
+                     if (! lastLog.args [0].match (k <= 3 ? 'Invalid path' : 'fun passed to B.view')) return 'Invalid error message: ' + B.str (args);
+                  });
+                  if (error) return error;
+
+                  if (B.internal.count !== 1) return 'Invalid invocation to B.view incremented B.internal.count.';
+
+               });
+
+               logLength = B.log.length;
+
+               Test ('B.view invalid vfun outputs', function () {
+                  var error = dale.stopNot ([
+                     {path: [1], fun: function () {}},
+                     {path: [2], fun: function () {return 'a'}},
+                     {path: [3], fun: function () {return [377, 'a']}},
+                     {path: [4], fun: function () {return /boo/}},
+                     {path: [5], fun: function () {return null}},
+                     {path: [6], fun: function () {return ['div.green', {color: 'green'}]}}
+                  ], undefined, function (args, k) {
+                     if (B.view (args.path, args.fun) !== false) return 'B.view - invalid arguments accepted as valid: ' + B.str (args);
+                     if (B.log.length !== logLength + k + 1) return 'Error not reported: ' + B.str (args);
+                     var lastLog = last (B.log);
+                     if (lastLog.verb !== 'error' || lastLog.path [0] !== 'B.view' || ! lastLog.args.length || type (lastLog.args [0]) !== 'string') return 'Error reported incorrectly: ' + B.str (args);
+                     if (! lastLog.args [0].match ('View function must return a lith element')) return 'Invalid error message: ' + B.str (args);
+                     if (! B.responders [B.B + (k + 1)]) return 'Responder not set: ' + B.str (args);
+                     if (B.responders [B.B + (k + 1)].path.length !== 0) return 'Responder not set with empty path.';
+                     B.forget (B.B + (k + 1));
+                  });
+                  if (error) return error;
+
+                  B.internal.count = 1;
+               });
 
                // Turn on again error handler
-               // B.responders.error.disabled = false;
+               B.responders.error.disabled = false;
+
+               /*
+               // B.view checks:
+               - count is incremented if inputs are valid
+               - set responder with priority -1
+               - paths can be single path element, normal path, or set of paths, or empty element
+               - id of reactive gets replaced
+               - paths of reactive gets added (single path element, normal path, set of paths)
+               */
+
+               Test ('B.view valid inputs, non-nested', function () {
+
+                  // INITIAL SETUP
+
+                  B.call (x, 'set', ['Data', 'view'], ['div']);
+
+                  B.mount ('body', function () {
+                     return B.view (['Data', 'view'], function (view) {
+                        return view;
+                     });
+                  });
+
+                  if (document.body.innerHTML !== '<div id="в1" path="Data:view"></div>') return 'Invalid HTML mounted #1.';
+                  var responder = B.responders [B.B + 1];
+                  if (responder.verb !== 'change') return 'Invalid change #1.';
+                  if (responder.path.length !== 0) return 'Invalid path #1.';
+                  if (responder.priority !== -1) return 'Invalid priority #1.';
+                  if (eq (responder.elem, B.get ('Data', 'view'))) return 'Store was modified by vfun #1.';
+                  if (! eq (responder.elem, ['div', {id: B.B + 1, path: 'Data:view'}])) return 'Invalid elem #1.';
+                  if (responder.children.length !== 0) return 'Invalid children #1.';
+
+                  var DOMElement = c ('#' + B.B + 1);
+
+                  // ADD CLASS
+
+                  B.call (x, 'set', ['Data', 'view'], ['div', {class: 'hello'}]);
+                  console.log (document.body.innerHTML);
+
+                  if (document.body.innerHTML !== '<div class="hello" id="в1" path="Data:view"></div>') return 'Invalid HTML mounted #2.';
+
+                  B.call (x, 'set', ['Data', 'view'], ['div', {class: 'hellou'}, 'forget']);
+
+                  var data = dale.go (dale.times (200), Math.random);
+
+                  B.call (x, 'set', ['Data', 'view'], ['ul', dale.go (data, function (v) {return ['li', v]})]);
+                  data [100] = 'foobar';
+                  var t0 = Date.now ();
+                  // TODO: this fails with a lower timeout!
+                  B.call (x, 'set', ['Data', 'view'], ['ul', dale.go (data, function (v) {return ['li', v]})]);
+                  console.log (Date.now () - t0);
+
+
+               });
+
+               return;
+
+               var views = [
+                  ['div', 'text'],
+                  ['div', 'more text'],
+                  ['div', 'a&nbsp;b'],
+                  ['div', ['LITERAL', 'a&nbsp;b']],
+                  ['div', {class: 'abc'}, ['LITERAL', 'a&nbsp;b']],
+                  //['div', ['a']],
+               ];
+
+               dale.go (views, function (view) {
+                  B.call (x, 'set', ['Data', 'view'], view);
+                  console.log ('compare', document.body.innerHTML);
+                  // TODO: perform checks.
+               });
+
+               console.log ('DEBUG body html:', document.body.innerHTML);
+
+               //B.call (x, 'set', ['Data', 'sabe'], 'anxious');
 
             });
-
-
-
 
             // mount/unmount: test with id="B ... that it doesn't get matched
             // same with B.view, see if old one blows up
@@ -953,121 +1077,6 @@
                   if (dale.keys (B.responders).length !== initialLength) return 'Cleanup failed #1.';
                });
 
-               Test ('B.mount & B.unmount invalid input', function () {
-                  if (B.mount ('p') !== false) return 'B.mount accepted invalid target #1.';
-                  if (B.mount ('#a p') !== false) return 'B.mount accepted invalid target #2.';
-                  if (B.mount (22) !== false) return 'B.mount accepted invalid target #3.';
-                  if (B.mount ({}) !== false) return 'B.mount accepted invalid target #4.';
-                  if (B.mount ('body', /a/) !== false) return 'B.mount accepted invalid view #1.';
-                  if (B.mount ('body', {}) !== false) return 'B.mount accepted invalid view #2.';
-                  if (B.mount ('body', null) !== false) return 'B.mount accepted invalid view #3.';
-                  if (B.mount ('#nosuch', []) !== false) return 'B.mount accepted empty target.';
-
-                  if (B.unmount ('p') !== false) return 'B.unmount accepted invalid target #1.';
-                  if (B.unmount ('#a p') !== false) return 'B.unmount accepted invalid target #2.';
-                  if (B.unmount (22) !== false) return 'B.unmount accepted invalid target #3.';
-                  if (B.unmount ({}) !== false) return 'B.unmount accepted invalid target #4.';
-                  if (B.unmount ('#nosuch', []) !== false) return 'B.unmount accepted empty target.';
-               });
-
-               Test ('B.mount & B.unmount valid', function () {
-
-                  var original = c ('body *');
-
-                  B.mount ('body', B.view ([], function () {return 1}));
-
-                  var view = c ('#' + getid ());
-
-                  if (! view) return 'B.mount didn\'t place view #1.';
-                  if (view.innerHTML !== '1') return 'B.mount didn\'t place contents of view correctly #1.';
-                  if (c ('body *') [0] !== view) return 'B.mount didn\'t place view in the right place #1.';
-
-                  B.unmount ('body');
-
-                  if (dale.stop (c ('body *'), true, function (el, k) {
-                     return el !== original [k];
-                  })) return 'B.mount & B.unmount didn\'t leave everything unchanged.';
-
-                  B.mount ('body', B.view ([], function () {
-                     return B.view ([], {onforget: function (x) {
-                        if (type (x) !== 'object') throw new Error ('onforget from unmount received wrong context.');
-                        if (type (x.from) !== 'array') throw new Error ('onforget from unmount received wrong x.from.');
-                        if (x.from [0].ev !== 'unmount') throw new Error ('onforget from unmount received wrong x.from [0].ev.');
-                        if (x.from [0].target !== 'body') throw new Error ('onforget from unmount received wrong x.from [0].target.');
-                        if (type (x.responder) !== 'object') throw new Error ('onforget from unmount received wrong x.responder.');
-                        if (type (x.responder.id) !== 'string') throw new Error ('onforget from unmount received wrong id.');
-                     }}, function () {
-                        return {a: 'b'};
-                     });
-                  }));
-
-                  view = c ('#' + getid ());
-
-                  clog (view.innerHTML);
-
-                  if (! view) return 'B.mount didn\'t place view #2.';
-                  if (view.innerHTML !== '<pre>Invalid lith: {\n   "a": "b"\n}</pre>' && view.innerHTML !== '<pre>Invalid lith: {\n   "a":"b"\n}</pre>') return 'B.mount didn\'t place contents of view correctly #2.'
-
-                  if (c ('body * *') [0] !== view) return 'B.mount didn\'t place view in the right place #2.';
-
-                  B.mount ('body', B.view ([], function () {return ['p', 'a']}));
-
-                  view = c ('#' + getid ());
-
-                  if (! view) return 'B.mount didn\'t place view #3.';
-                  if (view.innerHTML !== '<p>a</p>') return 'B.mount didn\'t place contents of view correctly #3.';
-                  if (c ('body *') [0] !== view) return 'B.mount didn\'t place view in the right place #3.';
-
-                  B.unmount ('body');
-
-                  if (dale.stop (c ('body *'), true, function (el, k) {
-                     return el !== original [k];
-                  })) return 'B.mount & B.unmount didn\'t leave everything unchanged.';
-
-                  var counter = 0;
-
-                  B.mount ('body', B.view ([], {
-                     ondraw: function (x) {
-                        if (type (x) !== 'object') throw new Error ('ondraw received wrong context.');
-                        if (type (x.from) !== 'array') throw new Error ('ondraw received wrong x.from.');
-                        if (type (x.responder) !== 'object') throw new Error ('ondraw received wrong x.responder.');
-                        if (x.responder.id !== getid ()) throw new Error ('ondraw received wrong id.');
-                        if (counter !== 0)   throw new Error ('ondraw timing error.');
-                        if (! c ('#' + x.responder.id))  throw new Error ('ondraw was executed before the DOM elements were placed.');
-                        if (x.from [0].ev !== 'mount') throw new Error ('ondraw from mount received wrong x.from [0].ev.');
-                        if (x.from [0].target !== 'body') throw new Error ('ondraw from mount received wrong x.from [0].target.');
-                        counter++;
-                     },
-                     onforget: function (x) {
-                        if (type (x) !== 'object') throw new Error ('onforget received wrong context.');
-                        if (type (x.from) !== 'array') throw new Error ('onforget received wrong x.from.');
-                        if (type (x.responder) !== 'object') throw new Error ('onforget received wrong x.responder.');
-                        if (x.responder.id !== getid ()) throw new Error ('onforget received wrong id.');
-                        if (counter !== 1)   throw new Error ('onforget timing error.');
-                        if (! c ('#' + x.responder.id))  throw new Error ('onforget was executed after the DOM elements were removed.');
-                        counter++;
-                     }
-                  }, function () {return ['p', {"class": 'vamo'}]}));
-
-                  view = c ('#' + getid ());
-
-                  if (! view) return 'B.mount didn\'t place view #4.';
-                  if (view.innerHTML !== '<p class="vamo"></p>') return 'B.mount didn\'t place contents of view correctly #4.';
-                  if (c ('body *') [0] !== view) return 'B.mount didn\'t place view in the right place #4.';
-
-                  if (counter !== 1) return 'ondraw was not executed.';
-
-                  B.unmount ('body');
-
-                  if (counter !== 2) return 'onforget was not executed.';
-
-                  if (dale.stop (c ('body *'), true, function (el, k) {
-                     return el !== original [k];
-                  })) return 'B.mount & B.unmount didn\'t leave everything unchanged.';
-
-               });
-
-               B.call (x, 'test', 'init');
             });
 
             var Views = {};
@@ -1474,21 +1483,6 @@
 
                B.call (x, 'test', 'prediff');
 
-            });
-
-            // *** PREDIFF TEST ***
-
-            B.respond ('test', 'prediff', {burn: true}, function (x) {
-
-               Views.prediff = function () {return [['just'], 'some', 'strings']}
-
-               B.call (x, 'set', ['State', 'view'], 'prediff');
-
-               Test ('B.prediff', function () {
-                  if (c ('div#canvas div div') [0].innerHTML !== 'justsomestrings') return 'prediff test wasn\'t passed.';
-               });
-
-               B.call (x, 'test', 'events');
             });
 
             // *** EVENTS TEST ***

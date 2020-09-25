@@ -1223,10 +1223,10 @@ In the case of recalc, we initialize a recalc object and store it in the variabl
    var dale = window.dale, teishi = window.teishi, lith = window.lith, r = window.R (), c = window.c;
 ```
 
-We create an alias to `teishi.type`, the function for finding out the type of an element.
+We create an alias to `teishi.type`, the function for finding out the type of an element. We also create a function `time` to return the current time in milliseconds; if `Date.now` is not supported by the browser, we resort to `new Date ().getTime`.
 
 ```javascript
-   var type = teishi.type;
+   var type = teishi.type, time = Date.now ? function () {return Date.now ()} : function () {return new Date ().getTime ()};
 ```
 
 We define `B`, the main object of the library. Note we also attach it to `window.B`, so that it is globally available to other scripts.
@@ -1247,7 +1247,7 @@ The remaining seven keys of the main object map to recalc entities. The first on
 - `r.forget`, the function for deleting an event responder.
 
 ```javascript
-   var B = window.B = {v: '2.0.0', B: 'в', t: new Date ().getTime (), r: r, responders: r.responders, store: r.store, log: r.log, call: r.call, respond: r.respond, forget: r.forget};
+   var B = window.B = {v: '2.0.0', B: 'в', t: time (), r: r, responders: r.responders, store: r.store, log: r.log, call: r.call, respond: r.respond, forget: r.forget};
 ```
 
 gotoв is essentially a set of functions built on top of recalc. The last six keys are meant as shorthands to the corresponding recalc objects for quicker debugging from the browser console. If it wasn't for these shorthands, instead of writing `B.call`, for example, we'd have to write `B.r.call`, which is longer and doesn't look as nice.
@@ -2047,16 +2047,25 @@ We overwrite the `innerHTML` of `element` with an empty string and close the fun
 
 ### `B.view`
 
-We now define the main function of the library, `B.view`. This function returns DOM viewents that are updated when a certain part of the store is updated. The function takes two arguments: `paths` and `fun`.
+We now define the main function of the library, `B.view`. This function returns DOM viewents that are updated when a certain part of the store is updated. The function takes two arguments: `path` and `fun`.
 
 ```javascript
-   B.view = function (paths, fun) {
+   B.view = function (path, fun) {
 ```
 
-If `paths` is an array whose first element is not an array, then it must be a path (instead of an array of paths). If this is the case, we wrap it in an array so that `paths` represents a list of paths.
+`path` can represent either a single path or an array of paths. To make the implementation simpler, we create a variable `paths` that will represent an array of paths.
 
 ```javascript
-      if (type (paths) === 'array' && type (paths [0]) !== 'array') paths = [paths];
+      var paths;
+```
+
+If `paths` is not an array, it should be either a string or a number. In this case, we wrap `path` with two arrays; one to convert the single-element path into an array with one element; and the second one, to convert it into an array of paths.
+
+If `paths` is an array but its first element is not an array, then we're dealing with a single path. If this is the case, we wrap it in an array so that `paths` represents a list of paths.
+
+```javascript
+      if      (type (path) !== 'array')     paths = [[path]];
+      else if (type (path [0]) !== 'array') paths = [path];
 ```
 
 If we're not in production mode, we perform validations on the input.
@@ -2069,21 +2078,21 @@ We iterate `paths` and apply `r.isPath` to determine whether they are valid path
 
 ```javascript
          dale.stopNot (paths, false, function (path) {
-            return r.isPath (path) ? true : B.error ('B.view', 'Invalid path:', path, 'Arguments', {paths: paths});
+            return r.isPath (path) ? true : B.error ('B.view', 'Invalid path:', path, 'Arguments', {path: path});
          }),
 ```
 
-`fun` must be a function.
+`fun` must be a function. Note we wrap this rule in a function to avoid [conditional capture](https://github.com/fpereiro/teishi#conditional-rules).
 
 ```javascript
-         ['fun', fun, 'function']
+         function () {return ['fun', fun, 'function']}
 ```
 
 If any of these conditions is not met, an error will be notified through `B.error` and `B.view` will return `false`.
 
 ```javascript
       }), function (error) {
-         B.error ('B.view', error, {paths: paths});
+         B.error ('B.view', error, {path: path});
       })) return false;
 ```
 
@@ -2105,16 +2114,18 @@ We copy the current value of `B.internal.count` and define an empty array `child
          var count = B.internal.count, children = [];
 ```
 
-We invoke `fun`, passing the current values of each of `paths` as an argument (we fetch the values through `B.get`). We store the result in a variable `elem`.
+We invoke `fun`, passing the current values of each of `paths` as an argument (we fetch the values through `B.get` and then copy them, so that modifications done by the view function don't affect the actual values on the store). We store the result in a variable `elem`.
 
 ```javascript
-         var elem = fun.apply (null, dale.go (paths, B.get));
+         var elem = fun.apply (null, dale.go (paths, function (path) {
+            return teishi.copy (B.get (path));
+         }));
 ```
 
 If we're not in production mode, we validate `elem` with `B.validateLith` (which is defined below). If `elem` is not a lith, we report an error through `B.error` and return `false`.
 
 ```javascript
-         if (! B.prod && B.validateLith (elem) !== 'Lith') return B.error ('B.view', 'Function must return a lith element but instead is:', elem, 'Arguments:', {paths: paths});
+         if (! B.prod && B.validateLith (elem) !== 'Lith') return B.error ('B.view', 'View function must return a lith element but instead returned:', elem, 'Arguments:', {path: path});
 ```
 
 We now find the reactive views that are children of the current one (if any). To do this, we make use of the fact that all reactive views have as id `в` followed by a number. Nested calls to `B.view` will by now have been executed, so `B.internal.count` will be updated.
@@ -2159,7 +2170,7 @@ We are done iterating the nested reactive views.
          });
 ```
 
-If the returned lith has no attributes, we add an empty object in its second position. We use `splice` instead of `push` since the element might include contents, and attributes must go between the tag and the contents.
+If the returned lith has no attributes, we add an empty object in its second position. We use `splice` instead of `push` since the element might include contents, and the attributes must go between the tag and the contents.
 
 ```javascript
          if (type (elem [1]) !== 'object') elem.splice (1, 0, {});
@@ -2171,10 +2182,10 @@ We set the `id` of the element.
          elem [1].id    = id;
 ```
 
-We set a `paths` property to the element, consisting of all the `paths`, stringified and joined by `, `. This provides a quick way to identify the path(s) of a reactive view from the DOM inspector.
+We set a `path` property to the element, consisting of all the `paths`, stringified and joined by `, `. This provides a quick way to identify the path(s) of a reactive view from the DOM inspector.
 
 ```javascript
-         elem [1].paths = dale.go (paths, function (path) {return path.join (':')}).join (', ');
+         elem [1].path = dale.go (paths, function (path) {return path.join (':')}).join (', ');
 ```
 
 We update the `responder` with two properties: the element itself (`elem`) and the array with its topmost nested reactive views (`children`). This will be necessary for redraws.
@@ -2213,17 +2224,19 @@ The `match` function iterates all the `paths` and uses `B.changeResponder` to de
 The responder function itself performs three actions:
 
 - Save a copy of the `elem` and the `children` stored inside the responder.
+- Note the current time (`t`).
 - Invoke `makeElement`.
 - If `makeElement` is successful (which means that its output is a valid lith), the responder will invoke `B.redraw` with four arguments:
    - The context (`x`).
    - The id of the view.
    - The old version of the element.
    - The old list of children.
+   - The number of milliseconds it took to create the view (including subviews).
 
 ```javascript
       }}, function (x) {
-         var oldElement = B.responders [id].elem, oldChildren = B.responders [id].children;
-         if (makeElement ()) B.redraw (x, id, oldElement, oldChildren);
+         var oldElement = B.responders [id].elem, oldChildren = B.responders [id].children, t = time ();
+         if (makeElement ()) B.redraw (x, id, oldElement, oldChildren, time () - t);
 ```
 
 We close the responder.
@@ -2359,10 +2372,10 @@ If the contents are an array (another litc), we invoke `B.validateLitc` recursiv
 
 We define `B.redraw`, the main internal function of gotoв. This function is only invoked by the responder functions of reactive views and is in charge of updating the views.
 
-It takes five arguments: a context object (`x`), the `id` of the view to redraw, the lith of the old version of the view (`oldElement`), a list of the toplevel nested reactive views before the redraw (`oldChildren`) and a boolean flag `fromQueue` (which we'll see in a moment).
+It takes sixe arguments: a context object (`x`), the `id` of the view to redraw, the lith of the old version of the view (`oldElement`), a list of the toplevel nested reactive views before the redraw (`oldChildren`), the amount of time it took to create the view (`msCreate`) and a boolean flag `fromQueue` (which we'll see in a moment).
 
 ```javascript
-   B.redraw = function (x, id, oldElement, oldChildren, fromQueue) {
+   B.redraw = function (x, id, oldElement, oldChildren, msCreate, fromQueue) {
 ```
 
 As a central design decision, gotoв only updates one view at a time. This helps keep things simple and understandable, even if it might make them somewhat slower sometimes.
@@ -2381,10 +2394,10 @@ If we're here, there was either no redraw taking place, or this redraw was trigg
       B.internal.redrawing = true;
 ```
 
-We find the corresponding `responder` and `element` to the view and assign them to corresponding local variables. We also store the current time in a timestamp `t`.
+We find the corresponding `responder` and `element` to the view and assign them to corresponding local variables. We also store the current time in a timestamp `t0`.
 
 ```javascript
-      var responder = B.responders [id], element = document.getElementById (id), t = new Date ().getTime ();
+      var responder = B.responders [id], element = document.getElementById (id), t0 = time ();
 ```
 
 If we're not in production mode and there's no corresponding DOM element for the view, or the element exists but it is not attached to the body of the document, we have encountered a *dangling view* error: gotoв requires views to be placed in the DOM after being generated - if they're not placed, they are said to be *dangling*.
@@ -2401,8 +2414,10 @@ We compute the diff between the old lith and the new lith. The old lith has been
 
 The diff is computed by the function `B.diff`. Instead of passing the liths directly, we invoke `B.prediff` on each of them, to perform some processing. We'll see these functions below.
 
+We also note the current time in a variable `t1`.
+
 ```javascript
-      var diff = B.diff (B.prediff (oldElement), B.prediff (responder.elem));
+      var diff = B.diff (B.prediff (oldElement), B.prediff (responder.elem)), t1 = time ();
 ```
 
 We now delete the responders for the reactive views nested inside the old version of the view; they are no longer needed, and will become dangling views after we apply the changes to the DOM. It is for this reason that we pass `oldChildren` as an argument.
@@ -2415,27 +2430,72 @@ Nested reactive views that are doubly nested (or more) are deleted recursively t
       dale.go (oldChildren, function (id) {B.forget (id)});
 ```
 
-If the diff takes too long, `B.diff` will return `false`.  In this case, we generate the lith for the responder with `lith.g`, passing a `true` flag to prevent lith validation (since validations, if production mode is not enabled, will already have happened when creating the element in the responder). The resulting HTML is placed inside the corresponding DOM element for the view, replacing any existing contents. This is what we call a *trample*, where all the HTML inside the view is replaced wholesale. This should not happen often, only when the old and the new views are very different, or when they are very large.
+If the diff takes too long, `B.diff` will return `false`. In this case, we generate a new element to replace the old one wholesale.
+
+we generate the lith for the responder with `lith.g`, passing a `true` flag to prevent lith validation (since validations, if production mode is not enabled, will already have happened when creating the element in the responder). The resulting HTML is placed inside the corresponding DOM element for the view, replacing any existing contents. This is what we call a *trample*, where all the HTML inside the view is replaced wholesale. This should not happen often, only when the old and the new views are very different, or when they are very large.
 
 ```javascript
-      if (diff === false) document.getElementById (id).innerHTML = lith.g (responder.elem, true);
+      if (diff === false) {
 ```
 
-If the diff was computed, we apply it through a function `B.applyDiff`, passing the `element` and `diff` as arguments. If `B.applyDiff` returns an error and we're not in production mode, we report it through `B.error` and return `false`. As with the dangling element error, if there is an error during the redraw, no further action will take place. Also, no more views will be redrawn, since `B.internal.redrawing` will still be set to `true`, and the other redraws in the queue (if any) will also not be executed.
-
-If `B.applyDiff` doesn't return an error, the operation is successful.
+We define variables for the existing element (`element`), the parent of the element (`elementParent`) and the next sibling to `element` (`nextSibling`).
 
 ```javascript
-      else {
-         var error = B.applyDiff (element, diff);
-         if (error && ! B.prod) return B.error (x, 'B.redraw', 'DOM redraw error.', {error: error, responder: responder});
+         var element = document.getElementById (id), elementParent = element.parentNode, nextSibling = element.nextSibling || null;
+```
+
+We create a new HTML element with the appropriate tag. We don't repurpose the existing `element` for two reasons: 1) its tag might be different than that of the new element; and 2) it would be cumbersome to add code to remove old attributes and add new ones (we do this on `B.applyDiff` only).
+
+```javascript
+         var newElement = document.createElement (responder.elem [0]);
+```
+
+If there are attributes on the new element, we set them as long as they are neither an empty string nor `null` nor `undefined`.
+
+```javascript
+         if (type (responder.elem [1]) === 'object') dale.go (responder.elem [1], function (v, k) {
+            if (v !== '' && v !== null && v !== undefined) newElement.setAttribute (k, v);
+         });
+```
+
+We set the inner HTML of `newElement` invoking `lith.g` on its elements. Note we pass `true` as a second argument to `lith.g`, since the lith has already been validated.
+
+```javascript
+         newElement.innerHTML = lith.g (responder.elem [2], true);
+```
+
+We remove `element` and insert `newElement` on the same place that `element` was. Note that if `nextSibling` is `null`, that means that `element` was the last child of `elementParent` and therefore `newElement` will be appended to `elementParent`.
+
+```javascript
+         element.parentNode.removeChild (element);
+         elementParent.insertBefore (newElement, nextSibling);
+```
+
+This concludes the case where we trample the existing `element`.
+
+```javascript
       }
 ```
 
-We call an event with verb `redraw`, `x.path` as its path (which will be the path of the event that triggered the redraw in the first place) and an object with three fields: the `responder` proper, the amount of time in milliseconds that the redraw took (`ms`) and `diffLength` (the number of items computed in the diff, which is a measure of its complexity), which will be `false` in case of a trample.
+If the diff was computed, we apply it through a function `B.applyDiff`, passing the `element` and `diff` as arguments. If `B.applyDiff` returns an `errorIndex` (the index of the diff item where a DOM element was not found) and we're not in production mode, we report it through `B.error` and return `false`. As with the dangling element error, if there is an error during the redraw, no further action will take place. Also, no more views will be redrawn, since `B.internal.redrawing` will still be set to `true`, and the other redraws in the queue (if any) will also not be executed.
+
+If `B.applyDiff` doesn't return an `errorIndex`, the operation is successful.
 
 ```javascript
-      B.call (x, 'redraw', x.path, {responder: responder, ms: new Date ().getTime () - t, diffLength: diff === false ? false : diff.length});
+      else {
+         var errorIndex = B.applyDiff (element, diff);
+         if (! B.prod && errorIndex !== undefined) return B.error (x, 'B.redraw', 'Redraw error: DOM element missing.', {diffIndex: errorIndex, diffElement: diff [errorIndex], diff: diff, responder: responder.id});
+      }
+```
+
+We call an event with verb `redraw`, `x.path` as its path (which will be the path of the event that triggered the redraw in the first place) and an object with three fields:
+
+- The id of the `responder`
+- `ms`, an object with the performance information of the redraw, measuring how many milliseconds each part of the redrawing process took. The keys are the following: `create`, with the time taken by the invocation of the responder to draw the view; `diff`, with the time taken by the diffing algorithm, including the prediffing; `DOM`, with the time taken to apply the changes to the DOM; and finally, `total`, the sum of these three.
+- `diffLength`, the number of items computed in the diff, which is a measure of its complexity. This will be `false` in case of a trample.
+
+```javascript
+      B.call (x, 'redraw', x.path, {responder: responder.id, ms: {create: msCreate, diff: t1 - t0, DOM: time () - t1, total: time () - t0 + msCreate}, diffLength: diff === false ? false : diff.length});
 ```
 
 We iterate the queue to find the next queued redraw, if any. If the queue is empty, nothing will happen.
@@ -2566,8 +2626,7 @@ We append a new element to `output`, comprised of `O `, followed by the tag itse
 
 If there are `attributes`, we stringify them and append them (after a single space) to the element we just created above.
 
-
-A more precise way of listing the attributes would be as an array of the shape `[[key1, value1], [key2, value2], ...]`, where the keys are sorted. This would allow for two objects with the keys in different order to be considered the same element; however, this is probably overkill, since objects for the same views are written usually in the same order. So we'll stick to the object representation, even though it might consider two equivalent `attributes` as different.
+A more precise way of listing the attributes would be as an array of the shape `[[key1, value1], [key2, value2], ...]`, where the keys are sorted. This would allow for two objects with the keys in different order to be considered the same element; however, this is probably overkill, since objects for the same views are written usually in the same order. So we'll stick to the object representation, even though it might consider two equivalent `attributes` as different. The solution will be correct anyway, although it might perform more DOM operations than it would otherwise; it might well be the case than the time we spend sorting this array of arrays is larger than going with the unordered iteration of objects that most of the time will have the keys in the same order.
 
 ```javascript
       if (attributes) output [output.length - 1] += ' ' + JSON.stringify (attributes);
@@ -2582,7 +2641,7 @@ If the lith is `opaque`, we first note the length of the last element of `output
 
 We replace the last element of `output` with a string of the following form: `P LENGTH TAG {...} CONTENTS`. `length` will be included in this string so that the function that applies changes to the DOM can know where the attributes (if any) end and where the contents (if any) start.
 
-The contents of an opaque element may be raw HTML. Note we pass `true` to `lith.g`, since the lith is already validated. The resulting HTML might be empty, it might be a text node, or it may be a tag (or multiple tags). gotoв will accept it wholesale.
+The contents of an opaque element may be raw HTML. Note we pass `true` to `lith.g`, since the lith is already validated, so there's no need to validate it again. The resulting HTML might be empty, it might be a text node, or it may be a tag (or multiple tags). gotoв will accept it wholesale.
 
 ```javascript
          output [output.length - 1] = 'P ' + length + output [output.length - 1].slice (1) + ' ' + lith.g (contents, true);
@@ -2661,51 +2720,337 @@ Finally, we push an element to `output` to denote the closing of the tag. We ret
    }
 ```
 
-TODO
-
-We define `B.applyDiff`, the function in charge of applying a diff to the DOM. This function is only called by `B.redraw`. It takes four arguments: `x`, `responder`, `element` and `diff`.
-
-This has been the hardest function to design of the entire library.
-
-The operations are per node, add/rem/keep.
-
-think only of the parent and the node itself. also the position.
-keep: a kept element can be either inside a kept parent (no change) or in a removed parent (in which case it should be moved to its new destination). it cannot be in an added parent, but it can be moved to one.
-rem: just rem, perhaps recycle.
-add: add in position, and that's it!
-
-keep: a kept
-
-Problem: with insertBefore, we don't know if the element is there yet. In the old design, we removed everything all the time, so in effect we were appending everything from scratch!
+We define `B.applyDiff`, the function in charge of applying a diff to the DOM. This function is only called by `B.redraw`. It takes two arguments: `rootElement` (which corresponds to the DOM element of the reactive view being redrawn) and `diff`.
 
 ```javascript
-   B.applyDiff = function (x, element, diff) {
+   B.applyDiff = function (rootElement, diff) {
+```
+
+Of all the functions in gotoв, this has been by far the hardest function to design, implement and debug.
+
+`diff` is a set of operations that need to be performed to update the DOM. `diff` is array of arrays, one per element, each of them with the following shape: `['add|rem|keep', 'O|C|L|P ...']`. The first part of each array specifies whether the element should be added, removed, or kept in place. The second element of each of these arrays is a string produced by `B.prediff`, and it can represent the opening of a tag, the closing of a tag, a literal HTML fragment or an opaque tag.
+
+The design entails two passes: we first iterate `diff` and construct a map of both the existing DOM elements and the new elements (many of which will already exist). Once we build this representation, we will perform the actual changes on the DOM in a second pass.
+
+While a one-pass design is probably possible, a clear and understandable formulation of it has eluded me. The main difficulty in implementing it lies in how the DOM changes while changes are being implemented, which renders much harder to figure out the position of existing and new elements.
+
+We define four variables that we will need across the scope of the entire function:
+
+- `elements`, an array of DOM elements (both normal elements & text node elements), each corresponding to the k-th item on the diff. For example, if the first element of the diff refers to the `rootElement`, `elements [0]` will point to the `rootElement`.
+- `positions`, an array of arrays, one per each diff item. Each of the internal arrays has zero or more integers denoting the *desired position* of the item in question. For example, if the first element of the diff corresponds to the root element, `positions [0]` will be `[]`. If the k-th element of the diff is the second child of the root element, then `positions [k]` will be `[1]`. For deeply nested elements, the logic is extended. If, for example, the k-th element of the diff corresponds to the first child of the first child of the root element, then `positions [k]` will be `[0, 0]`.
+- `references`: this object will link a `position` with the index of a diff item. If, for example, the first child of the first child of the root element is on the k-th diff element, there will be an entry `0,0` equal to `k`. This is used later to find the DOM element corresponding to a parent (by looking it up in `elements` using the provided index).
+- `rootElementParent`: a mere reference to the parent of the `rootElement`. This is necessary later in case the actual `rootElement` is removed from the DOM.
+
+```javascript
+      var elements = [], positions = [], references = {}, rootElementParent = rootElement.parentNode;
+```
+
+We define two variables that we'll only need in the first pass:
+- `tree`: an array with a list of DOM elements; the first element is initialized to the `rootElement` and the second one to `null`, to indicate that we're iterating a tag that might contain child elements. We'll see more about this variable later.
+- `position`: an array with the form of those saved inside `positions`, but which we'll modify as we go through the diff items. In fact, the arrays stored inside `positions` are copies from this array, taken at different moments.
+
+```javascript
+      var tree = [rootElement, null], position = [];
+```
+
+We now start the first pass over the diff items. The goal of this pass is to fill `elements` (a list of DOM references), `positions` (a list of desired positions) and `references` (a way to link a desired position with an actual DOM reference). On this pass, we'll refrain from modifying the DOM itself - that will be done on the second pass.
+
+As we iterate through the diff items, we will note whether there's a DOM element that should be there (according to the lith representing the old view) that is actually missing. If there's such an absence, we'll save it in a variable `errorIndex` and stop the iteration.
+
+```javascript
+      var errorIndex = dale.stopNot (diff, undefined, function (v, k) {
+```
+
+We deal first with the case of a diff item that represents the closing a tag.
+
+```javascript
+         if (v [1] [0] === 'C') {
+```
+
+If this is an `add` or `keep` item, it has import over the desired position of all the diff items. We do two things: remove the last element of `position`, and increment the last element of `position` (which a moment ago was the next-to-last element).
+
+```javascript
+            if (v [0] !== 'rem') {
+               position.pop ();
+               position [position.length - 1]++;
+            }
+```
+
+If this is a `keep` or `rem` item, it has import over the walking over the existing DOM elements. We only need to remove the last element of `tree`.
+
+```javascript
+            if (v [0] !== 'add') tree.pop ();
+```
+
+We've completely covered the case of a closing tag; we return and close the block.
+
+```javascript
+            return;
+         }
+```
+
+We now cover the case for all other `add` or `keep` items, which have import over `position` and `references`. These items can belong to the opening of a normal DOM element (`'O'`), an opaque element (`'P'`) or a literal/text element (`'L'`).
+
+```javascript
+         if (v [0] !== 'rem') {
+```
+
+We store the current `position` on the k-th item of `positions`. Notice we perform a shallow copy of `position` by using `slice` on it.
+
+```javascript
+            positions [k] = position.slice ();
+```
+
+If this item concerns the opening of a normal DOM element, we add an entry for it in the k-th element of `references`. The key will be the stringified `position` of this element, joined by commas; the value will be the diff index (`k`). For example, if we're on the k-th element and its position is `[x, y, z]`, this entry will be added to `references`: `x,y,z: k`.
+
+This reference is only added for the opening of a normal DOM element (not opaques or text elements), because it will only be required to locate the parent of a child element; because text elements cannot have children, and opaque elements' children are not managed by gotoв, we don't need to add entries in `references` for them.
+
+```javascript
+            if (v [1] [0] === 'O') {
+               references [positions [k].join (',')] = k;
+```
+
+We add a `0` to `position`, to mark the position for a possible first child of the current element. This concludes the operations regarding `position`.
+
+```javascript
+               position.push (0);
+            }
+```
+
+We now cover the case for all other `keep` or `rem` elements, which have import over `tree` and DOM references.
+
+```javascript
+         if (v [0] !== 'add') {
+```
+
+Our main goal in this section is to find the corresponding DOM element for this diff item. We set a variable `element` to store it.
+
+```javascript
+            var element;
+```
+
+If we're in the first element of the diff, we must refer to the `rootElement`. If the `rootElement` is kept, it will be in first position. And if it's removed, then the entry for its removal will preceed that of its replacement, because `B.diff` places deletions before insertions. In this way, we can always be sure that `k === 0` refers to `rootElement`.
+
+```javascript
+            if (k === 0)                       element = rootElement;
+```
+
+If the last element of `tree` is falsy (`null`, actually), we look for the first child of the next-to-last element in `tree`.
+
+```javascript
+            else if (! tree [tree.length - 1]) element = tree [tree.length - 2].firstChild;
+```
+
+Otherwise, we look for the next sibling of the last element of `tree`.
+
+```javascript
+            else                               element = tree [tree.length - 1].nextSibling;
+```
+
+If we're not in production mode and we cannot find `element`, there is a mismatch between the DOM and the old lith representing the view. We return the index of the current diff element, to inform the error that will be reported by `B.redraw`.
+
+```javascript
+            if (! B.prod && ! element) return k;
+```
+
+We set `elements [k]` to `element.`
+
+```javascript
+            elements [k] = element;
+```
+
+We update the last element of `tree` with element.
+
+```javascript
+            tree [tree.length - 1] = element;
+```
+
+If this diff item refers to opening a tag, we push `null` to `tree` as a marker so that the next diff element that references the DOM will know to look for the first child of the `element`.
+
+```javascript
+            if (v [1] [0] === 'O') tree.push (null);
+```
+
+This concludes the first pass over the diff.
+
+```javascript
+         }
+      });
+```
+
+If `errorIndex` is not `undefined`, we return it to interrupt the function's course and make `B.redraw` report an error.
+
+```javascript
+      if (errorIndex !== undefined) return errorIndex;
+```
+
+Before going into the second pass, we now define four helper functions:
+- `extract`, to get either the tag or the attributes from a diff item.
+- `place`, to place an element into the DOM in a desired position.
+- `make`, to create a normal DOM element, an opaque element or a text/literal element.
+- `recycle`, to take a DOM element and update its attributes so it can be reused.
+
+We start with `extract`, which starts with `elementString` (the second element of a diff item) and `part` (which will be either `'tag'` or `'attributes'`).
+
+```javascript
+      var extract = function (elementString, part) {
+```
+
+If we want to extract the tag, we return the non-whitespace characters that are immediately after `'O '` or `'P '` - note that `extract` will only be used for diff items of either normal or opaque tags, so we don't need to contemplate any other cases.
+
+```javascript
+         if (part === 'tag') return elementString.match (/(O|P) [^\s]+/) [0].replace (/(O|P) /, '')
+```
+
+If we want to extract the attributes, we check w
+
+```javascript
+         else                return elementString.match ('{') ? JSON.parse (elementString.replace (/[^{]+/, '').replace (/ $/, '')) : {};
+      }
+
+```javascript
+         if (part === 'tag') return elementString.match (/O [^\s]+/) [0].replace ('O ', '')
+         else                return elementString.match ('{') ? JSON.parse (elementString.replace (/[^{]+/, '').replace (/ $/, '')) : {};
+      }
+
+
+
+
+
+We now perform the second pass on the diff, to apply the changes to the DOM. As on the first pass, we iterate all the elements of the diff.
+
+```javascript
+      dale.go (diff, function (v, k) {
+```
+
+If we're closing an element, we don't need to do anything on this pass
+
+```javascript
+         if (v [1] [0] === 'C') return;
+```
+
+If we're keeping an item, whether it is an element, a text element or an opaque element, we will invoke the `place` function defined above with three arguments: the operation (in this case, `'keep'`), the desired position of the item, and the corresponding DOM element. There's nothing else to do in this case, so we return.
+
+```javascript
+         if (v [0] === 'keep') return place ('keep', positions [k], elements [k]);
+```
+
+If we're removing an item:
+
+```javascript
+         if (v [0] === 'rem')  {
+```
+
+If the item is a DOM element, we mark the diff index (`k`) and store it into the `recyclables` element, into the key for its corresponding tag. For example, if this element is a `div`, we set `recyclables.div` to the index. This marks the element as a "recyclable" `<div>`, which can be used by a subsequent new `<div>` element.
+
+This implementation of recycling is quite simplistic, but it seems to cover many cases. A more sophisticated implementation would implement a stack of elements per tag, or a queue (first-in first-out). This might be changed in the future, but for now seems to suffice.
+
+```javascript
+            if (v [0] === 'O') recyclables [extract (v [1], 'tag')] = k;
+```
+
+We remove the element from the DOM. There's nothing to do in the case of removing an item, so we return and close the conditional.
+
+```javascript
+            return elements [k].parentNode.removeChild (elements [k]);
+         }
+```
+
+If we're here, we're adding a new item.
+
+If the item is not a normal DOM element (either a text element or an opaque element), we only invoke `place`, passing three arguments: the operation (`'add'`), the desired position and the actual element. The actual element is built through the `make` function defined above.
+
+```javascript
+         if (v [1] [0] !== 'O') return place ('add', positions [k], make (v [1]));
+```
+
+If we're here, we're going to add a normal DOM element. We note the `tag` of the element and the index of a recyclable element of the same tag, if any. We also set up a variable to hold the DOM element that we'll either create or recycle.
+
+```javascript
+         var tag = extract (v [1], 'tag'), recycleIndex = recyclables [tag], element;
+```
+
+We now either create or recycle a DOM element, depending on whether `recycleIndex` is present or not. If it's not, we create the element from scratch using `make`.
+
+```javascript
+         if (recycleIndex === undefined) element = make (v [1]);
+```
+
+Otherwise, we use `elements [recycleIndex]` as our DOM element. We pass it to `recycle`, a function we defined above, also passing the diff element of this item (which has the info for the desired attributes of the element) and the diff element of the old entry (which has the existing attributes of the element). `recycle` modifies the `element` and returns it.
+
+```javascript
+         else {
+            element = recycle (elements [recycleIndex], diff [recycleIndex] [1], v [1]);
+```
+
+We clear out `recyclables [tag]`, since we've already used this element here.
+
+```javascript
+            recyclables [tag] = undefined;
+         }
+```
+
+Now that we have a DOM element (either new or recycled) that matches with this diff item, we set it in the corresponding spot inside `elements`. This will be necessary when positioning child elements inside of this element.
+
+```javascript
+         elements [k] = element;
+```
+
+Finally, we invoke `place`, passing the operation (`'add'`), the desired position and the actual DOM element.
+
+```javascript
+         place ('add', positions [k], element);
+```
+
+There's nothing else to do. We close the loop of the second pass and the function itself.
+
+```javascript
+      });
+   }
 ```
 
 
 
+```javascript
+         else {
+            recyclables [tag] = undefined;
+            place ('add', positions [k], recycle (element, diff [recycleIndex] [1], v [1]));
+         }
+      });
 
 
 
 
-https://blog.jcoglan.com/2017/02/12/the-myers-diff-algorithm-part-1/
-thanks for letting me understand the Myers' diff algorithm deeply.
 
-minimal edit script. deletions before additions. bunch of deletions, then bunch of insertions, instead of interleaving.
-greediness: keep on keeping stuff in a row, if you can.
 
-old string horizontal, new string vertical. going right is to remove, going down is to add, going in diagonal is to keep.
-diagonal paths are free.
 
-non-diagonal point: test going down and going right. none of those is a diagonal? keep those options open and proceed.
-is any of those the start of a diagonal? go to the end of the diagonal.
 
-if two paths take you to the same point in the same number of moves, priorize those that delete first (abandon the other one)
 
-deletion first means that we can recycle elements by seeing them first, storing them and then re-using them (rather than the alternative of having to do a lookahead)
 
+
+We define `B.diff`, the last function of gotoв. This function takes two arrays of strings and performs the [Myers' diff algorithm](http://www.xmailserver.org/diff2.pdf) on them, producing a shortest edit script. In essence, this algorithm gives us a minimal amount of changes that we need to perform to go from the first array of strings to the second.
+
+I'd like to thank [Nicholas Butler](https://www.codeproject.com/Articles/42279/Investigating-Myers-diff-algorithm-Part-1-of-2) and [James Coglan](https://blog.jcoglan.com/2017/02/12/the-myers-diff-algorithm-part-1/) for their wonderful explanation of the implementation of the Myers' diff algorithm.
+
+This function takes two arrays of strings, `s1` and `s2`. `s1` represents the old list of strings; `s2` represents the new list, to which we want to get from `s1`.
+
+```javascript
+   B.diff = function (s1, s2) {
+```
+
+The algorithm, as implemented here, is the first version of the algorithm presented on the paper, which takes linear space but uses quadratic space.
 
 TODO
+
+notes:
+   minimal edit script. deletions before additions. bunch of deletions, then bunch of insertions, instead of interleaving.
+   greediness: keep on keeping stuff in a row, if you can.
+   old string horizontal, new string vertical. going right is to remove, going down is to add, going in diagonal is to keep.
+   diagonal paths are free.
+   non-diagonal point: test going down and going right. none of those is a diagonal? keep those options open and proceed.
+   is any of those the start of a diagonal? go to the end of the diagonal.
+   if two paths take you to the same point in the same number of moves, priorize those that delete first (abandon the other one)
+   deletion first means that we can recycle elements by seeing them first, storing them and then re-using them (rather than the alternative of having to do a lookahead)
 
 ## License
 

@@ -1161,6 +1161,8 @@ negative priority descending to redraw outermost first. more efficient, more int
 
 negative priority to do all the changes first, then redraw. More fine-grained control, without an externally imposed cycle.
 
+userland scheduler: events with priorities!
+
 ### General architecture
 
 - comparison to other libraries:
@@ -2410,14 +2412,18 @@ Note that we check whether the element is attached to the body of the document t
       if (! B.prod && (! element || ! document.body.contains (element))) return B.error (x, 'B.redraw', 'Attempt to redraw dangling element.', {responder: responder});
 ```
 
-We compute the diff between the old lith and the new lith. The old lith has been passed to `B.redraw` as `oldElement`, whereas the new is already stored at `responder.elem` - when the responder was matched, it already executed `makeElement` and placed its result inside `responder.elem`. This, by the way, is the reason we pass `oldElement` as an argument, since if we don't, the old `responder.elem` will be overwritten by the new one.
-
-The diff is computed by the function `B.diff`. Instead of passing the liths directly, we invoke `B.prediff` on each of them, to perform some processing. We'll see these functions below.
+We invoke `B.prediff` on both the old lith and the new lith. This will yield two arrays with which we'll compute the actual diff in a minute. The old lith has been passed to `B.redraw` as `oldElement`, whereas the new is already stored at `responder.elem` - when the responder was matched, it already executed `makeElement` and placed its result inside `responder.elem`. This, by the way, is the reason we pass `oldElement` as an argument, since if we don't, the old `responder.elem` will be overwritten by the new one.
 
 We also note the current time in a variable `t1`.
 
 ```javascript
-      var diff = B.diff (B.prediff (oldElement), B.prediff (responder.elem)), t1 = time ();
+      var prediffs = [B.prediff (oldElement), B.prediff (responder.elem)], t1 = time ();
+```
+
+We compute the diff between the old lith and the new lith, using the values just produced by `B.prediff`. We also note the current time in a variable `t2`. The reason for noting these timestamps is the same reason for which we perform the call to `B.prediff` and `B.diff` on separate lines: we want to track the amount of time each step takes, for performance tracking purposes.
+
+```javascript
+      var diff = B.diff (prediffs [0], prediffs [1]), t2 = time ();
 ```
 
 We now delete the responders for the reactive views nested inside the old version of the view; they are no longer needed, and will become dangling views after we apply the changes to the DOM. It is for this reason that we pass `oldChildren` as an argument.
@@ -2438,37 +2444,29 @@ we generate the lith for the responder with `lith.g`, passing a `true` flag to p
       if (diff === false) {
 ```
 
-We define variables for the existing element (`element`), the parent of the element (`elementParent`) and the next sibling to `element` (`nextSibling`).
+We define variables for the existing element (`element`), the parent of the element (`parentNode`) and the next sibling to `element` (`nextSibling`).
 
 ```javascript
-         var element = document.getElementById (id), elementParent = element.parentNode, nextSibling = element.nextSibling || null;
+         var element = document.getElementById (id), parentNode = element.parentNode, nextSibling = element.nextSibling;
 ```
 
-We create a new HTML element with the appropriate tag. We don't repurpose the existing `element` for two reasons: 1) its tag might be different than that of the new element; and 2) it would be cumbersome to add code to remove old attributes and add new ones (we do this on `B.applyDiff` only).
+We create the HTML of the new view (`responder.elem`) using `lith.g`, passing `true` as a second argument since this lith has already been validated.
 
 ```javascript
-         var newElement = document.createElement (responder.elem [0]);
+         var html = lith.g (responder.elem, true);
 ```
 
-If there are attributes on the new element, we set them as long as they are neither an empty string nor `null` nor `undefined`.
+We remove the old `element` before inserting the new HTML. It is for this reason that we created references to `parentNode` and `nextSibling` before removing the element, so we wouldn't lose them once we remove `element` from the DOM.
 
 ```javascript
-         if (type (responder.elem [1]) === 'object') dale.go (responder.elem [1], function (v, k) {
-            if (v !== '' && v !== null && v !== undefined) newElement.setAttribute (k, v);
-         });
+         parentNode.removeChild (element);
 ```
 
-We set the inner HTML of `newElement` invoking `lith.g` on its elements. Note we pass `true` as a second argument to `lith.g`, since the lith has already been validated.
+If there's a sibling element after `element`, we insert the HTML before it. Otherwise, this means that `element` was the last child of `parentNode`, in which case we append the HTML to `parentNode`. For both operations, we use `insertAdjacentHTML`, which is polyfilled by cocholate.
 
 ```javascript
-         newElement.innerHTML = lith.g (responder.elem [2], true);
-```
-
-We remove `element` and insert `newElement` on the same place that `element` was. Note that if `nextSibling` is `null`, that means that `element` was the last child of `elementParent` and therefore `newElement` will be appended to `elementParent`.
-
-```javascript
-         element.parentNode.removeChild (element);
-         elementParent.insertBefore (newElement, nextSibling);
+         if (nextSibling) nextSibling.insertAdjacentHTML ('beforeBegin', html);
+         else             parentNode.insertAdjacentHTML  ('beforeEnd',   html);
 ```
 
 This concludes the case where we trample the existing `element`.
@@ -2487,7 +2485,7 @@ If `B.applyDiff` doesn't return an `errorIndex`, the operation is successful.
          if (! B.prod && errorIndex !== undefined) return B.error (x, 'B.redraw', 'Redraw error: DOM element missing.', {diffIndex: errorIndex, diffElement: diff [errorIndex], diff: diff, responder: responder.id});
       }
 ```
-
+✓✓
 We call an event with verb `redraw`, `x.path` as its path (which will be the path of the event that triggered the redraw in the first place) and an object with three fields:
 
 - The id of the `responder`
@@ -2495,7 +2493,7 @@ We call an event with verb `redraw`, `x.path` as its path (which will be the pat
 - `diffLength`, the number of items computed in the diff, which is a measure of its complexity. This will be `false` in case of a trample.
 
 ```javascript
-      B.call (x, 'redraw', x.path, {responder: responder.id, ms: {create: msCreate, diff: t1 - t0, DOM: time () - t1, total: time () - t0 + msCreate}, diffLength: diff === false ? false : diff.length});
+      B.call (x, 'redraw', x.path, {responder: responder.id, ms: {create: msCreate, prediff: t1 - t0, diff: t2 - t1, DOM: time () - t2, total: time () - t0 + msCreate}, diffLength: diff === false ? false : diff.length});
 ```
 
 We iterate the queue to find the next queued redraw, if any. If the queue is empty, nothing will happen.
@@ -2563,8 +2561,10 @@ If `input` is either `undefined` or an empty string, no HTML will be generated f
 
 If the previous element of the `output` is not a literal, we push a literal element to the output; note that it will be a string starting with `L `, with the resulting HTML appended to it. We pass `true` to `lith.g`, since this should be a valid lith. We don't check for the existence of at least one element in the output since there must be already at least an element for opening the tag, since the `input` to the first call of `B.prediff` must be a tag.
 
+We use `substr (0, 1)` instead of `[0]` for compatibility with IE7 and below.
+
 ```javascript
-         if (output [output.length - 1] [0] !== 'L') return output.push ('L ' + lith.g (input, true));
+         if (output [output.length - 1].substr (0, 1) !== 'L') return output.push ('L ' + lith.g (input, true));
 ```
 
 If the previous element of `output` is a literal, we merely append the HTML for this element to it. This concludes the recursive case of a simple `input`
@@ -2683,10 +2683,12 @@ If a `<thead>` is present in the lith, we iterate the elements of `output` start
 
 If we open a tag (including that of the `<thead>`), we increment `depth`; if we close a tag, we decrement `depth`. When `depth` is 0, we've reached the end of the outermost `<thead>`. We set `tableIndex` to the current index plus 1 (to start at the next element) and return a non-undefined value to stop the iteration.
 
+We use `substr (0, 1)` instead of `[0]` for compatibility with IE7 and below.
+
 ```javascript
             var index = dale.stopNot (dale.times (output.length - tableIndex, tableIndex), undefined, function (k) {
-               if (output [k] [0] === 'O') depth++;
-               if (output [k] [0] === 'C') depth--;
+               if (output [k].substr (0, 1) === 'O') depth++;
+               if (output [k].substr (0, 1) === 'C') depth--;
                if (depth === 0) return tableIndex = k + 1;
             });
          }
@@ -2764,7 +2766,7 @@ As we iterate through the diff items, we will note whether there's a DOM element
 We deal first with the case of a diff item that represents the closing a tag.
 
 ```javascript
-         if (v [1] [0] === 'C') {
+         if (v [1].substr (0, 1) === 'C') {
 ```
 
 If this is an `add` or `keep` item, it has import over the desired position of all the diff items. We do two things: remove the last element of `position`, and increment the last element of `position` (which a moment ago was the next-to-last element).
@@ -2806,7 +2808,7 @@ If this item concerns the opening of a normal DOM element, we add an entry for i
 This reference is only added for the opening of a normal DOM element (not opaques or text elements), because it will only be required to locate the parent of a child element; because text elements cannot have children, and opaque elements' children are not managed by gotoв, we don't need to add entries in `references` for them.
 
 ```javascript
-            if (v [1] [0] === 'O') {
+            if (v [1].substr (0, 1) === 'O') {
                references [positions [k].join (',')] = k;
 ```
 
@@ -2868,7 +2870,7 @@ We update the last element of `tree` with element.
 If this diff item refers to opening a tag, we push `null` to `tree` as a marker so that the next diff element that references the DOM will know to look for the first child of the `element`.
 
 ```javascript
-            if (v [1] [0] === 'O') tree.push (null);
+            if (v [1].substr (0, 1) === 'O') tree.push (null);
 ```
 
 This concludes the first pass over the diff.
@@ -2902,20 +2904,202 @@ If we want to extract the tag, we return the non-whitespace characters that are 
          if (part === 'tag') return elementString.match (/(O|P) [^\s]+/) [0].replace (/(O|P) /, '')
 ```
 
-If we want to extract the attributes, we check w
+If we want to extract the attributes, we check whether there's a `{` or not in the string.
+
+If there's no `{`, it must be a normal HTML element without attributes (opaque elements all have attributes, even if it's only the `opaque` attribute that they have); if there's no attributes, we return an empty object.
+
+Otherwise, we select all the characters after the `{` until the end of `elementString` and parse them, returning the resulting object. This imposes the following condition on `elementString`: there must not be anything after the attributes. While this happens automatically in the case of the diff item of a normal tag, the contents of an opaque element must be removed before invoking this function (we'll take care of this in the `make` function, defined below).
+
+There's nothing else to do, so we close the function.
 
 ```javascript
-         else                return elementString.match ('{') ? JSON.parse (elementString.replace (/[^{]+/, '').replace (/ $/, '')) : {};
+         else                return elementString.match ('{') ? JSON.parse (elementString.replace (/[^{]+/, '')) : {};
       }
+```
+
+We now define `place`, which is in charge of placing a DOM element into a certain position in the DOM. It takes three arguments: `operation` (which can be either `'add'` or `'keep'`), `position` (which is an array of integers with positions and matches the `position` computed for each diff item that is added or kept) and `element` (the DOM element itself).
 
 ```javascript
-         if (part === 'tag') return elementString.match (/O [^\s]+/) [0].replace ('O ', '')
-         else                return elementString.match ('{') ? JSON.parse (elementString.replace (/[^{]+/, '').replace (/ $/, '')) : {};
+      var place = function (operation, position, element) {
+```
+
+We define a variable `Parent` to determine the parent node of `element`. If `position` has length 0, `element` must be the outermost DOM element from this view, therefore `rootElementParent` should be its parent.
+
+For all the other cases, we must find the parent, we remove one element from `position`, join the resulting array by commas and use that key to find the index of that DOM element inside `references`. Armed with that index, we use it to retrieve the actual DOM element from `elements`. This is the only use of `references` we make in the entire function: it is merely a way to retrieve the desired parent of a certain element.
+
+```javascript
+         var Parent = position.length === 0 ? rootElementParent : elements [references [position.slice (0, -1).join (',')]];
+```
+
+If we're keeping this element (rather than adding it), it may well be the case that it is already where it should be. If `element` is already the k-th child of `Parent` (where `k` is the last element of `position`), then `element` is already a child of its parent and its placed in the right position. In this case, there's nothing else to do, so we return.
+
+```javascript
+         if (operation === 'keep' && Parent.children [position [position.length - 1]] === element) return;
+```
+
+We determine whether there is a DOM element inside `Parent` that will go after `element`. We store it in `nextSibling`. If there's no element that will go after `element`, we set `nextSibling` to `null`.
+
+```javascript
+         var nextSibling = Parent.children [position [position.length - 1]] || null;
+```
+
+We invoke `insertBefore` on `Parent`, ppassing `element` and `nextSibling`; this will insert `element` just before `nextSibling`, inside `Parent`. If `nextSibling` is `null`, `element` will be placed as the last child of `Parent`.
+
+Note that in case `element` is an element that is somewhere else in the DOM, there's no need to remove it before placing it somewhere else, since `insertBefore` takes care of removing it from its current position in the DOM before inserting it where it should go.
+
+This concludes the function.
+
+```javascript
+         Parent.insertBefore (element, nextSibling);
       }
+```
 
+We now define `make`, the function that will make and return a new text element, normal DOM element or opaque DOM element. This function takes a single argument, `elementString`, which is the second element of a diff item.
 
+```javascript
+      var make = function (elementString) {
+```
 
+If the string starts with `'L'`, we're dealing with a literal (text) element.
 
+```javascript
+         if (elementString.substr (0, 1) === 'L') {
+```
+
+We create a new `<div>` in the variable `container`.
+
+```javascript
+            var container = document.createElement ('div');
+```
+
+We set `container`'s innerHTML to `elementString` (except for its first two characters, which are `'L '`. `B.prediff` already created the text that should go inside the text node, so there's no need to invoke `lith.g`.
+
+You may be wondering: why not use `createTextNode`? The reason is that `createTextNode` escapes all HTML entities (like `&` to `&amp;`); but it might be the case that we might want to insert HTML entities directly as text without them being escaped. Using `innerHTML` on a new element sidesteps this problem.
+
+```javascript
+            container.innerHTML = elementString.slice (2);
+```
+
+We retrieve the first child of `container`, which will be a text node, and return it. Note that we don't do anything else with `container`.
+
+This concludes the case of a literal/text element.
+
+```javascript
+            return container.firstChild;
+         }
+```
+
+If the first character of `elementString` is `P`, we're dealing with an opaque element.
+
+```javascript
+         if (elementString.substr (0, 1) === 'P') {
+```
+
+The `elementString` of an opaque element (as constructed by `B.prediff`) has the following structure: `P LENGTH TAG {...} CONTENTS`. `LENGTH` is the length of `elementString` when it only has the following: `P TAG {...}`.
+
+What we want to do here is to extract the `contents` into another string and remove them from `elementString`. We first start by finding the `LENGTH`, which will be the first set of digits surrounded by whitespace.
+
+```javascript
+            var length = elementString.match (/ \d+ /) [0].replace (/\s/g, '');
+```
+
+We find the index at which `contents` start in `elementString`. This will be length, plus the number of characters of `length` (since those are included in `elementString` itself), plus two characters (one for the space that goes before `LENGTH`, another one for the space that goes after the `attributes` and before `contents`).
+
+```javascript
+            var contentsIndex = length + (length + '').length + 2;
+```
+
+We extract `contents` into its own variable.
+
+```javascript
+            var contents = elementString.replace (length + ' ', '').slice (contentsIndex);
+```
+
+We remove the `contents` (and the prepended space) from `elementString`. We also get rid of the length and its prepending space. Now `elementString` will now have the form `P TAG {...}`.
+
+```javascript
+            elementString = elementString.slice (0, contentsIndex).replace (/ \d+/, '');
+```
+
+This concludes the logic that is exclusive to opaque elements. From now on, the function will deal with both opaque and normal DOM elements.
+
+```javascript
+         }
+```
+
+We extract the `tag` using `extract` and create a new DOM element.
+
+```javascript
+         var element = document.createElement (extract (elementString, 'tag'));
+```
+
+We extract the `attributes` using `extract` and iterate them:
+
+```javascript
+         dale.go (extract (elementString, 'attributes'), function (v, k) {
+```
+
+If `v` is neither an empty string nor `null`, we set the attribute on `element` using `setAttribute`.
+
+```javascript
+            if (v !== '' && v !== null) element.setAttribute (k, v);
+         });
+```
+
+If we're constructing an opaque element, we set its `innerHTML` to `contents`.
+
+```javascript
+         if (elementString.substr (0, 1) === 'P') element.innerHTML = contents;
+```
+
+We return `element` and close the function.
+
+```javascript
+         return element;
+      }
+```
+
+We define the fourth and last helper function, `recycle`, which updates the attributes of a DOM element that has been recycled. This function takes three arguments: `element`, `old` and `New`; the last two are `elementStrings` for elements that are not opaque and have the same tag.
+
+```javascript
+      var recycle = function (element, old, New) {
+```
+
+We extract the `oldAttributes` and `newAttributes` using `extract`.
+
+```javascript
+         var oldAttributes = extract (old, 'attributes'), newAttributes = extract (New, 'attributes');
+```
+
+We iterate `newAttributes` and set them on `element` if they are neither an empty string nor `null`.
+
+```javascript
+         dale.go (newAttributes, function (v, k) {
+            if (v !== '' && v !== null) element.setAttribute (k, v);
+         });
+```
+
+We iterate the `oldAttributes`. If they are an empty string or `null`, we ignore them. If there's no corresponding entry for them in `newAttributes`, we remove the attributes from `element`.
+
+```javascript
+         dale.go (oldAttributes, function (v, k) {
+            if (v === '' || v === null) return;
+            if (newAttributes [k] === '' || newAttributes [k] === null || newAttributes [k] === undefined) el.removeAttribute (k);
+         });
+```
+
+We return `element` and close the function.
+
+```javascript
+         return element;
+      }
+```
+
+We create an object `recyclables`, which will hold DOM elements that we have removed and we might recycle into new elements.
+
+```javascript
+      var recyclables = {};
+```
 
 We now perform the second pass on the diff, to apply the changes to the DOM. As on the first pass, we iterate all the elements of the diff.
 
@@ -2926,7 +3110,7 @@ We now perform the second pass on the diff, to apply the changes to the DOM. As 
 If we're closing an element, we don't need to do anything on this pass
 
 ```javascript
-         if (v [1] [0] === 'C') return;
+         if (v [1].substr (0, 1) === 'C') return;
 ```
 
 If we're keeping an item, whether it is an element, a text element or an opaque element, we will invoke the `place` function defined above with three arguments: the operation (in this case, `'keep'`), the desired position of the item, and the corresponding DOM element. There's nothing else to do in this case, so we return.
@@ -2946,7 +3130,7 @@ If the item is a DOM element, we mark the diff index (`k`) and store it into the
 This implementation of recycling is quite simplistic, but it seems to cover many cases. A more sophisticated implementation would implement a stack of elements per tag, or a queue (first-in first-out). This might be changed in the future, but for now seems to suffice.
 
 ```javascript
-            if (v [0] === 'O') recyclables [extract (v [1], 'tag')] = k;
+            if (v [1].substr (0, 1) === 'O') recyclables [extract (v [1], 'tag')] = k;
 ```
 
 We remove the element from the DOM. There's nothing to do in the case of removing an item, so we return and close the conditional.
@@ -2961,7 +3145,7 @@ If we're here, we're adding a new item.
 If the item is not a normal DOM element (either a text element or an opaque element), we only invoke `place`, passing three arguments: the operation (`'add'`), the desired position and the actual element. The actual element is built through the `make` function defined above.
 
 ```javascript
-         if (v [1] [0] !== 'O') return place ('add', positions [k], make (v [1]));
+         if (v [1].substr (0, 1) !== 'O') return place ('add', positions [k], make (v [1]));
 ```
 
 If we're here, we're going to add a normal DOM element. We note the `tag` of the element and the index of a recyclable element of the same tag, if any. We also set up a variable to hold the DOM element that we'll either create or recycle.
@@ -3008,15 +3192,6 @@ There's nothing else to do. We close the loop of the second pass and the functio
       });
    }
 ```
-
-
-
-```javascript
-         else {
-            recyclables [tag] = undefined;
-            place ('add', positions [k], recycle (element, diff [recycleIndex] [1], v [1]));
-         }
-      });
 
 
 
@@ -3163,6 +3338,10 @@ Don’t count on HTTPS.
 No console!
 
 Trailing commas.
+
+To access the nth element of a string `s`, don't use `s [n]` - rather, use substr. (IE6/IE7)
+
+ie8 (but not ie6/7) escapes unicode characters in JSON.parse/JSON.stringify
 
 Put in quotes special words if they are method names, or rename!
 

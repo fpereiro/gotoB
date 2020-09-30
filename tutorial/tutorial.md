@@ -56,71 +56,42 @@ This tutorial only covers the frontend aspect of webapp development. We will how
 
 ### Is it a webpage or is it a webapp?
 
-In the beginning of the web, we only had webpages. Now, webpages are easy to understand: each webpage is a merely some HTML, CSS & js that gets loaded on the browser. Every time the user opens the page, that HTML, CSS & js gets loaded and the page is displayed. And, unless the owner of the webpage decides to change it, the webpage will be the same from here until the end of time.
+In the beginning of the web, we only had webpages. Webpages are easy to understand: each webpage is a merely some HTML, CSS & js that gets loaded on the browser. Every time the user opens the page, that HTML, CSS & js gets loaded and the page is displayed. And, unless the owner of the webpage decides to change it, the webpage will be the same from here until the end of time.
 
 Because webpages are always the same (unless updated), we consider them to be **static**.
 
-An example of this is the homepage of a newspaper. Sure, it might be updated all the time, but between updates, the page is the same for everyone.
+An example of this is the homepage of a newspaper. Sure, it might be updated all the time, but between updates, the page is the same for everyone. The newspaper is a set of documents, and each [Uniform Resource Locator](https://en.wikipedia.org/wiki/URL) gives you one document. The information flows in one way, from the webpage to the user.
 
 Webapps are a different game, because the HTML, CSS & js depends on **the state of the application**.
 
-An example of a webapp is the inbox of your web email, such as Gmail or Outlook.com. It is still HTML, CSS & js, but it will depend on what emails you have in your inbox!
+An example of a webapp is the inbox of your web email, such as Gmail or Outlook.com. It is still HTML, CSS & js, but it will depend on what emails you have in your inbox! Your inbox may have a single URL, but the information of your inbox will likely change because of user interaction. The information flows both ways, from the webapp to the user and from the user to the webapp.
 
-State of the application: can be changed by user, it can also be changed by third party (someone sending you an email).
+Diagrams:
+Webpage/static: URL -> HTML
+Webapp/dynamic: URL + state -> HTML
 
-Take the example of a shopping cart: the first time you load a shopping cart, it will be empty. If you add an item, the shopping cart will no longer be empty, and certain elements in the page will have changed, such as the list of products and the total amount.
+In the case of an email application, the state would be comprised of the following things:
+- The name of the user.
+- The current view (Inbox, Sent, Drafts, Account, etc.).
+- The emails currently displayed.
+- Other user preferences.
 
-It is very important to understand the main difference between a webpage and a webapp.
+(This is not an exhaustive list; there might be a lot more under the hood!)
 
-A webpage is static: this means that, at a given moment, two users that load the webpage will obtain an identical result.
+The state is *shared information* between the webapp and the user. In some webapps, only the user can change their own state. In others (like an email application), users can affect each others' mutual state. For example, if someone sends you an email, that affects the state of your inbox.
 
-A webapp, in contrast, is dynamic: this means that two users that load the webapp will obtain a different result.
+The takeaway from this section (which is probably the hardest in the entire tutorial!) is that a webapp is about *state*, the shared information between the user and the app. If you understand that, all the following concepts will fall into place.
 
-Website: same URL, same HTML! Static, doesn't change.
 
-Webapp: can change.
 
-The first step in our conceptual journey is to understand **the difference between a website and a webapp**. Websites started existing in the Christmas of 1990 when the World Wide Web was launched. A website is 1) a document composed of HTML; 2) that is identified by an Uniform Resource Locator (URL). A web browser, when visiting a given URL, will load and then display the document.
+- user starts using app with a basic state (only username).
+- app holds state for *each user*.
+- at any point in time, there's one state.
+- possible interactions are determined by the state.
+- user interacts with app and generates further state (emails, account preferences). others users may interact too. each interaction can create a change in the state.
+- the state is a sum/crystallization of all past interactions.
 
-At the beginning, app loads a webpage! But are we creating webpages or webapps? Let's see this historically, to understand it and also because it is fun!
-
-webpage + user provided data = webapp.
-
-The WWW is about documents. Christmas 1990. One format. Go ask the server. Browser shows it.
-
-- A website is a collection of webpages. The main distinction we need to grasp is that between a web*page* and a web*app*.
-
-A webpage is a document. One direction.
-
-User input! A form that sends an email. But that doesn't change anything! If you refresh the page, see empty form again.
-
-Application: send content and return it. Very simple app: put your name!
-
-viaweb, first app!
-
-requires login or local state (cookies).
-https://en.wikipedia.org/wiki/HTTP_cookie#History
-Magic cookies were already used in computing when computer programmer Lou Montulli had the idea of using them in web communications in June 1994.[8] At the time, he was an employee of Netscape Communications, which was developing an e-commerce application for MCI. Vint Cerf and John Klensin represented MCI in technical discussions with Netscape Communications. MCI did not want its servers to have to retain partial transaction states, which led them to ask Netscape to find a way to store that state in each user's computer instead. Cookies provided a solution to the problem of reliably implementing a virtual shopping cart.[9][10]
-
-apps mounted on top of pages.
-
-A webapp is an interface. Bidirectional.
-
-Diagrams!
-
-Then keep explaining.
-
-bidirectional? or having some data that modifies the page? a shopping cart doesn't transfer data to the server!
-
-Webpages are static and embody the original purpose of the web: to share documents. A webpage is some HTML and CSS that is the same for every browser that loads it. A webpage allows for limited user interactions, the main one being clicking on links to navigate to another page. But, as a general rule, webpages cannot be changed by those using them.
-
-Webapps are dynamic! While they use HTML and CSS (and perhaps js) to draw the page, they respond to user input. That is, the HTML and CSS served to each user is potentially different.
-
-What makes a webpage into a webapp is the possibility of a user providing information through the server, and that change being seen on the page! A shopping cart would be a great example!
-
-A webpage is static and doesn't change. In contrast, an application is a webpage that is more than just a webpage, because it has the potential to receive information from an user and then be updated. The distinctive feature of an application is that what the user sees on the screen is updated by user input.
-
-Main implementation breakthrough: background loading (ajax), without refreshing the page.
+create account  -> initial state -> draw initial version of the HTML -> this allows certain interactions -> user picks an interaction -> state changes -> HTML is updated -> user picks another interaction -> state changes -> ...
 
 ### The birth of templates
 

@@ -87,7 +87,6 @@
 
                B.call (x, 'test', 'error');
             });
-
             B.respond ('test', 'error', {burn: true}, function (x) {
 
                Test ('show eventlog in case of error', function () {
@@ -606,7 +605,7 @@
                      [true, ['script', {src: 'scripts.js', charset: 'utf-8'}]],
                      [true, ['style', ['span.action', {color: 'blue'}]]],
                      [true, ['style', lith.css.g (['span.action', {color: 'blue'}])]],
-                     [true, ['style', ['a', ['a', {}, ['a']]]]],
+                     [true, ['style', ['a', ['a', {}, ['a']]]]]
                   ], undefined, function (v) {
                      var validation = B.validateLith (v [1]);
                      if (v [0]   && validation !== 'Lith')    return 'B.validateLith error with valid input: ' + JSON.stringify (v [1]) + ' ' + validation;
@@ -729,18 +728,29 @@
                      [['a', {opaque: true}, '<svg></svg>'], ['P 19 a {"opaque":true} &lt;svg&gt;&lt;/svg&gt;']],
                      [['a', '<svg></svg>'], ['O a', 'L &lt;svg&gt;&lt;/svg&gt;','C a']],
                      [['div', [['a', {href: 'c'}], ['p', 2]]], ['O div','O a {"href":"c"}','C a','O p','L 2','C p','C div']]
-                  ], undefined, function (v) {
-                     if (! eq (B.prediff (v [0]), v [1])) return 'B.prediff mismatch: ' + JSON.stringify (v) + '   ' + B.prediff (v [0]);
+                  ], undefined, function (v, k) {
+                     if (! eq (B.prediff (v [0]), v [1])) return 'B.prediff mismatch: ' + (k + 1) + ' ' + JSON.stringify (v) + '   ' + B.prediff (v [0]);
                   });
 
                   if (error) return error;
 
                   B.responders [B.B + 1000] = {elem: ['a', {id: B.B + 1000}, 'z']};
-                  if (! eq (B.prediff (['a', {id: B.B + 1000}, 'u']), ['O a {"id":"' + B.B + 1000 + '"}', 'L u', 'C a'])) return 'Mismatch when prediffing up top-level reactive view.';
-                  if (! eq (B.prediff (['div', ['a', {id: B.B + 1000}, 'u']]), ['O div', 'O a {"id":"' + B.B + 1000 + '"}', 'L z', 'C a', 'C div'])) return 'Mismatch when looking up nested reactive view #2.';
-                  B.forget (B.B + 1000);
 
+                  if (
+                     ! eq (B.prediff (['a', {id: B.B + 1000}, 'u']), ['O a {"id":"' + B.B + 1000 + '"}', 'L u', 'C a']) &&
+                     // We use `\u0432` instead of `B.B` because of IE8 (but not IE6-7!)
+                     ! eq (B.prediff (['a', {id: B.B + 1000}, 'u']), ['O a {"id":"\\u0432' + 1000 + '"}', 'L u', 'C a'])
+                  ) return 'Mismatch when prediffing up top-level reactive view: ' + B.prediff (['a', {id: B.B + 1000}, 'u']);
+
+                  if (
+                     ! eq (['O div', 'O a {"id":"' + B.B + 1000 + '"}', 'L z', 'C a', 'C div'], B.prediff (['div', ['a', {id: B.B + 1000}, 'u']])) &&
+                     // We use `\u0432` instead of `B.B` because of IE8 (but not IE6-7!)
+                     ! eq (['O div', 'O a {"id":"\\u0432' + 1000 + '"}', 'L z', 'C a', 'C div'], B.prediff (['div', ['a', {id: B.B + 1000}, 'u']]))
+                  ) return 'Mismatch when looking up nested reactive view.';
+
+                  B.forget (B.B + 1000);
                });
+
                B.call (x, 'test', 'B.view');
             });
 
@@ -829,6 +839,7 @@
                - paths can be single path element, normal path, or set of paths, or empty element
                - id of reactive gets replaced
                - paths of reactive gets added (single path element, normal path, set of paths)
+               - test trample
                */
 
                Test ('B.view valid inputs, non-nested', function () {
@@ -843,7 +854,12 @@
                      });
                   });
 
-                  if (document.body.innerHTML !== '<div id="в1" path="Data:view"></div>') return 'Invalid HTML mounted #1.';
+                  if ([
+                     '<div id="в1" path="Data:view"></div>',
+                     // IE<=8
+                     '<DIV id="\\u04321" path="Data:view"> </DIV>'
+                  ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted #1: ' + document.body.innerHTML;
+
                   var responder = B.responders [B.B + 1];
                   if (responder.verb !== 'change') return 'Invalid change #1.';
                   if (responder.path.length !== 0) return 'Invalid path #1.';
@@ -856,22 +872,22 @@
 
                   // ADD CLASS
 
-                  B.call (x, 'set', ['Data', 'view'], ['div', {class: 'hello'}]);
-                  console.log (document.body.innerHTML);
+                  B.call (x, 'set', ['Data', 'view'], ['div', {'class': 'hello'}]);
 
-                  if (document.body.innerHTML !== '<div class="hello" id="в1" path="Data:view"></div>') return 'Invalid HTML mounted #2.';
+                  if ([
+                     '<div id="в1" path="Data:view" class="hello"></div>',
+                     // IE<=8
+                     '<DIV id="\\u04321" path="Data:view" class="hello"> </DIV>'
+                  ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted #2: ' + document.body.innerHTML;
 
-                  B.call (x, 'set', ['Data', 'view'], ['div', {class: 'hellou'}, 'forget']);
+                  B.call (x, 'set', ['Data', 'view'], ['div', {'class': 'hellou'}, 'forget']);
 
                   var data = dale.go (dale.times (200), Math.random);
 
                   B.call (x, 'set', ['Data', 'view'], ['ul', dale.go (data, function (v) {return ['li', v]})]);
                   data [100] = 'foobar';
                   var t0 = Date.now ();
-                  // TODO: this fails with a lower timeout!
                   B.call (x, 'set', ['Data', 'view'], ['ul', dale.go (data, function (v) {return ['li', v]})]);
-                  console.log (Date.now () - t0);
-
 
                });
 
@@ -882,8 +898,8 @@
                   ['div', 'more text'],
                   ['div', 'a&nbsp;b'],
                   ['div', ['LITERAL', 'a&nbsp;b']],
-                  ['div', {class: 'abc'}, ['LITERAL', 'a&nbsp;b']],
-                  //['div', ['a']],
+                  ['div', {'class': 'abc'}, ['LITERAL', 'a&nbsp;b']],
+                  ['div', ['a']],
                ];
 
                dale.go (views, function (view) {

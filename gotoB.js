@@ -265,7 +265,7 @@ Please refer to readme.md to read the annotated source.
       element.innerHTML = '';
    }
 
-   // *** B.ELEM ***
+   // *** B.VIEW ***
 
    B.view = function (path, fun) {
 
@@ -360,26 +360,24 @@ Please refer to readme.md to read the annotated source.
       //console.log ('-----------------------');
       //console.log ('DEBUG redraw', oldElement, responder.elem);
       //console.log ('DEBUG prediff', B.prediff (oldElement), B.prediff (responder.elem));
-      var diff = B.diff (B.prediff (oldElement), B.prediff (responder.elem)), t1 = time ();
+      var prediffs = [B.prediff (oldElement), B.prediff (responder.elem)], t1 = time ();
+      var diff = B.diff (prediffs [0], prediffs [1]), t2 = time ();
 
       dale.go (oldChildren, function (id) {B.forget (id)});
 
       if (diff === false) {
-         var element = document.getElementById (id), elementParent = element.parentNode, nextSibling = element.nextSibling || null;
-         var newElement = document.createElement (responder.elem [0]);
-         if (type (responder.elem [1]) === 'object') dale.go (responder.elem [1], function (v, k) {
-            if (v !== '' && v !== null && v !== undefined) newElement.setAttribute (k, v);
-         });
-         newElement.innerHTML = lith.g (responder.elem [2], true);
-         element.parentNode.removeChild (element);
-         elementParent.insertBefore (newElement, nextSibling);
+         var element = document.getElementById (id), parentNode = element.parentNode, nextSibling = element.nextSibling;
+         var html = lith.g (responder.elem, true);
+         parentNode.removeChild (element);
+         if (nextSibling) nextSibling.insertAdjacentHTML ('beforeBegin', html);
+         else             parentNode.insertAdjacentHTML  ('beforeEnd',   html);
       }
       else {
          var errorIndex = B.applyDiff (element, diff);
          if (! B.prod && errorIndex !== undefined) return B.error (x, 'B.redraw', 'Redraw error: DOM element missing.', {diffIndex: errorIndex, diffElement: diff [errorIndex], diff: diff, responder: responder.id});
       }
 
-      B.call (x, 'redraw', x.path, {responder: responder.id, ms: {create: msCreate, diff: t1 - t0, DOM: time () - t1, total: time () - t0 + msCreate}, diffLength: diff === false ? false : diff.length});
+      B.call (x, 'redraw', x.path, {responder: responder.id, ms: {create: msCreate, prediff: t1 - t0, diff: t2 - t1, DOM: time () - t2, total: time () - t0 + msCreate}, diffLength: diff === false ? false : diff.length});
 
       var nextRedraw = dale.stopNot (B.internal.queue, undefined, function () {
          var next = B.internal.queue.shift ();
@@ -394,7 +392,7 @@ Please refer to readme.md to read the annotated source.
 
       if (type (input) !== 'array' || input [0] === 'LITERAL') {
          if (input === undefined || input === '') return;
-         if (output [output.length - 1] [0] !== 'L') return output.push ('L ' + lith.g (input, true));
+         if (output [output.length - 1].substr (0, 1) !== 'L') return output.push ('L ' + lith.g (input, true));
          return output [output.length - 1] += lith.g (input, true);
       }
 
@@ -424,8 +422,8 @@ Please refer to readme.md to read the annotated source.
          if (output [tableIndex].match (/^O thead/)) {
             var depth = 0;
             dale.stopNot (dale.times (output.length - tableIndex, tableIndex), undefined, function (k) {
-               if (output [k] [0] === 'O') depth++;
-               if (output [k] [0] === 'C') depth--;
+               if (output [k].substr (0, 1) === 'O') depth++;
+               if (output [k].substr (0, 1) === 'C') depth--;
                if (depth === 0) return tableIndex = k + 1;
             });
          }
@@ -440,16 +438,12 @@ Please refer to readme.md to read the annotated source.
 
    B.applyDiff = function (rootElement, diff) {
 
-      // parentNode.insertBefore not supported in IE<=8, make local polyfill with appendChlid
-      // insertBefore removes automatically, no need to remove from current position
-      // node.parentNode, node.previousSibling, node.nextSibling, node.firstChild, node.childNodes
-
       var elements = [], positions = [], references = {}, rootElementParent = rootElement.parentNode;
       var tree = [rootElement, null], position = [];
 
       // console.log ('DEBUG diff', diff);
       var errorIndex = dale.stopNot (diff, undefined, function (v, k) {
-         if (v [1] [0] === 'C') {
+         if (v [1].substr (0, 1) === 'C') {
             if (v [0] !== 'rem') {
                position.pop ();
                position [position.length - 1]++;
@@ -459,7 +453,7 @@ Please refer to readme.md to read the annotated source.
          }
          if (v [0] !== 'rem') {
             positions [k] = position.slice ();
-            if (v [1] [0] === 'O') {
+            if (v [1].substr (0, 1) === 'O') {
                references [positions [k].join (',')] = k;
                position.push (0);
             }
@@ -476,7 +470,7 @@ Please refer to readme.md to read the annotated source.
 
             elements [k] = element;
             tree [tree.length - 1] = element;
-            if (v [1] [0] === 'O') tree.push (null);
+            if (v [1].substr (0, 1) === 'O') tree.push (null);
          }
       });
 
@@ -489,7 +483,7 @@ Please refer to readme.md to read the annotated source.
 
       var extract = function (elementString, part) {
          if (part === 'tag') return elementString.match (/(O|P) [^\s]+/) [0].replace (/(O|P) /, '')
-         else                return elementString.match ('{') ? JSON.parse (elementString.replace (/[^{]+/, '').replace (/ $/, '')) : {};
+         else                return elementString.match ('{') ? JSON.parse (elementString.replace (/[^{]+/, '')) : {};
       }
 
       var place = function (operation, position, element) {
@@ -497,30 +491,31 @@ Please refer to readme.md to read the annotated source.
          var Parent = position.length === 0 ? rootElementParent : elements [references [position.slice (0, -1).join (',')]];
          //console.log ('DEBUG place parent', Parent);
          if (operation === 'keep' && Parent.children [position [position.length - 1]] === element) return;
-         var after = Parent.children [position [position.length - 1]] || null;
-         Parent.insertBefore (element, after);
+         var nextSibling = Parent.children [position [position.length - 1]] || null;
+         Parent.insertBefore (element, nextSibling);
       }
 
       var make = function (elementString) {
          //console.log ('DEBUG make', elementString);
-         if (elementString [0] === 'L') {
+         if (elementString.substr (0, 1) === 'L') {
             var container = document.createElement ('div');
             container.innerHTML = elementString.slice (2);
             return container.firstChild;
          }
 
-         if (elementString [0] === 'P') {
+         if (elementString.substr (0, 1) === 'P') {
             var length = elementString.match (/ \d+ /) [0].replace (/\s/g, '');
             // one extra for space for length number, another for space before contents
             var contentsIndex = length + (length + '').length + 2;
-            var contents = elementString.replace (length + ' ', '').splice (contentsIndex, elementString.length - contentsIndex);
+            var contents = elementString.replace (length + ' ', '').slice (contentsIndex);
+            elementString = elementString.slice (0, contentsIndex).replace (/ \d+/, '');
          }
-         // done after splicing, in case contents contain {
+
          var element = document.createElement (extract (elementString, 'tag'));
          dale.go (extract (elementString, 'attributes'), function (v, k) {
             if (v !== '' && v !== null) element.setAttribute (k, v);
          });
-         if (elementString [0] === 'P') element.innerHTML = contents;
+         if (elementString.substr (0, 1) === 'P') element.innerHTML = contents;
          return element;
       }
 
@@ -540,14 +535,14 @@ Please refer to readme.md to read the annotated source.
       var recyclables = {};
 
       dale.go (diff, function (v, k) {
-         if (v [1] [0] === 'C') return;
+         if (v [1].substr (0, 1) === 'C') return;
          if (v [0] === 'keep') return place ('keep', positions [k], elements [k]);
          if (v [0] === 'rem')  {
-            if (v [0] === 'O') recyclables [extract (v [1], 'tag')] = k;
+            if (v [1].substr (0, 1) === 'O') recyclables [extract (v [1], 'tag')] = k;
             return elements [k].parentNode.removeChild (elements [k]);
          }
 
-         if (v [1] [0] !== 'O') return place ('add', positions [k], make (v [1]));
+         if (v [1].substr (0, 1) !== 'O') return place ('add', positions [k], make (v [1]));
          var tag = extract (v [1], 'tag'), recycleIndex = recyclables [tag], element;
 
          if (recycleIndex === undefined) element = make (v [1]);

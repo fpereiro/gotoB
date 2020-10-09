@@ -8,12 +8,13 @@
    <body>
       <noscript>Javascript is deactivated in your browser. Please activate it in order to use this page.</noscript>
       <script>
-         var Time = {zero: new Date ().getTime ()};
+         var time = Date.now ? function () {return Date.now ()} : function () {return new Date ().getTime ()};
+         var Time = {zero: time ()}
       </script>
       <script src="https://cdn.jsdelivr.net/gh/douglascrockford/JSON-js@aef828bfcd7d5efaa41270f831f8d27d5eef3845/json2.min.js"></script>
       <script src="gotoB.min.js"></script>
       <script>
-         Time ['0: load'] = teishi.time () - Time.zero;
+         Time ['0: load'] = time () - Time.zero;
       </script>
       <script>
          (function () {
@@ -338,7 +339,7 @@
 
                   var matches = [];
 
-                  B.respond ('change', ['foo', 'bar'], {match: B.changeResponder}, function (x) {
+                  var responder2 = B.respond ('change', ['foo', 'bar'], {match: B.changeResponder}, function (x) {
                      matches.push (x.path);
                   });
 
@@ -375,7 +376,7 @@
 
                   var currentValues  = [];
                   var previousValues = [];
-                  B.respond ('change', ['esa', 'abuela'], function (x, currentValue, previousValue) {
+                  var responder3 = B.respond ('change', ['esa', 'abuela'], function (x, currentValue, previousValue) {
                      currentValues.push  (currentValue);
                      previousValues.push (previousValue);
                   });
@@ -384,9 +385,13 @@
                   if (! eq (currentValues, [1, 2])) return 'change event not fired with currentValue.';
                   if (! eq (previousValues, [undefined, 1])) return 'change event not fired with previousValue.';
 
+                  B.forget (responder2);
+                  B.forget (responder3);
+
                });
 
                // We update the references since we've re-assigned Data and State during the above tests.
+               B.store = {};
                window.Data  = B.store.Data  = {};
                window.State = B.store.State = {};
 
@@ -455,7 +460,7 @@
                      [[['a', 'b'], ['c', 'd']], ' B.call ({"from": id}, "a", "b", this.value); B.call ({"from": id}, "c", "d", this.value);', true],
                      [[['a', 'b'], ['c', 'd', {raw: 'event.preventDefault'}]], ' B.call ({"from": id}, "a", "b", this.value); B.call ({"from": id}, "c", "d", event.preventDefault);', true]
                   ], undefined, function (v, k) {
-                     var result = 'var id = B.call ("ev", event.type, B.evh (this));' + v [1];
+                     var result = 'var id = B.call ("ev", event ? event.type : "undefined event", B.evh (this));' + v [1];
                      if (B.ev.apply (null, v [0]) !== result) return 'B.ev error with valid arguments #' + (k + 1) + ': ' + B.ev.apply (null, v [0]) + ' Expected: ' + result;
                   });
                   if (error) return error;
@@ -718,6 +723,9 @@
                      [['a', [[[['z']]], 'b']], ['O a','L zb','C a']],
                      [['a', {b: 'c'}], ['O a {"b":"c"}','C a']],
                      [['a', {b: null}], ['O a {}','C a']],
+                     [['a', {b: false}], ['O a {}','C a']],
+                     [['a', {b: ''}], ['O a {}','C a']],
+                     [['a', {a: '', b: 'c', d: null, e: false, f: 'g'}], ['O a {"b":"c","f":"g"}','C a']],
                      [['a', {b: ''}], ['O a {}','C a']],
                      [['a', {b: undefined}], ['O a {}','C a']],
                      [['a', {b: 0}], ['O a {"b":0}','C a']],
@@ -832,16 +840,6 @@
                // Turn on again error handler
                B.responders.error.disabled = false;
 
-               /*
-               // B.view checks:
-               - count is incremented if inputs are valid
-               - set responder with priority -1
-               - paths can be single path element, normal path, or set of paths, or empty element
-               - id of reactive gets replaced
-               - paths of reactive gets added (single path element, normal path, set of paths)
-               - test trample
-               */
-
                Test ('B.view valid inputs, non-nested', function () {
 
                   // INITIAL SETUP
@@ -857,7 +855,7 @@
                   if ([
                      '<div id="в1" path="Data:view"></div>',
                      // IE<=8
-                     '<DIV id="\\u04321" path="Data:view"> </DIV>'
+                     // '<DIV id="\\u04321" path="Data:view"> </DIV>'
                   ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted #1: ' + document.body.innerHTML;
 
                   var responder = B.responders [B.B + 1];
@@ -869,700 +867,727 @@
                   if (responder.children.length !== 0) return 'Invalid children #1.';
 
                   var DOMElement = c ('#' + B.B + 1);
+                  if (c.get ('#' + B.B + 1, 'path').path !== 'Data:view') return 'Invalid path in DOM #1.';
 
                   // ADD CLASS
 
                   B.call (x, 'set', ['Data', 'view'], ['div', {'class': 'hello'}]);
 
+                  if (c ('#' + B.B + 1) !== DOMElement) return 'DOM element not recycled #2.';
+                  if (c.get ('#' + B.B + 1, 'path').path !== 'Data:view') return 'Invalid path in DOM #1.';
+
                   if ([
-                     '<div id="в1" path="Data:view" class="hello"></div>',
-                     // IE<=8
-                     '<DIV id="\\u04321" path="Data:view" class="hello"> </DIV>'
+                     '<div id="в1" path="Data:view" class="hello"></div>'
                   ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted #2: ' + document.body.innerHTML;
 
-                  B.call (x, 'set', ['Data', 'view'], ['div', {'class': 'hellou'}, 'forget']);
+                  var llog = teishi.last (B.log);
+                  if (! eq ({verb: llog.verb, path: llog.path, rid: llog.args [0].responder}, {verb: 'redraw', path: ['Data', 'view'], rid: B.B + 1})) return 'Invalid redraw log #1.';
 
-                  var data = dale.go (dale.times (200), Math.random);
+                  // REMOVE CLASS
 
-                  B.call (x, 'set', ['Data', 'view'], ['ul', dale.go (data, function (v) {return ['li', v]})]);
-                  data [100] = 'foobar';
-                  var t0 = Date.now ();
-                  B.call (x, 'set', ['Data', 'view'], ['ul', dale.go (data, function (v) {return ['li', v]})]);
+                  B.call (x, 'set', ['Data', 'view'], ['div']);
+
+                  if (c ('#' + B.B + 1) !== DOMElement) return 'DOM element not recycled #3.';
+
+                  if ([
+                     '<div id="в1" path="Data:view"></div>'
+                  ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted #3: ' + document.body.innerHTML;
+
+                  // ADD CLASS AGAIN
+
+                  B.call (x, 'set', ['Data', 'view'], ['div', {'class': 'вla'}]);
+
+                  if ([
+                     '<div id="в1" path="Data:view" class="вla"></div>'
+                  ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted #4: ' + document.body.innerHTML;
+
+                  // REMOVE CLASS WITH null
+
+                  B.call (x, 'set', ['Data', 'view'], ['div', {'class': null}]);
+
+                  if ([
+                     '<div id="в1" path="Data:view"></div>'
+                  ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted #5: ' + document.body.innerHTML;
+
+                  // ADD CLASS AGAIN AND REMOVE WITH ''
+
+                  B.call (x, 'set', ['Data', 'view'], ['div', {'class': 'foo'}]);
+                  B.call (x, 'set', ['Data', 'view'], ['div', {'class': ''}]);
+
+                  if ([
+                     '<div id="в1" path="Data:view"></div>'
+                  ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted #6: ' + document.body.innerHTML;
+
+                  // ADD CONTENT
+
+                  B.call (x, 'set', ['Data', 'view'], ['div', {'class': 'foo'}, 'content']);
+
+                  if ([
+                     '<div id="в1" path="Data:view" class="foo">content</div>'
+                  ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted #7: ' + document.body.innerHTML;
+
+                  // REMOVE CONTENT
+
+                  B.call (x, 'set', ['Data', 'view'], ['div', {'class': 'foo'}]);
+
+                  if ([
+                     '<div id="в1" path="Data:view" class="foo"></div>'
+                  ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted #8: ' + document.body.innerHTML;
+
+                  // ADD CONTENT, REMOVE CLASS
+
+                  B.call (x, 'set', ['Data', 'view'], ['div', 'content']);
+
+                  if (c ('#' + B.B + 1) !== DOMElement) return 'DOM element not recycled #9.';
+
+                  if ([
+                     '<div id="в1" path="Data:view">content</div>'
+                  ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted #9: ' + document.body.innerHTML;
+
+                  // ADD MULTIPLE ATTRIBUTES
+
+                  B.call (x, 'set', ['Data', 'view'], ['div', {'class': 'foo', style: 'color: red'}, 'content']);
+
+                  if ([
+                     '<div id="в1" path="Data:view" class="foo" style="color: red">content</div>'
+                  ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted #10: ' + document.body.innerHTML;
+
+                  // LITHBAG CONTENT
+
+                  B.call (x, 'set', ['Data', 'view'], ['div', {'class': 'foo', style: 'color: red'}, ['A', ['B', ['C'], 'D'], 'E']]);
+
+                  if ([
+                     '<div id="в1" path="Data:view" class="foo" style="color: red">ABCDE</div>'
+                  ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted #11: ' + document.body.innerHTML;
+
+                  // REMOVE ALL ATTRIBUTES
+
+                  B.call (x, 'set', ['Data', 'view'], ['div', ['A', ['B', ['C'], 'D'], 'E']]);
+
+                  if (c ('#' + B.B + 1) !== DOMElement) return 'DOM element not recycled #12.';
+
+                  if ([
+                     '<div id="в1" path="Data:view">ABCDE</div>'
+                  ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted #12: ' + document.body.innerHTML;
+
+                  // ADD ATTRIBUTES THAT WILL BE IGNORED
+
+                  if (c ('#' + B.B + 1) !== DOMElement) return 'DOM element not recycled #13.';
+
+                  B.call (x, 'set', ['Data', 'view'], ['div', {id: 'foo', PATH: 'bar'}, ['A', ['B', ['C'], 'D'], 'E']]);
+
+                  if ([
+                     '<div id="в1" path="Data:view">ABCDE</div>'
+                  ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted #13: ' + document.body.innerHTML;
+
+                  // SPECIAL CHARACTERS IN CONTENT #1
+
+                  B.call (x, 'set', ['Data', 'view'], ['div', '&lt;`Me &amp; you too!`&gt;']);
+
+                  if ([
+                     '<div id="в1" path="Data:view">&amp;lt;`Me &amp;amp; you too!`&amp;gt;</div>'
+                  ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted #14: ' + document.body.innerHTML;
+
+                  // SPECIAL CHARACTERS IN CONTENT #2
+
+                  B.call (x, 'set', ['Data', 'view'], ['div', '"I have \'quotes\'!"']);
+
+                  if ([
+                     '<div id="в1" path="Data:view">"I have \'quotes\'!"</div>'
+                  ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted #15: ' + document.body.innerHTML;
+
+                  // SPECIAL CHARACTERS IN CONTENT #3
+
+                  B.call (x, 'set', ['Data', 'view'], ['div', '<`Me & you too!`>']);
+
+                  if ([
+                     '<div id="в1" path="Data:view">&lt;`Me &amp; you too!`&gt;</div>'
+                  ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted #16: ' + document.body.innerHTML;
+
+                  // SPECIAL CHARACTERS IN CONTENT #4
+
+                  B.call (x, 'set', ['Data', 'view'], ['div', '<script>hack ()</' + 'script>']);
+
+                  if ([
+                     '<div id="в1" path="Data:view">&lt;script&gt;hack ()&lt;/script&gt;</div>'
+                  ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted #17: ' + document.body.innerHTML;
+
+                  // LITERAL CONTENT
+
+                  B.call (x, 'set', ['Data', 'view'], ['div', ['LITERAL', 'a&nbsp;b']]);
+
+                  if ([
+                     '<div id="в1" path="Data:view">a&nbsp;b</div>'
+                  ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted #18: ' + document.body.innerHTML;
+
+                  // NESTED ELEMENT
+
+                  B.call (x, 'set', ['Data', 'view'], ['div', dale.go (dale.times (3), function (v) {return ['p', v]})]);
+
+                  if ([
+                     '<div id="в1" path="Data:view"><p>1</p><p>2</p><p>3</p></div>'
+                  ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted #19: ' + document.body.innerHTML;
+
+                  var ps = c ('p');
+
+                  // REMOVE INTERNAL ELEMENT FROM THE MIDDLE (CONTENT CHANGE)
+
+                  B.call (x, 'set', ['Data', 'view'], ['div', dale.go (dale.times (2), function (v) {return ['p', v === 1 ? 1 : 3]})]);
+
+                  if ([
+                     '<div id="в1" path="Data:view"><p>1</p><p>3</p></div>'
+                  ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted #20: ' + document.body.innerHTML;
+
+                  if (c ('p') [0] !== ps [0]) return 'First paragraph changed unnecessarily #20';
+                  if (c ('p') [1] !== ps [1]) return 'Second paragraph changed unnecessarily #20';
+
+                  // REMOVE INTERNAL ELEMENT FROM THE MIDDLE (ATTRIBUTE CHANGE)
+
+                  B.call (x, 'set', ['Data', 'view'], ['div', dale.go (dale.times (3), function (v) {return ['p', {class: v}]})]);
+
+                  ps = c ('p');
+
+                  B.call (x, 'set', ['Data', 'view'], ['div', dale.go (dale.times (2), function (v) {return ['p', {class: v === 1 ? 1 : 3}]})]);
+
+                  if ([
+                     '<div id="в1" path="Data:view"><p class="1"></p><p class="3"></p></div>'
+                  ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted #21: ' + document.body.innerHTML;
+
+                  if (c ('p') [0] !== ps [0]) return 'First paragraph changed unnecessarily #21';
+                  if (c ('p') [1] !== ps [2]) return 'Third paragraph changed unnecessarily #21';
+
+                  // REPLACE OUTERMOST ELEMENT
+
+                  B.call (x, 'set', ['Data', 'view'], ['section', dale.go (dale.times (2), function (v) {return ['p', {class: v === 1 ? 1 : 3}]})]);
+
+                  if ([
+                     '<section id="в1" path="Data:view"><p class="1"></p><p class="3"></p></section>'
+                  ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted #22: ' + document.body.innerHTML;
+
+                  if (c ('p') [0] !== ps [0]) return 'First paragraph changed unnecessarily #22';
+                  if (c ('p') [1] !== ps [2]) return 'Third paragraph changed unnecessarily #22';
+
+                  // REPLACE OUTERMOST ELEMENT WITH OTHER ELEMENTS IN CONTAINER
+
+                  B.internal.count = 1;
+
+                  B.unmount ('body');
+                  B.call (x, 'set', ['Data', 'view'], ['div']);
+                  B.mount ('body', function () {
+                     return ['div', [
+                        ['header'],
+                        B.view (['Data', 'view'], function (view) {
+                           return view;
+                        }),
+                        ['footer']
+                     ]];
+                  });
+
+                  if ([
+                     '<div><header></header><div id="в1" path="Data:view"></div><footer></footer></div>'
+                  ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted #23: ' + document.body.innerHTML;
+
+                  B.call (x, 'set', ['Data', 'view'], ['p']);
+                  if ([
+                     '<div><header></header><p id="в1" path="Data:view"></p><footer></footer></div>'
+                  ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted #24: ' + document.body.innerHTML;
 
                });
 
-               return;
+               Test ('B.view valid inputs, paths', function () {
 
-               var views = [
-                  ['div', 'text'],
-                  ['div', 'more text'],
-                  ['div', 'a&nbsp;b'],
-                  ['div', ['LITERAL', 'a&nbsp;b']],
-                  ['div', {'class': 'abc'}, ['LITERAL', 'a&nbsp;b']],
-                  ['div', ['a']],
-               ];
+                  // INITIAL SETUP
 
-               dale.go (views, function (view) {
-                  B.call (x, 'set', ['Data', 'view'], view);
-                  console.log ('compare', document.body.innerHTML);
-                  // TODO: perform checks.
-               });
+                  B.unmount ('body');
 
-               console.log ('DEBUG body html:', document.body.innerHTML);
+                  B.call (x, 'set', ['Data', 'view'], ['div']);
 
-               //B.call (x, 'set', ['Data', 'sabe'], 'anxious');
-
-            });
-
-            // mount/unmount: test with id="B ... that it doesn't get matched
-            // same with B.view, see if old one blows up
-
-            var e = function () {};
-            var f = function () {};
-            var getid = function () {return B.B + (B.count - 1)}
-
-            B.respond ('test', 'old B.view', {burn: true}, function (x) {
-
-               Test ('B.view validation', function () {
-                  var responders = dale.keys (B.responders);
-
-                  if (B.view (/notapath/, e) !== false) return 'B.view accepted invalid path.';
-                  if (B.view (['path'], {attrs: {id: 'myid'}}, e) !== false) return 'B.view accepted id.';
-
-                  if (B.view ([], /notafun/) !== false) return 'B.view accepted invalid lfun.';
-
-                  if (B.view ([], {tag: 'paprika'}, e) !== false) return 'B.view accepted invalid tag.';
-                  if (B.view ([], {tag: /p/}, e) !== false) return 'B.view accepted invalid tag.';
-
-                  if (B.view ([], {attrs: /paprika/}, e) !== false) return 'B.view accepted invalid attrs.';
-
-                  if (B.view ([], {ondraw: /notafun/}, e) !== false) return 'B.view accepted invalid ondraw.';
-                  if (B.view ([], {onforget: /notafun/}, e) !== false) return 'B.view accepted invalid onforget.';
-
-                  if (B.view ('verb', 'path', e) !== false) return 'B.view accepted verb + path.';
-
-                  if (B.view ('path', {respond: {verb: 'a', path: 'b', lfun: e}}, e) !== false) return 'B.view accepted respond that is object.';
-
-                  if (B.view ('path', {respond: [{verb: 'a', path: 'b'}]}, e) !== false) return 'B.view accepted respond with invalid args.';
-
-                  if (B.view ('path', {respond: [null, 'path', e]}, e) !== false) return 'B.view accepted invalid verb in respond.';
-
-                  if (B.view ('path', {respond: [[{}, 'path', e]]}, e) !== false) return 'B.view accepted invalid verb in respond.';
-
-                  if (B.view ('path', {respond: ['verb', null, e]}, e) !== false) return 'B.view accepted invalid path in respond.';
-
-                  if (B.view ('path', {respond: [['verb', [[]], e]]}, e) !== false) return 'B.view accepted invalid path in respond.';
-
-                  if (B.view ('path', {respond: [['verb', 'path', e], ['verb', {}, e]]}, e) !== false) return 'B.view accepted invalid second respond.';
-
-                  if (B.view ('path', {respond: [['verb', 'path', e], ['verb', null, e]]}, e) !== false) return 'B.view accepted invalid second respond.';
-
-                  if (B.view ('path', {respond: ['a', 'b', {id: 'anything'}, e]}) !== false) return 'B.view accepted responder with id.';
-
-                  if (B.view ('path', {respond: [['verb', 'path', e], ['a', 'b', {id: 'anything'}, e]]}) !== false) return 'B.view accepted second responder with id.';
-
-                  if (B.view ('path', {respond: [[['verb', 'path', e]]]}, e) !== false) return 'B.view accepted invalid respond that is too nested.';
-
-                  var invalidView = B.view (x, ['a', 'path'], {ondraw: e, onforget: f}, function () {
-                     return /notaview/;
-                  });
-
-                  if (type (invalidView) !== 'array') return 'B.view didn\'t return lith when lfun returned invalid lith.';
-                  if (lith.g (invalidView) !== '<div id="в' + (B.count - 1) + '" path-в="a:path"><pre>Invalid lith: /notaview/</pre></div>') return 'B.view didn\'t return informative <pre> when lfun returned invalid lith';
-
-                  var id = B.B + (B.count - 1);
-
-                  if (B.responders [id].ondraw !== e) return 'B.view didn\'t correctly place ondraw in the responder.';
-                  if (B.responders [id].onforget !== f) return 'B.view didn\'t correctly place onforget in the responder.';
-                  if (type (B.responders [id].view) !== 'array') return 'B.view didn\t correctly place view in the responder.';
-                  if (B.responders [id].view [0] !== 'pre') return 'B.view didn\t correctly place view in the responder.';
-
-                  B.forget (id);
-
-                  if (dale.keys (B.responders).length !== responders.length) return 'B.view generated invalid responders.';
-               });
-
-
-               return;
-
-               var initialLength = dale.keys (B.responders).length;
-
-               Test ('B.view valid input', function () {
-
-                  var initial = B.count;
-
-                  var view = B.view (x, [2, 3], e);
-
-                  if (type (view) !== 'array' || view [0] !== 'div' || type (view [1]) !== 'object' || view [1].id !== getid () || view [1] ['path-' + B.B] !== [2, 3].join (':')) return 'B.view didn\'t initialize view attributes properly with lfun returning undefined.';
-
-                  if (! B.responders [getid ()] || B.responders [getid ()].view !== undefined) return 'B.view didn\'t generate properly responder with lfun returning undefined.';
-
-                  view = B.view (x, 'a', function () {return 2});
-
-                  if (type (view) !== 'array' || view [0] !== 'div' || type (view [1]) !== 'object' || view [1].id !== getid () || view [1] ['path-' + B.B] !== 'a') return 'B.view didn\'t initialize view attributes properly #1.';
-
-                  if (! B.responders [getid ()] || B.responders [getid ()].view !== 2) return 'B.view didn\'t properly generate responder #1.';
-
-                  view = B.view (x, ['State', 'view'], {tag: 'p', attrs: {}, ondraw: e, onforget: f}, function () {return ['a', 1]});
-
-                  if (type (view) !== 'array' || view [0] !== 'p' || type (view [1]) !== 'object' || view [1].id !== getid () || view [1] ['path-' + B.B] !== 'State:view') return 'B.view didn\'t initialize view attributes properly #2.';
-
-                  if (! B.responders [getid ()] || B.responders [getid ()].verb !== 'change' || B.responders [getid ()].priority !== -1 || ! eq (B.responders [getid ()].view, ['a', 1]) || B.responders [getid ()].ondraw !== e || B.responders [getid ()].onforget !== f) return 'B.view didn\'t properly generate responder #2.';
-
-                  view = B.view (x, ['State', 'items', 0], {tag: 'input', attrs: {'class': 'blue', type: 'text'}}, function () {});
-
-                  if (type (view) !== 'array' || view [0] !== 'input' || type (view [1]) !== 'object' || ! eq ({id: getid (), 'path-в': 'State:items:0', "class": 'blue', type: 'text'}, view [1])) return 'B.view didn\'t initialize view attributes properly #3.';
-
-                  if (! B.responders [getid ()] || B.responders [getid ()].verb !== 'change' || B.responders [getid ()].priority !== -1 || ! eq (B.responders [getid ()].view, undefined)) return 'B.view didn\'t properly generate responder #3.';
-
-                  view = B.view (x, 'c', {respond: ['a', 'b', e]}, function () {});
-
-                  if (type (view) !== 'array') return 'B.view didn\'t properly generate responder with responder #1.';
-
-                  var responders = dale.fil (B.responders, undefined, function (responder) {
-                     if (responder.parent === getid ()) return responder;
-                  });
-
-                  if (responders.length !== 1 || ! eq (responders [0], {verb: 'a', path: ['b'], id: responders [0].id, lfun: e, parent: getid ()})) return 'B.view didn\'t register responders properly #1.';
-
-                  view = B.view (x, 'c', {respond: [['a', 'b', e]]}, function () {});
-
-                  if (type (view) !== 'array' || B.responders [getid ()].verb !== 'change' || B.responders [getid ()].priority !== -1) return 'B.view didn\'t properly generate responder with responder #2.';
-
-                  responders = dale.fil (B.responders, undefined, function (responder) {
-                     if (responder.parent === getid ()) return responder;
-                  });
-
-                  if (responders.length !== 1 || ! eq (responders [0], {verb: 'a', path: ['b'], id: responders [0].id, lfun: e, parent: getid ()})) return 'B.view didn\'t register responders properly #2.';
-
-                  view = B.view ('c', {respond: [[{verb: 'a', path: 'b'}, e]]}, function () {});
-
-                  if (type (view) !== 'array' || B.responders [getid ()].verb !== 'change' || B.responders [getid ()].priority !== -1) return 'B.view didn\'t properly generate responder with responder #3.';
-
-                  responders = dale.fil (B.responders, undefined, function (responder) {
-                     if (responder.parent === getid ()) return responder;
-                  });
-
-                  if (responders.length !== 1 || ! eq (responders [0], {verb: 'a', path: ['b'], id: responders [0].id, lfun: e, parent: getid ()})) return 'B.view didn\'t register responders properly #3.';
-
-                  view = B.view ('c', {respond: [['a', 'b', {parent: 'add', priority: 2, burn: true}, e]]}, function () {});
-
-                  if (type (view) !== 'array' || B.responders [getid ()].verb !== 'change' || B.responders [getid ()].priority !== -1) return 'B.view didn\'t properly generate responder with responder #4.';
-
-                  var getresponder = function () {
-                     return dale.stopNot (B.responders, undefined, function (responder) {
-                        if (responder.parent === 'add') return responder;
+                  B.mount ('body', function () {
+                     return B.view (['Data', 'view'], function (view) {
+                        return view;
                      });
-                  }
-
-                  if (! eq (getresponder (), {id: getresponder ().id, verb: 'a', path: ['b'], parent: 'add', priority: 2, burn: true, lfun: e})) return 'B.view didn\'t register responders properly #4.';
-
-                  B.forget (getresponder ().id);
-
-                  view = B.view ('c', {respond: ['a', 'b', {parent: 'add', priority: 2, burn: true}, e]}, function () {});
-
-                  if (type (view) !== 'array' || B.responders [getid ()].verb !== 'change' || B.responders [getid ()].priority !== -1) return 'B.view didn\'t properly generate responder with responder #5.';
-
-                  if (! eq (getresponder (), {id: getresponder ().id, verb: 'a', path: ['b'], parent: 'add', priority: 2, burn: true, lfun: e})) return 'B.view didn\'t register responders properly #5.';
-
-                  B.forget (getresponder ().id);
-
-                  view = B.view ('c', {respond: [['a', 'b', {parent: 'add', priority: 2, burn: true}, e], ['c', 'd', f]]}, function () {});
-
-                  if (type (view) !== 'array' || B.responders [getid ()].verb !== 'change' || B.responders [getid ()].priority !== -1) return 'B.view didn\'t properly generate responder with responder #6.';
-
-                  if (! eq (getresponder (), {id: getresponder ().id, verb: 'a', path: ['b'], parent: 'add', priority: 2, burn: true, lfun: e})) return 'B.view didn\'t register responders properly #6.';
-
-                  B.forget (getresponder ().id);
-
-                  responders = dale.fil (B.responders, undefined, function (responder) {
-                     if (responder.parent === getid ()) return responder;
                   });
 
-                  if (responders.length !== 1 || ! eq (responders [0], {verb: 'c', path: ['d'], id: responders [0].id, lfun: f, parent: getid ()})) return 'B.view didn\'t register responders properly #6.';
+                  var responder = B.responders [B.B + 2];
+                  if (responder.verb !== 'change') return 'Invalid change #2.';
+                  if (responder.path.length !== 0) return 'Invalid path #2.';
+                  if (responder.priority !== -1) return 'Invalid priority #2.';
+                  if (! eq (responder.elem, ['div', {id: B.B + 2, path: 'Data:view'}])) return 'Invalid elem #2.';
+                  if (responder.children.length !== 0) return 'Invalid children #2.';
 
-                  view = B.view ('c', {respond: []}, e);
+                  // VIEW THAT DEPENDS ON EVERYTHING
 
-                  if (! eq (view, ['div', {id: 'в20', 'path-в': 'c'}, ['LITERAL', '']])) return 'B.view didn\'t create view with empty responder.';
+                  var draws = 0;
 
-                  dale.go (dale.times (B.count - initial, initial), function (id) {
-                     id = B.B + id;
-                     B.forget (id);
+                  B.unmount ('body');
+                  B.mount ('body', function () {
+                     return B.view ([], function (allData) {
+                        draws++;
+                        return ['pre', JSON.stringify (allData)];
+                     });
                   });
 
-                  if (dale.keys (B.responders).length !== initialLength) return 'Cleanup failed #1.';
-               });
+                  responder = B.responders [B.B + 3];
+                  if (responder.path.length !== 0) return 'Invalid path #3.';
+                  if (responder.priority !== -1) return 'Invalid priority #3.';
+                  if (! eq (responder.elem, ['pre', {id: B.B + 3, path: ':'}, JSON.stringify (B.get ())])) return 'Invalid elem #3.';
+                  if (responder.children.length !== 0) return 'Invalid children #3.';
 
-            });
+                  if ([
+                     '<pre id="в3" path=":">' + JSON.stringify (B.store) + '</pre>',
+                  ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted, view with path []: ' + document.body.innerHTML;
 
-            var Views = {};
+                  if (draws !== 1) return 'View with path [] drawn more than once.';
+                  B.call (x, 'change', []);
+                  if (draws !== 2) return 'View with path [] drawn more than once on path change.';
+                  B.call (x, 'change', ['foo', 'bar']);
+                  if (draws !== 3) return 'View with path [] not drawn once with deep object modified.';
 
-            // *** INIT ***
+                  // MULTIPLE PATHS
 
-            B.respond ('test', 'init', {burn: true}, function (x) {
-
-               // *** BASE VIEW ***
-
-               Views.baseCSS = [
-                  ['body', {
-                     'background-color': '#c9c9c9',
-                     'font-family': '"Arial Narrow", Arial, sans-serif'
-                  }],
-                  ['#canvas', {
-                     width: .9,
-                     'min-height': 200,
-                     'border-top, border-bottom': 'solid 1px gray',
-                     'border-left, border-right': 'solid 2px gray',
-                     'margin, overflow': 'auto',
-                     'background-color': 'white'
-                  }],
-                  ['a, u', {cursor: 'pointer', 'text-decoration': 'underline', color: 'blue'}]
-               ];
-
-               Views.base = ['div', {id: 'canvas'}, [
-                  B.view (['State', 'view'], function (x, view) {
-                     return [
-                        ['style', Views.baseCSS],
-                        B.view ('State', function (x, state) {
-                           return Views [view] ? Views [view] () : state ['default'];
-                        })
-                     ];
-                  })
-               ]];
-
-               B.mount ('body', Views.base);
-
-               B.call (x, 'set', ['State', 'default'], [['To be'], ' determined']);
-
-               Test ('canvas initialization', function () {
-                  if (c ('body #canvas').length        !== 1) return 'Canvas not placed.';
-                  if (c ('body #canvas style').length  !== 1) return 'Inner style not placed.';
-                  if (c ('body #canvas div div').length !== 1) return 'Inner div not placed.';
-
-                  B.call (x, 'set', ['State', 'default'], ['h1', [['To be'], ' determined']]);
-                  if (c ('body #canvas div div h1') [0].innerHTML !== 'To be determined') return 'Content of inner div not placed properly.';
-
-                  var evs = B.eventlog.length;
-                  B.call (x, 'set', ['State', 'default'], ['h1', [['To be'], ' determined']]);
-                  if (B.eventlog.length - evs !== 1) return 'B.change didn\'t prevent redrawing on equal set.';
-                  if (c ('body #canvas div div h1') [0].innerHTML !== 'To be determined') return 'Content of inner div not placed properly.';
-
-               });
-
-               Test ('viewresponders', function () {
-                  var viewresponders = dale.fil (dale.keys (B.responders), undefined, function (v) {
-                     if (v.match ('в')) return v;
-                  });
-                  if (viewresponders.length !== 2) return 'Unexpected viewresponders.';
-                  var viewresponder = B.responders [viewresponders [0]];
-                  if (viewresponder.verb !== 'change') return 'Invalid viewresponder verb #1.';
-                  if (! eq (viewresponder.path, ['State', 'view'])) return 'Invalid viewresponder path #1.';
-                  if (type (viewresponder.view) !== 'array') return 'Invalid viewresponder view #1.';
-                  if (viewresponder.priority !== -1) return 'Invalid viewresponder priority #1.';
-
-                  viewresponder = B.responders [viewresponders [1]];
-                  if (viewresponder.verb !== 'change') return 'Invalid viewresponder verb #2.';
-                  if (! eq (viewresponder.path, ['State'])) return 'Invalid viewresponder path #2.';
-                  if (type (viewresponder.view) !== 'array') return 'Invalid viewresponder view #2.';
-                  if (viewresponder.priority !== -2) return 'Invalid viewresponder priority #2.';
-               });
-
-               Test ('dangling', function () {
-
-                  var d1 = B.view ([], {onforget: function (x) {
-                     if (type (x) !== 'object') throw new Error ('onforget from dangling error received wrong context.');
-                     if (type (x.from) !== 'array') throw new Error ('onforget from dangling error received wrong x.from.');
-                     if (x.from [0].ev !== 'danglingView') throw new Error ('onforget from dangling error received wrong x.from [0].ev.');
-                     if (type (x.responder) !== 'object') throw new Error ('onforget from dangling error received wrong x.responder.');
-                     if (type (x.responder.id) !== 'string') throw new Error ('onforget from dangling error received wrong id.');
-                     if (type (x.responder.path) !== 'array' || x.responder.path.length !== 0) throw new Error ('onforget from dangling error received wrong x.responder.path.');
-                  }}, function () {});
-
-                  B.call (x, 'set', ['Data', 'test'], 1);
-
-                  var viewresponders = dale.fil (dale.keys (B.responders), undefined, function (v) {
-                     if (v.match ('в')) return v;
+                  B.unmount ('body');
+                  B.mount ('body', function () {
+                     return B.view ([['Data'], ['State']], function (Data, State, third) {
+                        draws++;
+                        return ['div', [
+                           ['textarea', JSON.stringify (Data)],
+                           ['textarea', JSON.stringify (State)],
+                           ['textarea', arguments.length]
+                        ]];
+                     });
                   });
 
-                  if (viewresponders.length !== 2) return 'Dangling responder was not removed.';
+                  responder = B.responders [B.B + 4];
+                  if (responder.path.length !== 0) return 'Invalid path #4.';
+                  if (responder.priority !== -1) return 'Invalid priority #4.';
+                  if (responder.children.length !== 0) return 'Invalid children #4.';
 
-                  delete B.eventlog [0].from;
-                  delete B.eventlog [0].responder;
+                  if ([
+                     '<div id="в4" path="Data, State">' + '<textarea>' + JSON.stringify (Data) + '</textarea><textarea>' + JSON.stringify (State) + '</textarea><textarea>2</textarea></div>'
+                  ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted, view with multiple paths: ' + document.body.innerHTML;
 
-                  if (! eq (B.eventlog [0], {verb: 'change', path: ['Data', 'test']})) return 'change event fired with wrong parameters.';
+                  if (draws !== 4) return 'View with multiple paths drawn more than once.';
+                  B.call (x, 'change', ['bla']);
+                  if (draws !== 4) return 'View with multiple paths drawn unnecessarily.';
+                  B.call (x, 'change', []);
+                  if (draws !== 5) return 'View with multiple paths drawn invalid amount of times when root object changes.';
+                  B.call (x, 'change', 'Data');
+                  if (draws !== 6) return 'View with multiple paths drawn invalid amount of times when first argument changes.';
+                  B.call (x, 'change', 'State');
+                  if (draws !== 7) return 'View with multiple paths drawn invalid amount of times when second argument changes.';
+
+                  // SIMPLE PATH
+
+                  B.unmount ('body');
+                  B.mount ('body', function () {
+                     return B.view ('Data', function (Data) {
+                        return ['div', [
+                           ['textarea', JSON.stringify (Data)],
+                           ['textarea', arguments.length]
+                        ]];
+                     });
+                  });
+
+                  responder = B.responders [B.B + 5];
+                  if (responder.path.length !== 0) return 'Invalid path #5.';
+                  if (responder.priority !== -1) return 'Invalid priority #5.';
+                  if (responder.children.length !== 0) return 'Invalid children #5.';
+
+                  if ([
+                     '<div id="в5" path="Data">' + '<textarea>' + JSON.stringify (Data) + '</textarea><textarea>1</textarea></div>'
+                  ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted, view with multiple paths: ' + document.body.innerHTML;
+               });
+
+               Test ('B.view, nested views', function () {
+
+                  // DOUBLE NESTED
+
+                  B.unmount ('body');
+                  B.mount ('body', function () {
+                     return B.view (['Data', 'view'], function (view) {
+                        return ['div', [
+                           view,
+                           B.view ('State', function (State) {
+                              return ['pre', JSON.stringify (State)];
+                           })
+                        ]];
+                     });
+                  });
+
+                  if ([
+                     '<div id="в6" path="Data:view"><div></div><pre id="в7" path="State">{}</pre></div>'
+                  ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted, double nested: ' + document.body.innerHTML;
+
+                  responder = B.responders [B.B + 6];
+                  if (responder.path.length !== 0) return 'Invalid path #6.';
+                  if (responder.priority !== -1) return 'Invalid priority #6.';
+                  if (! (eq (responder.children, [B.B + 7]))) return 'Invalid children #6.';
+
+                  var responder2 = B.responders [B.B + 7];
+                  if (responder2.parent !== B.B + 6) return 'Invalid parent #7.';
+                  if (responder2.path.length !== 0) return 'Invalid path #7.';
+                  if (responder2.priority !== -2) return 'Invalid priority #7.';
+                  if (! (eq (responder2.children, []))) return 'Invalid children #7.';
+
+                  // TRIPLE NESTED
+
+                  var draws = {outer: 0, medium: 0, inner0: 0, inner1: 0};
+
+                  B.unmount ('body');
+                  B.mount ('body', function () {
+                     return B.view (['Data', 'view'], function (view) {
+                        draws.outer++;
+                        return ['div', [
+                           view,
+                           B.view ('State', function (State) {
+                              draws.medium++;
+                              return ['div', [
+                                 B.view ('Data', function () {
+                                    draws.inner0++;
+                                    return ['pre'];
+                                 }),
+                                 B.view (['Data', 'view'], function () {
+                                    draws.inner1++;
+                                    return ['pre'];
+                                 })
+                              ]];
+                           })
+                        ]];
+                     });
+                  });
+
+                  if ([
+                     '<div id="в8" path="Data:view"><div></div><div id="в9" path="State"><pre id="в10" path="Data"></pre><pre id="в11" path="Data:view"></pre></div></div>'
+                  ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted, triple nested: ' + document.body.innerHTML;
+
+                  responder = B.responders [B.B + 8];
+                  if (responder.priority !== -1) return 'Invalid priority #8.';
+                  if (! (eq (responder.children, [B.B + 9]))) return 'Invalid children #8.';
+
+                  responder2 = B.responders [B.B + 9];
+                  if (responder2.parent !== B.B + 8) return 'Invalid parent #9.';
+                  if (responder2.priority !== -2) return 'Invalid priority #9.';
+                  if (! (eq (responder2.children, [B.B + 10, B.B + 11]))) return 'Invalid children #9.';
+
+                  var responder3 = B.responders [B.B + 10];
+                  if (responder3.parent !== B.B + 9) return 'Invalid parent #10.';
+                  if (responder3.priority !== -3) return 'Invalid priority #10.';
+                  if (! (eq (responder3.children, []))) return 'Invalid children #10.';
+
+                  var responder4 = B.responders [B.B + 11];
+                  if (responder4.parent !== B.B + 9) return 'Invalid parent #11.';
+                  if (responder4.priority !== -3) return 'Invalid priority #11.';
+                  if (! (eq (responder4.children, []))) return 'Invalid children #11.';
+
+                  if (! eq (draws, {outer: 1, medium: 1, inner0: 1, inner1: 1})) return 'Invalid draws count #1.';
+
+                  B.call (x, 'set', ['Data', 'view'], ['section']);
+
+                  if ([
+                     '<div id="в8" path="Data:view"><section></section><div id="в12" path="State"><pre id="в13" path="Data"></pre><pre id="в14" path="Data:view"></pre></div></div>'
+                  ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted, triple nested: ' + document.body.innerHTML;
+
+                  if (! eq (draws, {outer: 2, medium: 2, inner0: 2, inner1: 2})) return 'Invalid draws count #1.';
+
+                  if (B.responders [B.B + 9] !== undefined)  return 'Responder #9 not deleted.';
+                  if (B.responders [B.B + 10] !== undefined) return 'Responder #10 not deleted.';
+                  if (B.responders [B.B + 11] !== undefined) return 'Responder #11 not deleted.';
+
+                  responder = B.responders [B.B + 8];
+                  if (responder.priority !== -1) return 'Invalid priority #8, 2.';
+                  if (! (eq (responder.children, [B.B + 12]))) return 'Invalid children #8, 2.';
+
+                  responder2 = B.responders [B.B + 12];
+                  if (responder2.parent !== B.B + 8) return 'Invalid parent #12.';
+                  if (responder2.priority !== -2) return 'Invalid priority #12.';
+                  if (! (eq (responder2.children, [B.B + 13, B.B + 14]))) return 'Invalid children #12.';
+
+                  responder3 = B.responders [B.B + 13];
+                  if (responder3.parent !== B.B + 12) return 'Invalid parent #13.';
+                  if (responder3.priority !== -3) return 'Invalid priority #13.';
+                  if (! (eq (responder3.children, []))) return 'Invalid children #13.';
+
+                  responder4 = B.responders [B.B + 14];
+                  if (responder4.parent !== B.B + 12) return 'Invalid parent #14.';
+                  if (responder4.priority !== -3) return 'Invalid priority #14.';
+                  if (! (eq (responder4.children, []))) return 'Invalid children #14.';
 
                });
 
-               Views.args = function () {
-                  return [
-                     B.view (['Data', 'title'], {tag: 'h1', attrs: {"class": 'opa'}}, function (x, title) {return title}),
-                     ['div', {"class": 'nav'}, B.view (['Data', 'items'], function (x, items) {
-                        return ['ul', {"class": 'items'}, dale.go (items, function (v, k) {
-                           return ['li', {"class": k}, v];
+
+               Test ('B.view, tables', function () {
+
+                  B.unmount ('body');
+                  B.call (x, 'set', ['Data', 'view'], ['table']);
+                  B.mount ('body', function () {
+                     return B.view (['Data', 'view'], function (view) {
+                        return view;
+                     });
+                  });
+
+                  if ([
+                     '<table id="в15" path="Data:view"></table>'
+                  ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted, table #1: ' + document.body.innerHTML;
+
+                  B.call (x, 'set', ['Data', 'view'], ['table', ['tr']]);
+                  if ([
+                     '<table id="в15" path="Data:view"><tbody><tr></tr></tbody></table>'
+                  ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted, table #2: ' + document.body.innerHTML;
+
+                  B.call (x, 'set', ['Data', 'view'], ['table', ['thead', ['tr']]]);
+                  if ([
+                     '<table id="в15" path="Data:view"><thead><tr></tr></thead></table>'
+                  ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted, table #3: ' + document.body.innerHTML;
+
+                  B.call (x, 'set', ['Data', 'view'], ['table', [['thead', ['tr']], [['tbody', ['tr']]]]]);
+                  if ([
+                     '<table id="в15" path="Data:view"><thead><tr></tr></thead><tbody><tr></tr></tbody></table>'
+                  ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted, table #4: ' + document.body.innerHTML;
+
+               });
+
+               Test ('B.view, list', function () {
+                  B.unmount ('body');
+                  B.mount ('body', function () {
+                     return B.view (['Data', 'list'], function (list) {
+                        return ['ul', dale.go (list, function (item) {
+                           return ['li', item];
                         })];
-                     })],
-                  ];
-               }
-
-               B.call (x, 'set', ['State', 'view'], 'args');
-
-               Data.items = [];
-
-               Test ('change view to args', function () {
-                  if (State.view !== 'args') return 'Data item not set!';
-               });
-
-               Test ('args view placed', function () {
-                  if (! c ('#canvas div div.nav')) return 'nav div not placed.';
-                  if (c ('#canvas div div.nav div ul.items') [0].innerHTML !== '') return 'ul not placed.';
-               });
-
-               B.call (x, 'set', ['Data', 'title'], 'One big title.');
-
-               Test ('view changed after set operation', function () {
-                  if (c ('#canvas h1') [0].innerHTML !== Data.title) return 'title not placed correctly.';
-               });
-
-               dale.go (['a', 'b', 'c', 'd'], function (v) {
-                  B.call (x, 'add', ['Data', 'items'], v);
-               });
-
-               Test ('views updated after add operation', function () {
-                  if (JSON.stringify (Data.items) !== JSON.stringify (['a', 'b', 'c', 'd'])) return 'add not working properly.';
-                  if (c ('ul.items li').length !== 4) return 'ul contents not updated.';
-               });
-
-               B.call (x, 'rem', ['Data', 'items'], [0, 2]);
-
-               Test ('views updated after rem operation', function () {
-                  if (JSON.stringify (Data.items) !== JSON.stringify (['b', 'd'])) return 'rem not working properly.';
-                  if (c ('ul.items li').length !== 2) return 'ul contents not updated.';
-                  if (c ('ul.items li') [0].innerHTML !== 'b') return 'rem not working properly.';
-               });
-
-               B.call (x, 'set', ['Data', 'items', 1], 'e');
-
-               Test ('views updated after set in array', function () {
-                  if (JSON.stringify (Data.items) !== JSON.stringify (['b', 'e'])) return 'rem not working properly.';
-                  if (c ('ul.items li').length !== 2) return 'ul contents not updated.';
-                  if (c ('ul.items li') [1].innerHTML !== 'e') return 'rem not working properly.';
-               });
-
-               B.call (x, 'set', ['Data', 'items'], {a: 'b', c: 'd'});
-
-               Test ('views updated after setting object', function () {
-                  if (JSON.stringify (Data.items) !== JSON.stringify ({a: 'b', c: 'd'})) return 'rem not working properly.';
-                  if (c ('ul.items li').length !== 2) return 'ul contents not updated.';
-                  if (c ('ul.items li.a').length !== 1) return 'ul contents not updated.';
-                  if (c ('ul.items li') [1].innerHTML !== 'd') return 'rem not working properly.';
-               });
-
-               B.call (x, 'rem', ['Data', 'items'], 'a');
-
-               Test ('views updated after removal', function () {
-                  if (JSON.stringify (Data.items) !== JSON.stringify ({c: 'd'})) return 'rem not working properly.';
-                  if (c ('ul.items li').length !== 1) return 'ul contents not updated.';
-                  if (c ('ul.items li.c').length !== 1) return 'ul contents not updated.';
-               });
-
-               B.call (x, 'rem', ['Data', 'items'], dale.keys (Data.items));
-
-               Test ('views updated after complete removal', function () {
-                  if (JSON.stringify (Data.items) !== JSON.stringify ({})) return 'rem not working properly.';
-                  if (c ('ul.items li').length !== 0) return 'ul contents not updated.';
-                  if (c ('ul.items li.c').length !== 0) return 'ul contents not updated.';
-               });
-
-               B.call (x, 'test', 'B.view additional');
-
-            });
-
-            // *** B.VIEW ADDITIONAL TESTS ***
-
-            B.respond ('test', 'B.view additional', {burn: true}, function (x) {
-
-               var counter1 = 0, counter2 = 0;
-
-               Views.escapes = function () {
-                  return B.view (['same', 'path'], function () {
-                     return [
-                        ['table', [
-                           ['thead', ['th']],
-                           ['tr', ['td', '"I have \'quotes\'!"']]
-                        ]],
-                        B.view (['same', 'path'], function () {
-                           return ['table', ['tbody', ['tr', ['td', '<`Me & you too!`>']]]];
-                        }),
-                        B.view (['same', 'path'], function () {
-                           return ['table', ['tr', ['td', '<eval>hack ()</eval>']]];
-                        }),
-                        B.view (['same', 'path'], function () {
-                           return ['table', [['thead'], [['tr', ['td', '<eval>hack ()</eval>']], ['br']]]];
-                        }),
-                        B.view (['same', 'path'], function () {
-                           return ['table', ['thead']];
-                        }),
-                        B.view (['same', 'path'], {ondraw: function () {
-                           if (B.get ('same', 'path') === undefined) B.call (x, 'set', ['same', 'path'], 1);
-                        }}, function () {
-                           return ['table', ['br']];
-                        })
-                     ];
-                  });
-               }
-
-               B.call (x, 'set', ['State', 'view'], 'escapes');
-
-               Test ('B.view quotes & special characters; and tbodys!', function () {
-
-                  B.call (x, 'change', ['same', 'path']);
-                  if (c ('table').length !== 6) return 'tables weren\'t created.';
-                  if (c ('tbody').length !== 5) return 'tbodys weren\'t created.';
-
-                  if (c ('table') [0].innerHTML !== '<thead><th></th></thead><tbody><tr><td>"I have \'quotes\'!"</td></tr></tbody>') return 'table #1 was not created properly.';
-                  if (c ('table') [1].innerHTML !== '<tbody><tr><td>&lt;`Me &amp; you too!`&gt;</td></tr></tbody>') return 'table #2 was not created properly.';
-                  if (c ('table') [2].innerHTML !== '<tbody><tr><td>&lt;eval&gt;hack ()&lt;/eval&gt;</td></tr></tbody>') return 'table #3 was not created properly.';
-                  if (c ('table') [3].innerHTML !== '<thead></thead><tbody><tr><td>&lt;eval&gt;hack ()&lt;/eval&gt;</td></tr><br></tbody>') return 'table #4 was not created properly.';
-
-                  if (c ('table') [4].innerHTML !== '<thead></thead>') return 'table #5 was not created properly.';
-
-                  if (c ('table') [5].innerHTML !== '<tbody><br></tbody>') return 'table #6 was not created properly.';
-
-                  B.call (x, 'change', ['same', 'path']);
-
-                  if (c ('table') [0].innerHTML !== '<thead><th></th></thead><tbody><tr><td>"I have \'quotes\'!"</td></tr></tbody>') return 'table #1 was not created properly.';
-                  if (c ('table') [1].innerHTML !== '<tbody><tr><td>&lt;`Me &amp; you too!`&gt;</td></tr></tbody>') return 'table #2 was not created properly.';
-                  if (c ('table') [2].innerHTML !== '<tbody><tr><td>&lt;eval&gt;hack ()&lt;/eval&gt;</td></tr></tbody>') return 'table #3 was not created properly.';
-                  if (c ('table') [3].innerHTML !== '<thead></thead><tbody><tr><td>&lt;eval&gt;hack ()&lt;/eval&gt;</td></tr><br></tbody>') return 'table #4 was not created properly.';
-
-                  if (c ('table') [4].innerHTML !== '<thead></thead>') return 'table #5 was not created properly.';
-
-                  if (c ('table') [5].innerHTML !== '<tbody><br></tbody>') return 'table #6 was not created properly.';
-               });
-
-               Views.tablebr = function () {
-                  return B.view (['a', 'path'], function () {
-                     return ['table', ['br']];
-                  });
-               }
-
-               B.call (x, 'set', ['State', 'view'], 'tablebr');
-
-               B.call (x, 'set', ['Data', 'viewevent1'], 7);
-               B.call (x, 'set', ['Data', 'viewevent2'], 9);
-
-               Views.viewevents = function () {
-                  return B.view (['Data', 'viewevent1'], {
-                     ondraw:   function (id) {checkid (id); checktd ('ondraw1'); Data.ondraw1++},
-                     onforget: function (id) {checkid (id); checktd ('onforget1'); Data.onforget1++},
-                     respond: ['a', 'b', function () {}]
-                  }, function (x, viewevent1) {
-                     return B.view (['Data', 'viewevent2'], {
-                        ondraw:   function (id) {checkid (id); checktd ('ondraw2'); Data.ondraw2++},
-                        onforget: function (id) {checkid (id); Data.onforget2++},
-                        respond: [
-                           ['a', 'b', function () {}],
-                           ['a', 'b', function () {}],
-                        ]
-                     }, function (x, viewevent2) {
-                        return ['td', {id: 'td'}, viewevent1 + viewevent2];
                      });
                   });
-               }
 
-               Data.ondraw1 = 0;
-               Data.ondraw2 = 0;
-               Data.onforget1 = 0;
-               Data.onforget2 = 0;
+                  if ([
+                     '<ul id="в16" path="Data:list"></ul>'
+                  ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted, list #1: ' + document.body.innerHTML;
 
-               var checktd = function (where) {
-                  if (parseInt (c ('#td').innerHTML) !== (Data.viewevent1 + Data.viewevent2)) throw new Error ('ondraw/onforget timing error: ' + where);
-               }
+                  B.call (x, 'set', ['Data', 'list'], [1, 2, 3, 4]);
 
-               var checkid = function (x) {
-                  if (type (x) !== 'object') throw new Error ('ondraw/onforget didn\'t receive context');
-                  if (type (x.from) !== 'array') throw new Error ('ondraw/onforget didn\'t receive x.from');
-                  if (type (x.responder) !== 'object') throw new Error ('ondraw/onforget didn\'t receive x.responder');
-                  if (type (x.responder.id) !== 'string' || ! x.responder.id.match (/^в[0-9a-f]+$/)) throw new Error ('ondraw/onforget didn\'t receive valid id.');
-               }
+                  if ([
+                     '<ul id="в16" path="Data:list"><li>1</li><li>2</li><li>3</li><li>4</li></ul>'
+                  ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted, list #2: ' + document.body.innerHTML;
 
-               var compare = function (comparison) {
-                  return ('' + Data.ondraw1 + Data.ondraw2 + Data.onforget1 + Data.onforget2) !== comparison;
-               }
+                  B.call (x, 'set', ['Data', 'list', 1], 9);
 
-               B.call (x, 'set', ['State', 'view'], 'viewevents');
+                  if ([
+                     '<ul id="в16" path="Data:list"><li>1</li><li>9</li><li>3</li><li>4</li></ul>'
+                  ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted, list #3: ' + document.body.innerHTML;
 
-               Test ('Testing view events', function () {
-                  if (compare ('1100')) return 'ondraw/onforget didn\'t work #1.';
-                  B.call (x, 'set', ['Data', 'viewevent2'], 11);
-                  if (compare ('1200')) return 'ondraw/onforget didn\'t work #2.';
-                  B.call (x, 'set', ['Data', 'viewevent1'], 4);
-                  if (compare ('2301')) return 'ondraw/onforget didn\'t work #3.';
-                  B.call (x, 'change', ['State'], State);
-                  if (compare ('3412')) return 'ondraw/onforget didn\'t work #4.';
-                  B.call (x, 'set', ['State', 'view'], 'bla');
-                  if (compare ('3423')) return 'ondraw/onforget didn\'t work #5.';
+                  B.call (x, 'rem', ['Data', 'list'], 2);
+
+                  if ([
+                     '<ul id="в16" path="Data:list"><li>1</li><li>9</li><li>4</li></ul>'
+                  ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted, list #4: ' + document.body.innerHTML;
+
+                  B.call (x, 'add', ['Data', 'list'], 'a > b');
+
+                  if ([
+                     '<ul id="в16" path="Data:list"><li>1</li><li>9</li><li>4</li><li>a &gt; b</li></ul>'
+                  ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted, list #5: ' + document.body.innerHTML;
+
                });
 
-               Views.respond = function () {
-                  return B.view (['Data'], function (x, Data) {
-                     return [
-                        Data.extra ? [
-                           ['input', {value: 'throw focus off'}],
-                           ['input', {value: 'throw focus off'}],
-                           ['input', {value: 'throw focus off'}],
-                        ] : [],
-                        ['input', B.ev ({id: 'user', value: B.get ('Data', 'user')},                   ['onchange', 'set', ['Data', 'user']])],
-                        ['input', B.ev ({id: 'pass', value: B.get ('Data', 'pass'), type: 'password'}, ['onchange', 'set', ['Data', 'pass']])]
-                     ];
+               Test ('B.view, inputs', function () {
+                  B.unmount ('body');
+                  B.mount ('body', function () {
+                     return B.view (['Data'], function (Data) {
+                        return ['div', [
+                           Data.extra ? [
+                              ['input', {value: 'throw focus off'}],
+                              ['input', {value: 'throw focus off'}],
+                              ['input', {value: 'throw focus off'}],
+                           ] : [],
+                           ['input', {id: 'user', value: B.get ('Data', 'user'),                   onchange: B.ev ('set', ['Data', 'user'])}],
+                           ['input', {id: 'pass', value: B.get ('Data', 'pass'), type: 'password', onchange: B.ev ('set', ['Data', 'pass'])}]
+                        ]];
+                     });
                   });
-               }
 
-               B.call (x, 'set', ['State', 'view'], 'respond');
+                  c ('#user').focus ? c ('#user').focus () : c ('#user').setActive ();
 
-               c ('#user').focus ();
+                  B.call (x, 'set', ['Data', 'user'], 'hello!');
+                  B.call (x, 'set', ['Data', 'pass'], 'secreto');
 
-               B.call (x, 'set', ['Data', 'user'], 'hello!');
-               B.call (x, 'set', ['Data', 'pass'], 'secreto');
+                  B.call (x, 'set', ['Data', 'extra'], true);
 
-               B.call (x, 'set', ['Data', 'extra'], true);
+                  Test ('Focus & value tests', function () {
+                     if (document.activeElement !== c ('#user')) return 'focus wasn\'t preserved when it should.';
 
-               Test ('Focus & value tests', function () {
-                  if (document.activeElement !== c ('#user')) return 'focus wasn\'t preserved when it should.';
-
-                  if (c ('#user').value !== 'hello!') return 'value wasn\'t preserved when it should.';
+                     if (c ('#user').value !== 'hello!') return 'value wasn\'t preserved when it should.';
+                     if (c ('#pass').value !== 'secreto') return 'value wasn\'t preserved when it should.';
+                  });
                });
 
-               // *** OPAQUE ***
+               Test ('B.view, textareas', function () {
+                  B.unmount ('body');
+                  B.mount ('body', function () {
+                     return B.view (['State', 'textarea'], function (data) {
+                        return ['div', dale.go (data, function (v) {
+                           return ['textarea', v === 6 ? undefined : '<' + v + '&'];
+                        })];
+                     });
+                  });
 
-               Views.opaque = function () {
+                  if ([
+                     '<div id="в18" path="State:textarea"></div>'
+                  ].indexOf (document.body.innerHTML) === -1) return 'Textareas #1: ' + document.body.innerHTML;
 
-                  return B.view (['State', 'ltable'], function (x, ltable) {
-                     return B.view (['State'], function (x, State) {
-                        return [
-                           ['table', dale.go (dale.times (ltable), function (v) {
-                              return ['tr', dale.go (dale.times (ltable), function (v2, k2) {
-                                 if (k2 === 0) return ['td', {'class': 'something ' + State.opaqueclass, opaque: true}, ['input']];
-                                 else return ['td', k2];
-                              })];
-                           })],
-                           ['div', {id: 'd1', opaque: true}],
-                           ['div', {id: 'd2', opaque: true}, ltable],
-                           ['div', {id: 'd3', opaque: true}, [
-                              ['span'],
-                              ['span'],
+                  B.call (x, 'set', ['State', 'textarea'], [1, 2, 3, 4, 5]);
+                  c ('textarea') [2].focus ? c ('textarea') [2].focus () : c ('textarea') [2].setActive ();
+
+                  if ([
+                     '<div id="в18" path="State:textarea"><textarea>&lt;' + State.textarea.join ('&amp;</textarea><textarea>&lt;') + '&amp;</textarea></div>'
+                  ].indexOf (document.body.innerHTML) === -1) return 'Textareas #2: ' + document.body.innerHTML;
+
+                  B.call (x, 'set', ['State', 'textarea'], [5, 4, 1, 2, 3]);
+                  if (document.activeElement !== c ('textarea') [2]) return 'Textarea lost focus #1.';
+                  if ([
+                     '<div id="в18" path="State:textarea"><textarea>&lt;' + State.textarea.join ('&amp;</textarea><textarea>&lt;') + '&amp;</textarea></div>'
+                  ].indexOf (document.body.innerHTML) === -1) return 'Textareas #3: ' + document.body.innerHTML;
+
+                  B.call (x, 'set', ['State', 'textarea'], [2, 1, 4, 3, 5]);
+                  // Here the diff will move the 2nd textarea to the 4th position through recycling.
+                  if (document.activeElement !== c ('textarea') [4]) return 'Textarea lost focus #2.';
+                  if ([
+                     '<div id="в18" path="State:textarea"><textarea>&lt;' + State.textarea.join ('&amp;</textarea><textarea>&lt;') + '&amp;</textarea></div>'
+                  ].indexOf (document.body.innerHTML) === -1) return 'Textareas #4: ' + document.body.innerHTML;
+
+                  B.call (x, 'set', ['State', 'textarea'], [1, 2, 5, 3, 4]);
+                  if (document.activeElement !== c ('textarea') [4]) return 'Textarea lost focus #3.';
+                  if ([
+                     '<div id="в18" path="State:textarea"><textarea>&lt;' + State.textarea.join ('&amp;</textarea><textarea>&lt;') + '&amp;</textarea></div>'
+                  ].indexOf (document.body.innerHTML) === -1) return 'Textareas #5: ' + document.body.innerHTML;
+
+                  B.call (x, 'set', ['State', 'textarea'], [1, 2, 5, 3, 6]);
+                  if (document.activeElement !== c ('textarea') [4]) return 'Textarea lost focus #4.';
+                  if ([
+                     '<div id="в18" path="State:textarea"><textarea>&lt;' + State.textarea.slice (0, 4).join ('&amp;</textarea><textarea>&lt;') + '&amp;</textarea><textarea></textarea></div>'
+                  ].indexOf (document.body.innerHTML) === -1) return 'Textareas #5: ' + document.body.innerHTML;
+
+               });
+
+               Test ('B.view, selects', function () {
+
+                  B.unmount ('body');
+                  B.mount ('body', function () {
+                     return B.view (['State', 'select'], function (both) {
+                        return ['div', ! both ? [
+                           ['select', [
+                              ['option', {selected: null}, 1],
+                              ['option', {selected: true}, 2],
+                              ['option', {selected: ''}, 3]
+                           ]]
+                        ] : [
+                           ['select', [
+                              ['option', 1],
+                              ['option', 2],
+                              ['option', 3]
                            ]],
-                        ];
+                           ['select', [
+                              ['option', 1],
+                              ['option', {selected: true}, 2],
+                              ['option', 3]
+                           ]]
+                        ]];
                      });
                   });
-               }
 
-               B.call (x, 'set', ['State', 'ltable'], 2);
-               B.call (x, 'set', ['State', 'view'], 'opaque');
+                  if ([
+                     '<div id="в19" path="State:select"><select><option>1</option><option selected="true">2</option><option>3</option></select></div>'
+                  ].indexOf (document.body.innerHTML) === -1) return 'Checkboxes #1: ' + document.body.innerHTML;
 
-               Test ('Testing opaque elements', function () {
-                  var opaques = c ('.something');
-                  if (opaques.length !== 2) return 'Opaques were not created.';
-                  opaques = c ('.something input');
-                  if (opaques.length !== 2) return 'Opaque contents were not created.';
+                  if (c ('option') [1].selected !== true) return 'Option values not set #1.';
 
-                  c.fill ('.something', '<input><input>');
-                  B.call (x, 'set', ['State', 'ltable'], 4);
-                  opaques = c ('.something');
-                  if (opaques.length !== 4) return 'Opaques were not updated 1.';
-                  opaques = c ('.something input');
-                  if (opaques.length !== 4) return 'Opaque contents were not updated 1.';
+                  B.call (x, 'set', ['State', 'select'], true);
 
-                  c.fill ('.something', 'boo');
-                  if (c ('.something') [0].innerHTML !== 'boo') return 'Opaque contents were not updated.';
+                  if ([
+                     '<div id="в19" path="State:select"><select><option>1</option><option>2</option><option>3</option></select><select><option>1</option><option selected="true">2</option><option>3</option></select></div>'
+                  ].indexOf (document.body.innerHTML) === -1) return 'Checkboxes #2: ' + document.body.innerHTML;
+                  if (c ('option') [1].selected !== false || c ('option') [4].selected !== true) return 'Option values not set #2.';
 
-                  B.call (x, 'set', ['State', 'ltable'], 5);
-                  opaques = c ('.something');
-                  if (opaques.length !== 5) return 'Opaques were not updated 2.';
-                  opaques = c ('.something input');
-                  if (opaques.length !== 5) return 'Opaque contents were not updated 2.';
-
-                  c.fill ('.something', '<div><input><span></span></div>');
-
-                  B.call (x, 'set', ['State', 'ltable'], 4);
-                  B.call (x, 'set', ['State', 'opaqueclass'], 'style');
-
-                  opaques = c ('.style');
-                  if (opaques.length !== 4) return 'Opaques were not updated 3.';
-                  opaques = c ('.style input');
-                  if (opaques.length !== 4) return 'Opaque contents were not updated 3.';
-
-                  if (c ('#d1').innerHTML !== '') return 'Opaque empty has invalid content after redraw.';
-                  if (c ('#d2').innerHTML !== '4') return 'Opaque text has invalid content after redraw.';
-                  if (c ('#d3').innerHTML !== '<span></span><span></span>') return 'Opaque multiple has invalid content after redraw.';
                });
 
-               B.call (x, 'test', 'prediff');
+               Test ('B.view, checkboxes', function () {
 
-            });
+                  B.call (x, 'set', ['Data', 'items'], [
+                     {id: 'widget1', title: 'Widget #1', price: 5,  checked: false},
+                     {id: 'widget2', title: 'Widget #2', price: 8,  checked: true},
+                     {id: 'widget3', title: 'Widget #3', price: 11, checked: true},
+                     {id: 'widget4', title: 'Widget #4', price: 4,  checked: false}
+                  ]);
 
-            // *** EVENTS TEST ***
-
-            B.respond ('test', 'events', {burn: true}, function (x) {
-
-               var counter = 0;
-
-               Views.events = function () {
-                  return B.view (x, ['Data'], {respond: [
-                     ['upload', 'i2', function (x, arg2, arg3) {
-                        Test ('form upload', function () {
-                           if (! x.from [1] || x.from [1].ev !== 'onclick' || ! x.from [1].attrs || x.from [1].attrs.value !== 'Submit') return 'B.ev didn\'t pass event or attributes in its stringified invocation to B.call.';
-                           if (JSON.stringify ({user: 'Talk about', pass: 'thepassion'}) !== JSON.stringify (Data.i2)) return 'form values weren\'t updated.';
-                           if (arg2 !== '"a"' || arg3 !== ',"b"') return 'extra args weren\'t passed properly.';
-                        });
-                     }],
-                     ['just', ['another', 'responder'], function () {}]
-                  ]}, function (x, Data) {
-                     counter++;
-                     Test ('x.from inside view function', function () {
-                        if (counter === 1 && (! x.from || x.from.length !== 9 || x.from [0].verb !== 'test' || x.from [0].path [0] !== 'events')) return 'x.from B.view error #1';
-                        if (counter === 2 && (! x.from || x.from.length !== 4 || x.from [1].verb !== 'change' || x.from [1].path [1] !== 'i1')) return 'x.from B.view error #2';
-                        if (counter === 3 && (! x.from || x.from.length !== 12 || x.from [1].verb !== 'change' || x.from [1].path [1] !== 'i1')) return 'x.from B.view error #3';
-                        if (counter === 4 && (! x.from || x.from.length !== 4 || x.from [1].verb !== 'change' || x.from [1].path [2] !== 'user')) return 'x.from B.view error #4';
-                        if (counter === 5 && (! x.from || x.from.length !== 4 || x.from [1].verb !== 'change' || x.from [1].path [2] !== 'pass')) return 'x.from B.view error #5';
-                        if (counter === 6 && (! x.from || x.from.length !== 12 || x.from [1].verb !== 'change' || x.from [1].path [1] !== 'i3')) return 'x.from B.view error #6';
-                        if (counter === 7 && (! x.from || x.from.length !== 12 || x.from [1].verb !== 'change' || x.from [1].path [2] !== 'fries')) return 'x.from B.view error #7';
-                        if (counter === 8 && (! x.from || x.from.length !== 4 || x.from [1].verb !== 'change' || x.from [1].path [2] !== 'fries')) return 'x.from B.view error #8';
+                  B.unmount ('body');
+                  B.mount ('body', function () {
+                     return B.view ('Data', function (Data) {
+                        return ['table', dale.go (Data.items, function (item, k) {
+                           if (Data.filter && item.title.match (Data.filter) === null) return;
+                           return ['tr', dale.go (['id', 'title', 'price', 'checked'], function (key) {
+                              if (key === 'checked') return ['td', [
+                                 ['input', {type: 'checkbox', checked: B.get ('Data', 'items', k, 'checked'), onchange: B.ev ('set', ['Data', 'items', k, 'checked'], ! B.get ('Data', 'items', k, 'checked'))}]
+                              ]];
+                              return ['td', item [key]];
+                           })];
+                        })];
                      });
-                     return [
-                        ['input', B.ev ({id: 'i1', value: B.get ('Data', 'i1')}, ['onchange', 'set', ['Data', 'i1']])],
-                        ['form', {id: 'i2'}, [
-                           ['input', B.ev ({name: 'user', type: 'text', value: B.get ('Data', 'i2', 'user')}, ['onchange', 'set', ['Data', 'i2', 'user']])],
-                           Data.i8 ? [] : ['input'],
-                           Data.i7 ? [] : ['input', {id: 'i7'}],
-                           ['input', B.ev ({name: 'pass', type: 'password', value: B.get ('Data', 'i2', 'pass')}, ['onchange', 'set', ['Data', 'i2', 'pass']])],
-                           ['input', B.ev ({type: 'button', value: 'Submit'}, ['onclick', 'upload', 'i2', {args: ['"a"', ',"b"']}])]
-                        ]],
-                        ['textarea', B.ev ({id: 'i3'}, ['onchange', 'set', ['Data', 'i3']]), B.get ('Data', 'i3')],
-                        ['form', {id: 'i4'}, [
-                           ['label', 'Fries'],
-                           ['input', B.ev ({
-                              type: 'checkbox',
-                              checked: B.get ('Data', 'i4', 'fries')
-                           }, ['onchange', 'set', ['Data', 'i4', 'fries'], {args: ! B.get ('Data', 'i4', 'fries')}])],
-                        ]],
-                        ['form', {id: 'i5'}, dale.go (['red', 'green', 'blue'], function (v) {
-                           return [
-                              ['label', v],
-                              ['input', B.ev ({name: 'colors', type: 'radio', checked: B.get ('Data', 'i5') === v}, ['onchange', 'set', ['Data', 'i5'], {args: v}])]
-                           ];
-                        })],
-                        ['br'],
-                        ['select', B.ev (['onchange', 'set', ['Data', 'i6']]), dale.go (['select one', 'leisure', 'ok computer', 'second coming'], function (v) {
-                           return ['option', {selected: B.get ('Data', 'i6') === v ? true : undefined, value: v}, v];
-                        })],
-                     ];
                   });
-               }
 
-               B.call (x, 'set', ['State', 'view'], 'events');
+                  if (c ('input') [0].checked !== false) return 'wrong checkbox was checked #1.';
+                  if (c ('input') [3].checked !== false) return 'wrong checkbox was checked #2.';
+                  if (c ('input') [1].checked !== true)  return 'checkbox wasn\'t checked #1.';
+                  if (c ('input') [2].checked !== true)  return 'checkbox wasn\'t checked #2.';
 
-               Test ('events', function () {
+                  B.call (x, 'set', ['Data', 'filter'], '1');
+                  if (c ('input') [0].checked !== false) return 'wrong checkbox was checked #3.';
+                  B.call (x, 'set', ['Data', 'filter'], '2');
+                  if (c ('input') [0].checked !== true) return 'checkbox wasn\'t checked #3.';
+                  B.call (x, 'set', ['Data', 'filter'], '');
+
+                  if (c ('input') [0].checked !== false) return 'wrong checkbox was checked #4.';
+                  if (c ('input') [3].checked !== false) return 'wrong checkbox was checked #5.';
+                  if (c ('input') [1].checked !== true)  return 'checkbox wasn\'t checked #4.';
+                  if (c ('input') [2].checked !== true)  return 'checkbox wasn\'t checked #5.';
+
+                  // For some reason, dispatching `click` doesn't work, even on the newest browsers!
+                  c.fire (c ('input') [0], 'change');
+
+                  if (c ('input') [0].checked !== true) return 'checkbox not checked after event.';
+               });
+
+               Test ('B.view, events', function () {
+                  B.unmount ('body');
+                  B.mount ('body', function () {
+                     return B.view ('Data', function (Data) {
+                        return ['div', [
+                           ['input', {id: 'i1', value: B.get ('Data', 'i1'), onchange: B.ev ('set', ['Data', 'i1'])}],
+                           ['form', {id: 'i2'}, [
+                              ['input', {name: 'user', type: 'text', value: B.get ('Data', 'i2', 'user'), onchange: B.ev ('set', ['Data', 'i2', 'user'])}],
+                              Data.i8 ? [] : ['input'],
+                              Data.i7 ? [] : ['input', {id: 'i7'}],
+                              ['input', {name: 'pass', type: 'password', value: B.get ('Data', 'i2', 'pass'), onchange: B.ev ('set', ['Data', 'i2', 'pass'])}],
+                              ['input', {type: 'button', value: 'Submit', onclick: B.ev ('upload', 'i2', '"a"', ',"b"')}]
+                           ]],
+                           ['textarea', {id: 'i3', onchange: B.ev ('set', ['Data', 'i3'])}, B.get ('Data', 'i3')],
+                           ['form', {id: 'i4'}, [
+                              ['label', 'Fries'],
+                              ['input', {
+                                 type: 'checkbox',
+                                 checked: B.get ('Data', 'i4', 'fries'),
+                                 onchange: B.ev ('set', ['Data', 'i4', 'fries'], ! B.get ('Data', 'i4', 'fries'))
+                              }]
+                           ]],
+                           ['form', {id: 'i5'}, dale.go (['red', 'green', 'blue'], function (v) {
+                              return [
+                                 ['label', v],
+                                 ['input', {name: 'colors', type: 'radio', checked: B.get ('Data', 'i5') === v, onchange: B.ev ('set', ['Data', 'i5'], v)}]
+                              ];
+                           })],
+                           ['br'],
+                           ['select', {onchange: B.ev ('set', ['Data', 'i6'])}, dale.go (['select one', 'leisure', 'ok computer', 'second coming'], function (v) {
+                              return ['option', {selected: B.get ('Data', 'i6') === v ? true : false, value: v}, v];
+                           })]
+                        ]];
+                     });
+                  });
+
                   c.set ('#i1', {value: 'i1'});
                   if (Data.i1 !== 'i1') return 'input onchange didn\'t update properly.';
                   B.call (x, 'set', ['Data', 'i1'], 'i1plus');
@@ -1571,14 +1596,14 @@
                   c.set ('#i2 [name="user"]', {value: 'Talk about'});
                   c.set ('#i2 [name="pass"]', {value: 'thepassion'});
 
-                  // http://stackoverflow.com/a/20548330
-                  try {
-                     var ev = new Event ('click');
-                     c ('#i2 [type="button"]') [0].dispatchEvent (ev);
-                  }
-                  catch (error) {
-                     c ('#i2 [type="button"]') [0].click ();
-                  }
+                  var matched = false, upload = B.respond ('upload', 'i2', {burn: true}, function (x, arg1, arg2) {
+                     if (arg1 !== '"a"' || arg2 !== ',"b"') matched = null;
+                     matched = true;
+                  });
+
+                  c.fire ('#i2 [type="button"]', 'click');
+                  if (matched === false) return 'event wasn\'t triggered on click.';
+                  if (matched === null)  return 'event didn\'t receive proper arguments.';
 
                   B.call (x, 'set', ['Data', 'i3'], 'some text');
                   if (c ('#i3').value !== 'some text') return 'textarea wasn\'t set properly';
@@ -1586,18 +1611,7 @@
                   B.call (x, 'set', ['Data', 'i4', 'fries'], true);
                   if (c ('#i4 input') [0].checked !== true) return 'checkbox wasn\'t checked.';
 
-                  try {
-                     c ('#i4 input') [0].dispatchEvent (new Event ('change'));
-                  }
-                  catch (error) {
-                     //http://stackoverflow.com/a/13439901
-                     if (document.createEvent) {
-                        var ev = document.createEvent ('Event');
-                        ev.initEvent ('change', true, true);
-                        c ('#i4 input') [0].dispatchEvent (ev);
-                     }
-                  }
-
+                  c.fire ('#i4 input', 'change');
                   if (B.get ('Data', 'i4', 'fries') !== false) return 'checkbox didn\'t change data after being changed.';
                   if (c ('#i4 input') [0].checked !== false) return 'checkbox wasn\'t unchecked.';
 
@@ -1617,334 +1631,143 @@
 
                   B.call (x, 'set', ['Data', 'i7'], true);
 
-                  if (document.activeElement !== null && document.activeElement !== c ('body') [0]) {
-                     return 'focus was preserved when it shouldn\'t.';
-                  }
+                  if (document.activeElement !== c ('body')) return 'focus was preserved when it shouldn\'t.';
 
                });
 
-               var counter = 0;
-               var db = function (wha, sec) {
-                  console.log ('DEBUG', wha, sec);
-               }
-
-               Views.selfmodify = function () {
-                  return B.view (x, ['State', 'self'], {tag: 'div', attrs: {"class": 'self'}, ondraw: function (x) {
-                     if (! B.get ('State', 'self')) B.call (x, 'set', ['State', 'self'], 1);
-                  }, onforget: function () {
-                     B.call ('set', ['foo', 'bar'], 2);
-                  }}, function (x, self) {return [
-                     dale.go (dale.times (50), function () {
-                        return ['td', self];
-                     }),
-                     B.view (['foo', 'bar'], function () {counter++})
-                  ]});
-               }
-
-               B.call (x, 'set', ['State', 'view'], 'selfmodify');
-
-               Test ('B.view selfmodify', function () {
-                  var targets = c ('div.self td');
-                  if (targets.length !== 50) return 'selfmodify didn\'t update tds #1.';
-                  if (targets [0].innerHTML !== '1') return 'selfmodify didn\'t update tds #2.';
-                  B.verbose = false;
-                  if (counter !== 3) return 'selfmodify triggered itself a wrong number of times.';
-               });
-
-               Views.simult = function () {
-                  return [
-                     B.view (['Data', 'self'], {ondraw: function () {
-                        if (! B.get ('Data', 'self')) {
-                           if (B.resolvequeue.length !== 1) throw new Error ('B.resolvequeue error.');
-                           B.call (x, 'set', ['Data', 'self'], 1);
-                           if (B.resolvequeue.length !== 3) throw new Error ('B.resolvequeue error.');
-                        }
-                     }},
-                     function (x, self) {
-                        return ['td', self];
-                     }),
-                     B.view (x, ['Data', 'self'], function (x, self) {
-                        return ['td', self];
-                     })
-                  ];
-               }
-
-               B.call (x, 'set', ['State', 'view'], 'simult');
-
-               Test ('B.view simult', function () {
-                  var targets = c ('td');
-                  if (targets.length !== 2) return 'simult didn\'t update tds #1.';
-                  if (targets [0].innerHTML !== '1') return 'simult didn\'t update tds #2.';
-               });
-
-               B.trample = 2;
-
-               Views.trample = function () {
-                  return B.view (x, ['State', 'items'], function (x, items) {
-                     return ['table', [
-                        ['thead', ['tr', ['td', 'items']]],
-                        ['tbody', dale.go (items, function (v) {
-                           return ['tr', ['td', v]];
-                        })]
+               Test ('B.view, trample', function () {
+                  B.unmount ('body');
+                  B.mount ('body', function () {
+                     return ['div', [
+                        ['p', 'hello'],
+                        B.view (['Data', 'items'], function (items) {
+                           return ['ul', dale.go (items, function (v) {return ['li', v]})];
+                        })
                      ]];
                   });
-               }
 
-               B.call (x, 'set', ['State', 'view'], 'trample');
+                  B.internal.timeout = 1;
+                  B.call (x, 'set', ['Data', 'items'], dale.times (100));
+                  if ([
+                     '<div><p>hello</p><ul id="в22" path="Data:items"><li>' + Data.items.join ('</li><li>') + '</li></ul></div>'
+                  ].indexOf (document.body.innerHTML) === -1) return 'Trample #1: ' + document.body.innerHTML;
+                  var llog = teishi.last (B.log);
+                  if (llog.args [0].diffLength !== false) return 'Trample #1 timeout was ignored.';
 
-               Test ('B.resolve trample', function () {
-                  if (c ('table') [0].innerHTML !== '<thead><tr><td>items</td></tr></thead><tbody></tbody>') return 'booyah';
-                  B.call (x, 'set', ['State', 'items'], dale.times (200));
-                  var t = teishi.time ();
-                  B.call (x, 'set', ['State', 'items'], dale.times (1));
-                  if (teishi.time () - t > 1000) return 'B.trample is not working!';
-               });
-
-               Views.select = function () {
-                  return B.view (['State', 'select'], {ondraw: function (x) {
-                     var s = B.get ('State', 'select');
-                     if (s === 0) return B.call (x, 'set', ['State', 'select'], 1);
-                  }}, function (x, select) {
-                     return [
-                        ['select', [
-                           ['option', {value: 0, selected: 0 === select}, 0],
-                           ['option', {value: 1, selected: 1 === select}, 1],
-                           select === 0 ? [] : ['option', {value: 2}, 2],
-                        ]],
-                        select === 1 ? [] : ['select', [
-                           ['option', {value: 0, selected: true}],
-                        ]],
-                        ['select', [
-                           ['option', {value: 1, selected: 0 === select}, 1],
-                           ['option', {value: 0, selected: 1 === select}, 0],
-                        ]],
-                     ];
-                  });
-               }
-
-               var shuffleArray = function (array) {
-                  if (array.length === 0) return array;
-                  dale.go (dale.times (array.length - 1, array.length - 1, -1), function (k) {
-                     var randomIndex = Math.floor (Math.random () * (k + 1));
-                     var temp = array [k];
-                     array [k] = array [randomIndex];
-                     array [randomIndex] = temp;
-                  });
-                  return array;
-               }
-
-               Views.textarea = function () {
-                  return B.view (['State', 'textarea'], {respond: [
-                     ['shuffle', '*', function (x) {
-                        B.call (x, 'set', ['State', 'textarea'], shuffleArray (B.get ('State', 'textarea')));
-                        B.call (x, 'change', ['State', 'textarea']);
-                     }],
-                  ], ondraw: function () {
-                  }}, function (x, textarea) {
-                     return [
-                        dale.go (textarea, function (i) {
-                           return ['textarea', {"class": 'main'}, i ? '<' + i + '>&amp;</html>' : undefined];
-                        }),
-                        dale.go (textarea, function (i) {
-                           return ['textarea', i];
-                        }),
-                        dale.go (textarea, function (i) {
-                           return ['input', {"class": 'check', type: 'checkbox', checked: i % 2 === 0}];
-                        }),
-                        ['br'],
-                        dale.go (textarea, function (i) {
-                           return ['input', {"class": 'text', value: i ? '<' + i + '><' : undefined}];
-                        }),
-                     ];
-                  });
-               }
-
-               Views.selectShuffle = function () {
-                  return B.view (['State', 'selectshuffle'], {ondraw: function () {
-                     if (! B.get ('State', 'selectshuffle')) B.call ('set', ['State', 'selectshuffle'], 1);
-                  }}, function (x, c) {
-                     if (! c) return ['select', [
-                        ['option', 1],
-                        ['option', {selected: true}, 2],
-                        ['option', 3],
+                  B.unmount ('body');
+                  B.mount ('body', function () {
+                     return ['div', [
+                        ['p', 'hello'],
+                        B.view (['Data', 'items'], function (items) {
+                           return [items.length === 100 ? 'ul' : 'div', dale.go (items, function (v) {return [items.length === 100 ? 'li' : 'p', v]})];
+                        })
                      ]];
-                     return [
-                        ['select'],
-                        ['select', [
-                           ['option', 1],
-                           ['option', {selected: true}, 2],
-                           ['option', 3],
-                        ]],
-                     ];
-                  });
-               }
-
-               Test ('moving selects & textareas', function () {
-                  B.call (x, 'set', ['State', 'view'], 'select');
-                  B.call (x, 'set', ['State', 'select'], 0);
-                  var firstOption = c ('option') [0];
-                  // `selected` as empty string is only in IE and Edge
-                  if (firstOption.getAttribute ('selected') !== null && firstOption.getAttribute ('selected') !== '') return 'Falsy value was inserted as attribute by B.prediff.';
-
-                  if (c ('option') [1].selected !== true || c ('option') [2].selected !== false) return 'Option values were not updated!';
-
-                  B.call (x, 'set', ['State', 'textarea'], dale.times (5));
-
-                  B.call (x, 'set', ['State', 'view'], 'textarea');
-
-                  if (! eq (dale.go (c ('textarea.main'), function (textarea) {
-                     return textarea.value;
-                  }), dale.go (B.get ('State', 'textarea'), function (v) {
-                     return '<' + v + '>&amp;</html>';
-                  }))) return 'Textarea value mismatch error #1.';
-
-                  if (! eq (dale.go (c ('input.check'), function (input) {
-                     return input.checked;
-                  }), dale.go (B.get ('State', 'textarea'), function (v) {
-                     return v % 2 === 0;
-                  }))) return 'Checked input mismatch error #1.';
-
-                  if (! eq (dale.go (c ('input.text'), function (input) {
-                     return input.value;
-                  }), dale.go (B.get ('State', 'textarea'), function (v) {
-                     return '<' + v + '><';
-                  }))) return 'Text input mismatch error #1.';
-
-                  B.call (x, 'set', ['State', 'textarea'], dale.times (5, 10));
-
-                  if (! eq (dale.go (c ('textarea.main'), function (textarea) {
-                     return textarea.value;
-                  }), dale.go (B.get ('State', 'textarea'), function (v) {
-                     return '<' + v + '>&amp;</html>';
-                  }))) return 'Textarea value mismatch error #2.';
-
-                  if (! eq (dale.go (c ('input.check'), function (input) {
-                     return input.checked;
-                  }), dale.go (B.get ('State', 'textarea'), function (v) {
-                     return v % 2 === 0;
-                  }))) return 'Checked input mismatch error #2.';
-
-                  if (! eq (dale.go (c ('input.text'), function (input) {
-                     return input.value;
-                  }), dale.go (B.get ('State', 'textarea'), function (v) {
-                     return '<' + v + '><';
-                  }))) return 'Text input mismatch error #2.';
-
-                  dale.go (c ('textarea'), function (textarea) {
-                     textarea.value = '';
                   });
 
-                  B.call (x, 'shuffle', '*');
+                  B.call (x, 'add', ['Data', 'items'], 0);
+                  if ([
+                     '<div><p>hello</p><div id="в23" path="Data:items"><p>' + Data.items.join ('</p><p>') + '</p></div></div>'
+                  ].indexOf (document.body.innerHTML) === -1) return 'Trample #2: ' + document.body.innerHTML;
+                  llog = teishi.last (B.log);
+                  if (llog.args [0].diffLength !== false) return 'Trample #2 timeout was ignored.';
 
-                  if (! eq (dale.go (c ('textarea.main'), function (textarea) {
-                     return textarea.value;
-                  }), dale.go (B.get ('State', 'textarea'), function (v) {
-                     return '<' + v + '>&amp;</html>';
-                  }))) return 'Textarea value mismatch error #3.';
+                  B.unmount ('body');
+                  B.mount ('body', function () {
+                     return ['div', [
+                        ['p', 'hello'],
+                        B.view (['Data', 'items'], function (items) {
+                           return [items.length === 100 ? 'ul' : 'div', dale.go (items, function (v) {return [items.length === 100 ? 'li' : 'p', v]})];
+                        }),
+                        ['footer']
+                     ]];
+                  });
 
-                  if (! eq (dale.go (c ('input.check'), function (input) {
-                     return input.checked;
-                  }), dale.go (B.get ('State', 'textarea'), function (v) {
-                     return v % 2 === 0;
-                  }))) return 'Checked input mismatch error #3.';
+                  B.call (x, 'rem', ['Data', 'items'], 0);
 
-                  if (! eq (dale.go (c ('input.text'), function (input) {
-                     return input.value;
-                  }), dale.go (B.get ('State', 'textarea'), function (v) {
-                     return '<' + v + '><';
-                  }))) return 'Text input mismatch error #3.';
+                  if ([
+                     '<div><p>hello</p><ul id="в24" path="Data:items"><li>' + Data.items.join ('</li><li>') + '</li></ul><footer></footer></div>'
+                  ].indexOf (document.body.innerHTML) === -1) return 'Trample #3: ' + document.body.innerHTML;
+                  llog = teishi.last (B.log);
+                  if (llog.args [0].diffLength !== false) return 'Trample #3 timeout was ignored.';
 
-                  B.call (x, 'set', ['State', 'textarea'], ['a', 'b', undefined, 'd', 'e']);
-
-                  if (! eq (dale.go (c ('textarea.main'), function (textarea) {
-                     return textarea.value || undefined;
-                  }), dale.go (B.get ('State', 'textarea'), function (v) {
-                     return v ? '<' + v + '>&amp;</html>' : undefined;
-                  }))) return 'Textarea value mismatch error #4.';
-
-                  if (! eq (dale.go (c ('input.check'), function (input) {
-                     return input.checked;
-                  }), dale.go (B.get ('State', 'textarea'), function (v) {
-                     return v % 2 === 0;
-                  }))) return 'Checked input mismatch error #4.';
-
-                  if (! eq (dale.go (c ('input.text'), function (input) {
-                     return input.value || undefined;
-                  }), dale.go (B.get ('State', 'textarea'), function (v) {
-                     return v ? '<' + v + '><' : undefined;
-                  }))) return 'Text input mismatch error #4.';
-
-                  B.call ('set', ['State', 'view'], 'selectShuffle');
-
-                  if (c ('select') [1].value !== '2') return 'new select with two kept options that were selected before error';
+                  B.internal.timeout = 200;
 
                });
 
-               B.call (x, 'test', 'attrs');
-
-            });
-
-            // *** ATTRS TEST ***
-
-            B.respond ('test', 'attrs', {burn: true}, function (x) {
-
-               B.call (x, 'set', ['Data', 'items'], [
-                  {id: 'widget1', title: 'Widget #1', price: 5,  checked: false},
-                  {id: 'widget2', title: 'Widget #2', price: 8,  checked: true},
-                  {id: 'widget3', title: 'Widget #3', price: 11, checked: true},
-                  {id: 'widget4', title: 'Widget #4', price: 4,  checked: false}
-               ]);
-
-               Views.attrs = function () {
-                  return B.view (x, ['Data'], function (x, Data) {
-                     return ['table', dale.go (Data.items, function (item, k) {
-                        if (Data.filter && Data.filter.match (item.title) === null) return;
-                        return ['tr', dale.go (['id', 'title', 'price', 'checked'], function (key) {
-                           if (key === 'checked') return ['td', [
-                              ['input', B.ev ({type: 'checkbox', checked: B.get ('Data', 'items', k, 'checked')}, ['onchange', 'set', ['Data', 'items', k, 'checked'], {args: ! B.get ('Data', 'items', k, 'checked')}])]
-                           ]];
-                           return ['td', item [key]];
-                        })];
-                     })];
+               Test ('B.view, opaque', function () {
+                  B.unmount ('body');
+                  B.mount ('body', function () {
+                     return B.view ('State', function (State) {
+                        return ['section', [
+                           ['table', dale.go (dale.times (State.ltable || 0), function (v) {
+                              return ['tr', dale.go (dale.times (State.ltable || 0), function (v2, k2) {
+                                 if (k2 === 0) return ['td', {'class': 'something ' + State.opaqueclass, opaque: true}, ['input']];
+                                 else return ['td', k2];
+                              })];
+                           })],
+                           ['div', {id: 'd1', opaque: true}],
+                           ['div', {id: 'd2', opaque: true}, State.ltable],
+                           ['div', {id: 'd3', opaque: true}, [
+                              ['span'],
+                              ['span'],
+                           ]],
+                           ['div', {id: 'd4', opaque: true}, ['LITERAL', '<svg class="c' + State.ltable + '"></svg>']]
+                        ]];
+                     });
                   });
-               }
 
-               B.call (x, 'set', ['State', 'view'], 'attrs');
+                  B.call (x, 'set', ['State', 'ltable'], 2);
 
-               Test ('attrs', function () {
-                  if (c ('input') [0].checked !== false) return 'wrong checkbox was checked.';
-                  if (c ('input') [1].checked !== true) return 'checkbox wasn\'t checked.';
-                  if (c ('input') [2].checked !== true) return 'checkbox wasn\'t checked.';
-                  if (c ('input') [3].checked !== false) return 'wrong checkbox was checked.';
+                  var opaques = c ('.something');
+                  if (opaques.length !== 2) return 'Opaques were not created.';
+                  opaques = c ('.something input');
+                  if (opaques.length !== 2) return 'Opaque contents were not created.';
+                  if (c ('#d4').innerHTML !== '<svg class="c2"></svg>') return 'Opaque with literal svg has invalid content #1.';
 
-                  B.call (x, 'set', ['Data', 'filter'], 'booyah');
-                  B.call (x, 'set', ['Data', 'filter'], '');
+                  c.fill ('.something', '<input><input>');
+                  B.call (x, 'set', ['State', 'ltable'], 4);
+                  opaques = c ('.something');
+                  if (opaques.length !== 4) return 'Opaques were not updated #1.';
+                  opaques = c ('.something input');
+                  if (opaques.length !== 4) return 'Opaque contents were not updated #1.';
+                  if (c ('#d4').innerHTML !== '<svg class="c4"></svg>') return 'Opaque with literal svg has invalid content #2.';
 
-                  if (c ('input') [0].checked !== false) return 'wrong checkbox was checked.';
-                  if (c ('input') [1].checked !== true) return 'checkbox wasn\'t checked.';
-                  if (c ('input') [2].checked !== true) return 'checkbox wasn\'t checked.';
-                  if (c ('input') [3].checked !== false) return 'wrong checkbox was checked.';
+                  c.fill ('.something', 'boo');
+                  if (c ('.something') [0].innerHTML !== 'boo') return 'Opaque contents were not updated.';
+                  opaques = c ('.something input');
+                  if (opaques.length !== 0) return 'Opaque contents were not overwritten.';
+
+                  B.call (x, 'set', ['State', 'ltable'], 5);
+                  opaques = c ('.something');
+                  if (opaques.length !== 5) return 'Opaques were not updated #2.';
+                  opaques = c ('.something input');
+                  if (opaques.length !== 5) return 'Opaque contents were not updated #2.';
+                  if (c ('#d4').innerHTML !== '<svg class="c5"></svg>') return 'Opaque with literal svg has invalid content #3.';
+
+                  c.fill ('.something', '<div><input><span></span></div>');
+
+                  B.call (x, 'set', ['State', 'ltable'], 4);
+                  B.call (x, 'set', ['State', 'opaqueclass'], 'style');
+
+                  opaques = c ('.style');
+                  if (opaques.length !== 4) return 'Opaques were not updated #3.';
+                  opaques = c ('.style input');
+                  if (opaques.length !== 4) return 'Opaque contents were not updated #3.';
+
+                  if (c ('#d1').innerHTML !== '') return 'Opaque empty has invalid content after redraw.';
+                  if (c ('#d2').innerHTML !== '4') return 'Opaque text has invalid content after redraw.';
+                  if (c ('#d3').innerHTML !== '<span></span><span></span>') return 'Opaque multiple has invalid content after redraw.';
+                  if (c ('#d4').innerHTML !== '<svg class="c4"></svg>') return 'Opaque with literal svg has invalid content #4.';
 
                });
 
-               B.call (x, 'test', 'perf');
+               B.call (x, 'test', 'performance');
 
             });
 
             // *** PERFORMANCE ***
 
-            B.respond ('test', 'perf', {burn: true}, function (x) {
-
-               Views.perf = function () {
-                  return B.view (x, ['Data', 'perf'], function (x, perf) {
-                     if (! perf) return [];
-                     return ['table', {style: 'display: block'}, dale.go (perf.data, function (v, k) {
-                        return ['tr', dale.go (v, function (v2) {
-                           return ['td', {"class": perf ['class']}, k + '-' + v2];
-                        })];
-                     })];
-                  });
-               }
+            B.respond ('test', 'performance', {burn: true}, function (x) {
 
                var data = dale.go (dale.times (40), function (v) {
                   return dale.go (dale.times (5), function (v2) {
@@ -1952,82 +1775,107 @@
                   });
                });
 
-               Time ['1: beforeperf'] = teishi.time () - dale.acc (Time, function (a, b) {return a + b});
+               Time ['1: tests'] = time () - dale.acc (Time, function (a, b) {return a + b});
 
-               clog ('Starting perf');
+               B.unmount ('body');
+               B.mount ('body', function () {
+                  return B.view (['Data', 'perf'], function (perf) {
+                     if (! perf) return ['table'];
+                     return ['table', {style: 'display: block'}, dale.go (perf.data, function (v, k) {
+                        return ['tr', dale.go (v, function (v2) {
+                           return ['td', {"class": perf ['class']}, k + '-' + v2];
+                        })];
+                     })];
+                  });
+               });
 
-               B.call (x, 'set', ['State', 'view'], 'perf');
+               Time ['2: set view'] = time () - dale.acc (Time, function (a, b) {return a + b});
 
-               Time ['2: perfsetview'] = teishi.time () - dale.acc (Time, function (a, b) {return a + b});
-
-               clog ('Done setting view');
-
-               B.call (x, 'set', ['Data', 'perf'], {});
                B.call (x, 'set', ['Data', 'perf', 'data'], data);
-               Time ['3: perfsetdata'] = teishi.time () - dale.acc (Time, function (a, b) {return a + b});
-               clog ('Done updating view with all data');
+               Time ['3: set data'] = time () - dale.acc (Time, function (a, b) {return a + b});
+               clog ('set data', last (B.log).args [0].ms, last (B.log).args [0].diffLength);
 
                B.call (x, 'set', ['Data', 'perf', 'data', 10, 2], 'something');
-               Time ['4: perfupdateone'] = teishi.time () - dale.acc (Time, function (a, b) {return a + b});
-               clog ('Done updating one item');
+               Time ['4: update one item'] = time () - dale.acc (Time, function (a, b) {return a + b});
+               clog ('update one', last (B.log).args [0].ms, last (B.log).args [0].diffLength);
 
                B.call (x, 'set', ['Data', 'perf', 'class'], 'aclass');
-               Time ['5: perfupdateall'] = teishi.time () - dale.acc (Time, function (a, b) {return a + b});
-               clog ('Done updating all items');
+               Time ['5: update all items'] = time () - dale.acc (Time, function (a, b) {return a + b});
+               clog ('update all', last (B.log).args [0].ms, last (B.log).args [0].diffLength);
 
                B.call (x, 'rem', ['Data', 'perf', 'data', 10], 2);
-               Time ['6: perfrem'] = teishi.time () - dale.acc (Time, function (a, b) {return a + b});
-
-               clog ('Done removing one item');
+               Time ['6: remove one item'] = time () - dale.acc (Time, function (a, b) {return a + b});
+               clog ('remove one', last (B.log).args [0].ms, last (B.log).args [0].diffLength);
 
                B.call (x, 'add', ['Data', 'perf', 'data', 10], 999);
 
-               Time ['7: perfadd'] = teishi.time () - dale.acc (Time, function (a, b) {return a + b});
+               Time ['7: add an item'] = time () - dale.acc (Time, function (a, b) {return a + b});
+               clog ('add an item', last (B.log).args [0].ms, last (B.log).args [0].diffLength);
 
-               Time ['8: total'] = dale.acc (dale.fil (Time, undefined, function (v, k) {
+               B.prod = true;
+               B.unmount ('body');
+               B.call (x, 'rem', 'Data', 'perf');
+
+               B.mount ('body', function () {
+                  return B.view (['Data', 'perf'], function (perf) {
+                     if (! perf) return ['table'];
+                     return ['table', {style: 'display: block'}, dale.go (perf.data, function (v, k) {
+                        return ['tr', dale.go (v, function (v2) {
+                           return ['td', {"class": perf ['class']}, k + '-' + v2];
+                        })];
+                     })];
+                  });
+               });
+
+               Time ['8: set view (prod)'] = time () - dale.acc (Time, function (a, b) {return a + b});
+
+               B.call (x, 'set', ['Data', 'perf'], {});
+               B.call (x, 'set', ['Data', 'perf', 'data'], data);
+               Time ['9: set data (prod)'] = time () - dale.acc (Time, function (a, b) {return a + b});
+               clog ('set data prod', last (B.log).args [0].ms, last (B.log).args [0].diffLength);
+
+               B.call (x, 'set', ['Data', 'perf', 'data', 10, 2], 'something');
+               Time ['10: update one item (prod)'] = time () - dale.acc (Time, function (a, b) {return a + b});
+               clog ('update one prod', last (B.log).args [0].ms, last (B.log).args [0].diffLength);
+
+               B.call (x, 'set', ['Data', 'perf', 'class'], 'aclass');
+               Time ['11: update all items (prod)'] = time () - dale.acc (Time, function (a, b) {return a + b});
+               clog ('update all prod', last (B.log).args [0].ms, last (B.log).args [0].diffLength);
+
+               B.call (x, 'rem', ['Data', 'perf', 'data', 10], 2);
+               Time ['12: remove one item (prod)'] = time () - dale.acc (Time, function (a, b) {return a + b});
+               clog ('remove one prod', last (B.log).args [0].ms, last (B.log).args [0].diffLength);
+
+               B.call (x, 'add', ['Data', 'perf', 'data', 10], 999);
+               Time ['13: add an item (prod)'] = time () - dale.acc (Time, function (a, b) {return a + b});
+               clog ('add item prod', last (B.log).args [0].ms, last (B.log).args [0].diffLength);
+
+               Time ['14: total time'] = dale.acc (dale.fil (Time, undefined, function (v, k) {
                   if (k !== 'zero') return v;
                }), function (a, b) {return a + b});
 
                delete Time.zero;
 
-               clog ('Done adding one item');
+               B.unmount ('body');
 
                Test ('responder cleanup', function () {
-                  if (dale.keys (B.responders).length !== 8) return 'Some responders were not cleaned up!';
+                  if (! eq (dale.keys (B.responders).sort (), ['R13', 'add', 'error', 'rem', 'set'])) return 'Some responders were not cleaned up!';
                });
 
-               B.call (x, 'test', 'success');
+               B.call (x, 'test', 'done');
             });
 
-            Views.done = function () {
-               return [
-                  ['h1', 'All tests were successful!'],
+            B.respond ('test', 'done', {burn: true}, function (x) {
+               if (Errorlist.length === 0) return c.fill ('body', lith.g ([
+                  ['b', 'All tests successful!'],
                   ['pre', JSON.stringify (Time, null, '   ')],
-               ];
-            }
+               ]));
 
-            B.respond ('test', 'success', {burn: true}, function (x) {
-               if (Errorlist.length === 0) {
-                  B.call (x, 'set', ['State', 'view'], 'done');
-                  clog ('Success', 'All tests were successful!');
-                  return;
-               }
-
-               Views.error = function () {
-                  return [
-                     ['h2', 'Errors found!'],
-                     ['pre', teishi.str (Errorlist, null, '   ')]
-                  ];
-               };
-               B.call (x, 'set', ['State', 'view'], 'error');
+               c.fill ('body', lith.g ([
+                  ['h2', 'Errors found!'],
+                  ['pre', teishi.str (Errorlist, null, '   ')]
+               ]));
             });
-
-
-
-
-
-
-
 
          }) ();
 

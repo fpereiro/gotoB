@@ -159,7 +159,15 @@ Please refer to readme.md to read the annotated source.
       return true;
    }
 
-   // *** CHANGE EVENT & B.CHANGERESPONDER ***
+   // *** B.MRESPOND ***
+
+   B.mrespond = function (responders) {
+      dale.go (responders, function (responder) {
+         B.respond.apply (null, responder);
+      });
+   }
+
+   // *** CHANGE RESPONDERS ***
 
    dale.go (['add', 'rem', 'set'], function (verb) {
       B.respond ({id: verb, verb: verb, path: [], match: function (ev, responder) {
@@ -217,7 +225,7 @@ Please refer to readme.md to read the annotated source.
          B.error ('B.ev', error, 'Events:', evs);
       })) return false;
 
-      var output = 'var id = B.call ("ev", event.type, B.evh (this));';
+      var output = 'var id = B.call ("ev", event ? event.type : "undefined event", B.evh (this));';
 
       dale.go (evs, function (ev) {
          output += ' B.call ({"from": id}, ' + dale.go (ev.length === 2 ? ev.concat ({raw: 'this.value'}) : ev, function (v, k) {
@@ -272,6 +280,7 @@ Please refer to readme.md to read the annotated source.
       var paths;
       if      (type (path) !== 'array')     paths = [[path]];
       else if (type (path [0]) !== 'array') paths = [path];
+      else                                  paths = path;
 
       if (! B.prod && teishi.stop ('B.view', [
          dale.stopNot (paths, false, function (path) {
@@ -286,9 +295,7 @@ Please refer to readme.md to read the annotated source.
 
       var makeElement = function () {
          var count = B.internal.count, children = [];
-         var elem = fun.apply (null, dale.go (paths, function (path) {
-            return teishi.copy (B.get (path));
-         }));
+         var elem = fun.apply (null, dale.go (paths, B.get));
          if (! B.prod && B.validateLith (elem) !== 'Lith') return B.error ('B.view', 'View function must return a lith element but instead returned:', elem, 'Arguments:', {path: path});
 
          dale.go (dale.times (B.internal.count - count, count), function (k) {
@@ -297,12 +304,20 @@ Please refer to readme.md to read the annotated source.
                children.push (responder.id);
                responder.parent = id;
             }
-            responder.priority = responder.priority + B.responder [id].priority;
+            responder.priority = responder.priority + B.responders [id].priority;
          });
 
-         if (type (elem [1]) !== 'object') elem.splice (1, 0, {});
-         elem [1].id   = id;
-         elem [1].path = dale.go (paths, function (path) {return path.join (':')}).join (', ');
+         var attributes = dale.obj (type (elem [1]) === 'object' ? elem [1] : {}, {
+            id: id,
+            path: dale.go (paths, function (path) {return path.join (':') || ':'}).join (', ')
+         }, function (v, k) {
+            if (['id', 'path'].indexOf (k.toLowerCase ()) === -1) return [k, v]
+         });
+         elem = elem.slice ();
+
+         if (type (elem [1]) !== 'object') elem.splice (1, 0, attributes);
+         else                              elem [1] = attributes;
+
          B.responders [id].elem     = elem;
          B.responders [id].children = children;
          return elem;
@@ -357,9 +372,6 @@ Please refer to readme.md to read the annotated source.
 
       if (! B.prod && (! element || ! document.body.contains (element))) return B.error (x, 'B.redraw', 'Attempt to redraw dangling element.', {responder: responder});
 
-      //console.log ('-----------------------');
-      //console.log ('DEBUG redraw', oldElement, responder.elem);
-      //console.log ('DEBUG prediff', B.prediff (oldElement), B.prediff (responder.elem));
       var prediffs = [B.prediff (oldElement), B.prediff (responder.elem)], t1 = time ();
       var diff = B.diff (prediffs [0], prediffs [1]), t2 = time ();
 
@@ -403,7 +415,7 @@ Please refer to readme.md to read the annotated source.
       if (input [1] && input [1].id && (input [1].id + '').match (/^в[0-9a-f]+$/g) && output.length) input = B.responders [input [1].id].elem;
 
       var attributes = type (input [1]) !== 'object' ? undefined : dale.obj (input [1], function (v, k) {
-         if (v !== undefined && v !== null && v !== '') return [k, v];
+         if (['', null, false, undefined].indexOf (v) === -1) return [k, v];
       });
       var contents = input [attributes ? 2 : 1];
 
@@ -438,10 +450,9 @@ Please refer to readme.md to read the annotated source.
 
    B.applyDiff = function (rootElement, diff) {
 
-      var elements = [], positions = [], references = {}, rootElementParent = rootElement.parentNode;
+      var elements = [], positions = [], references = {}, rootElementParent = rootElement.parentNode, rootElementSibling = rootElement.nextSibling, active;
       var tree = [rootElement, null], position = [];
 
-      // console.log ('DEBUG diff', diff);
       var errorIndex = dale.stopNot (diff, undefined, function (v, k) {
          if (v [1].substr (0, 1) === 'C') {
             if (v [0] !== 'rem') {
@@ -461,7 +472,6 @@ Please refer to readme.md to read the annotated source.
          }
          if (v [0] !== 'add') {
             var element;
-            // how do we know? rem before add, and if it's keep it will be first. so k === 0 always refer to the existing rootElement.
             if (k === 0)                       element = rootElement;
             else if (! tree [tree.length - 1]) element = tree [tree.length - 2].firstChild;
             else                               element = tree [tree.length - 1].nextSibling;
@@ -469,17 +479,13 @@ Please refer to readme.md to read the annotated source.
             if (! B.prod && ! element) return k;
 
             elements [k] = element;
+            if (element === document.activeElement) active = element;
             tree [tree.length - 1] = element;
             if (v [1].substr (0, 1) === 'O') tree.push (null);
          }
       });
 
       if (errorIndex !== undefined) return errorIndex;
-      //console.log ('DEBUG elements', elements);
-      //console.log ('DEBUG positions', positions);
-      //console.log ('DEBUG references', references);
-      //console.log ('DEBUG tree', tree);
-      //console.log ('DEBUG position', position);
 
       var extract = function (elementString, part) {
          if (part === 'tag') return elementString.match (/(O|P) [^\s]+/) [0].replace (/(O|P) /, '')
@@ -487,16 +493,13 @@ Please refer to readme.md to read the annotated source.
       }
 
       var place = function (operation, position, element) {
-         //console.log ('DEBUG place', operation, position, element);
          var Parent = position.length === 0 ? rootElementParent : elements [references [position.slice (0, -1).join (',')]];
-         //console.log ('DEBUG place parent', Parent);
          if (operation === 'keep' && Parent.children [position [position.length - 1]] === element) return;
-         var nextSibling = Parent.children [position [position.length - 1]] || null;
+         var nextSibling = Parent === rootElementParent ? rootElementSibling : Parent.children [position [position.length - 1]] || null;
          Parent.insertBefore (element, nextSibling);
       }
 
       var make = function (elementString) {
-         //console.log ('DEBUG make', elementString);
          if (elementString.substr (0, 1) === 'L') {
             var container = document.createElement ('div');
             container.innerHTML = elementString.slice (2);
@@ -504,30 +507,28 @@ Please refer to readme.md to read the annotated source.
          }
 
          if (elementString.substr (0, 1) === 'P') {
-            var length = elementString.match (/ \d+ /) [0].replace (/\s/g, '');
-            // one extra for space for length number, another for space before contents
-            var contentsIndex = length + (length + '').length + 2;
-            var contents = elementString.replace (length + ' ', '').slice (contentsIndex);
-            elementString = elementString.slice (0, contentsIndex).replace (/ \d+/, '');
+            var length = parseInt (elementString.match (/ \d+ /) [0].replace (/\s/g, ''));
+            elementString = elementString.replace (length + ' ', '');
+            var contents = elementString.slice (length + 1);
+            elementString = elementString.slice (0, length);
          }
 
          var element = document.createElement (extract (elementString, 'tag'));
          dale.go (extract (elementString, 'attributes'), function (v, k) {
-            if (v !== '' && v !== null) element.setAttribute (k, v);
+            if (['', null, false].indexOf (v) === -1) element.setAttribute (k, v);
          });
          if (elementString.substr (0, 1) === 'P') element.innerHTML = contents;
          return element;
       }
 
-      // only elements with the same tag
       var recycle = function (element, old, New) {
          var oldAttributes = extract (old, 'attributes'), newAttributes = extract (New, 'attributes');
          dale.go (newAttributes, function (v, k) {
-            if (v !== '' && v !== null) element.setAttribute (k, v);
+            if (['', null, false].indexOf (v) === -1) element.setAttribute (k, v);
          });
          dale.go (oldAttributes, function (v, k) {
-            if (v === '' || v === null) return;
-            if (newAttributes [k] === '' || newAttributes [k] === null || newAttributes [k] === undefined) el.removeAttribute (k);
+            if (['', null, false].indexOf (v) !== -1) return;
+            if (['', null, false, undefined].indexOf (newAttributes [k]) !== -1) element.removeAttribute (k);
          });
          return element;
       }
@@ -535,14 +536,18 @@ Please refer to readme.md to read the annotated source.
       var recyclables = {};
 
       dale.go (diff, function (v, k) {
-         if (v [1].substr (0, 1) === 'C') return;
-         if (v [0] === 'keep') return place ('keep', positions [k], elements [k]);
+         var elementType = v [1].substr (0, 1);
+         if (elementType === 'C') return;
+         if (v [0] === 'keep') {
+            if (elementType !== 'P') return place ('keep', positions [k], elements [k]);
+            elements [k].parentNode.removeChild (elements [k]);
+         }
          if (v [0] === 'rem')  {
-            if (v [1].substr (0, 1) === 'O') recyclables [extract (v [1], 'tag')] = k;
+            if (elementType === 'O') recyclables [extract (v [1], 'tag')] = k;
             return elements [k].parentNode.removeChild (elements [k]);
          }
 
-         if (v [1].substr (0, 1) !== 'O') return place ('add', positions [k], make (v [1]));
+         if (elementType !== 'O') return place ('add', positions [k], make (v [1]));
          var tag = extract (v [1], 'tag'), recycleIndex = recyclables [tag], element;
 
          if (recycleIndex === undefined) element = make (v [1]);
@@ -550,10 +555,11 @@ Please refer to readme.md to read the annotated source.
             element = recycle (elements [recycleIndex], diff [recycleIndex] [1], v [1]);
             recyclables [tag] = undefined;
          }
-         if (recycleIndex !== undefined) console.log ('DEBUG recycleIndex', recycleIndex, element);
          elements [k] = element;
          place ('add', positions [k], element);
       });
+
+      if (active && document.body.contains (active)) active.focus ? active.focus () : active.setActive ();
    }
 
    B.diff = function (s1, s2) {
@@ -562,7 +568,6 @@ Please refer to readme.md to read the annotated source.
 
       while (d < s1.length + s2.length + 1) {
 
-         // TODO: count every n
          if (B.internal.timeout && (time () - t > B.internal.timeout)) return false;
 
          vl = V [V.length - 1] || {1: [0, 0]};

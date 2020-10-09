@@ -1149,9 +1149,9 @@ TODO
 
 - opaque & literal
    - if literal, just for nbsp, not for inserting tags. otherwise, you need opaque.
+   - if opaque within reactive view, redrawn every time.
 - negative priorities & nestedness
 - trample & perflogs
-
 
 ## Internals
 
@@ -1184,7 +1184,7 @@ deterministic diff, deterministic id assignation.
 
 ## Source code
 
-The complete source code is contained in `gotoB.js`. gotoв itself is about XXX lines long; its dependencies are about 1320 lines; the whole thing is about XXX lines.
+The complete source code is contained in `gotoB.js`. gotoв itself is about 620 lines long; its dependencies are about 1380 lines; the whole thing is about 2000 lines.
 
 Below is the annotated source.
 
@@ -1724,6 +1724,25 @@ There's nothing else to do, so we return `true` and close the function. Note tha
    }
 ```
 
+### `B.mrespond`
+
+We define a helper function to perform multiple invocations to `B.respond`. This simplifies a pattern where a group of responders are defined one after the other.
+
+This function takes an array of arrays as argument. Each of these arrays is a list of arguments to be passed to `B.respond`.
+
+```javascript
+   B.mrespond = function (responders) {
+```
+
+We iterate `responders` and `apply` them, one by one, to `B.respond`. There's nothing else to do, so we close the function.
+
+```javascript
+      dale.go (responders, function (responder) {
+         B.respond.apply (null, responder);
+      });
+   }
+```
+
 ### Change responders
 
 We're now ready to define the three data responders. These functions are wrappers around the three data functions that modify the store: `add` for `B.add`, `rem` for `B.rem` and `set` for `B.set`.
@@ -1897,10 +1916,12 @@ We create `output`, a string that will contain the output of a function.
 
 We initialize `output` with the code needed to invoke `B.call` with the following arguments: `'ev'` as the verb, `event.type` (a string with the name of the event being called) as the `path`; as its third argument, we pass the result of invoking `B.evh` with `this` (the DOM element which received the event) as its only argument. This third argument will contain an object with all attribute names and values, *except* for those that are event handlers and start with *on* (i.e.: `onclick`, `oninput`).
 
+If `event` is not defined (which can happen with an event handler triggered directly instead of through an event), instead of `event.type` we pass as path an `"undefined event"` string.
+
 Invoking `B.call` will generate an id. We store this id in a variable `id` that is local to the event handler.
 
 ```javascript
-      var output = 'var id = B.call ("ev", event.type, B.evh (this));';
+      var output = 'var id = B.call ("ev", event ? event.type : "undefined event", B.evh (this));';
 ```
 
 We iterate each of the events to be called. For each of them, we will append to `output` an invocation to `B.call`.
@@ -2065,9 +2086,12 @@ If `paths` is not an array, it should be either a string or a number. In this ca
 
 If `paths` is an array but its first element is not an array, then we're dealing with a single path. If this is the case, we wrap it in an array so that `paths` represents a list of paths.
 
+Otherwise, `path` must be an array of paths, in which case we set `paths` to it.
+
 ```javascript
       if      (type (path) !== 'array')     paths = [[path]];
       else if (type (path [0]) !== 'array') paths = [path];
+      else                                  paths = path;
 ```
 
 If we're not in production mode, we perform validations on the input.
@@ -2116,12 +2140,10 @@ We copy the current value of `B.internal.count` and define an empty array `child
          var count = B.internal.count, children = [];
 ```
 
-We invoke `fun`, passing the current values of each of `paths` as an argument (we fetch the values through `B.get` and then copy them, so that modifications done by the view function don't affect the actual values on the store). We store the result in a variable `elem`.
+We invoke `fun`, passing the current values of each of `paths` as an argument (we fetch the values through `B.get`. We store the result in a variable `elem`.
 
 ```javascript
-         var elem = fun.apply (null, dale.go (paths, function (path) {
-            return teishi.copy (B.get (path));
-         }));
+         var elem = fun.apply (null, dale.go (paths, B.get));
 ```
 
 If we're not in production mode, we validate `elem` with `B.validateLith` (which is defined below). If `elem` is not a lith, we report an error through `B.error` and return `false`.
@@ -2162,7 +2184,7 @@ This line requires more explanation. Once a redrawing takes place, the nested vi
 - A non-outermost nested view (priority -3, say) with a nested view with another nested view inside. The outermost view is redrawn; the execution starts with the innermost nested view, it gets a priority of -1. Then the middle nested view is redrawn, it gets a priority of -1 and it reduces the priority of the innermost view by -1, so it's now -2. Then the outermost view finishes and it reduces the priorities of both nested views by -3, to -4 and -5 respectively.
 
 ```javascript
-            responder.priority = responder.priority + B.responder [id].priority;
+            responder.priority = responder.priority + B.responders [id].priority;
 ```
 
 
@@ -2172,10 +2194,42 @@ We are done iterating the nested reactive views.
          });
 ```
 
-If the returned lith has no attributes, we add an empty object in its second position. We use `splice` instead of `push` since the element might include contents, and the attributes must go between the tag and the contents.
+We create an `attribute` objects. If the second element of `elem` is an object, we iterate it using `dale.obj` - otherwise, we iterate an empty object.
+
+In both cases, we use a new base object with the desired `id` and `path`. The `path` property of the element consists of all the `paths`, stringified and joined by `, `. This provides a quick way to identify the path(s) of a reactive view from the DOM inspector.
+
+In case a `path` is `[]`, which means a reference to the entire `B.store`, we represent the `path` as a single colon.
 
 ```javascript
-         if (type (elem [1]) !== 'object') elem.splice (1, 0, {});
+
+         var attributes = dale.obj (type (elem [1]) === 'object' ? elem [1] : {}, {
+            id: id,
+            path: dale.go (paths, function (path) {return path.join (':') || ':'}).join (', ')
+```
+
+We set the attributes from the original attributes (if any), ignoring `id` and `path`. Note we lowercase the attribute name before comparing the attribute names.
+
+```javascript
+         }, function (v, k) {
+            if (['id', 'path'].indexOf (k.toLowerCase ()) === -1) return [k, v]
+         });
+```
+
+You may ask: why do we create a new `attributes` object if there's one there already? This is because we always want `id` and `path` to appear first in the list of properties of the element, for consistency purposes. When DOM elements are recycled, user defined properties will appear after `id` and `path` (which remain unchanged if the reactive element is recycled). By enforcing this order, HTML properties will always be in the same order. Besides, having `id` and `path` always at the beginning make it easier to scan the DOM.
+
+We create a shallow copy of `elem` - a new array with each of its elements being the same of those of `elem`. We overwrite the local variable `elem` with this new array. The reason for this is that we will overwrite or add attributes to `elem`, and we don't want to modify the original `elem` returned by `makeElement` in case `makeElement` directly references a lith in the store.
+
+```javascript
+         elem = elem.slice ();
+```
+
+If the returned lith has no attributes, we add `attributes` in its second position. We use `splice` instead of `push` since the element might include contents, and the attributes must go between the tag and the contents.
+
+Otherwise, we overwrite the second element of `elem` with `attributes`.
+
+```javascript
+         if (type (elem [1]) !== 'object') elem.splice (1, 0, attributes);
+         else                              elem [1] = attributes;
 ```
 
 We set the `id` of the element.
@@ -2183,8 +2237,6 @@ We set the `id` of the element.
 ```javascript
          elem [1].id    = id;
 ```
-
-We set a `path` property to the element, consisting of all the `paths`, stringified and joined by `, `. This provides a quick way to identify the path(s) of a reactive view from the DOM inspector.
 
 ```javascript
          elem [1].path = dale.go (paths, function (path) {return path.join (':')}).join (', ');
@@ -2602,13 +2654,13 @@ Note an exception: if `output` has no length, it means we're prediffing the firs
       if (input [1] && input [1].id && (input [1].id + '').match (/^в[0-9a-f]+$/g) && output.length) input = B.responders [input [1].id].elem;
 ```
 
-We create a local variable `attributes` to hold the attributes of the lith, if any. If the second element of `input` is not an object, they will be undefined. Otherwise, we iterate them and build a new object, filtering out those attributes that have a value of `undefined`, `null` or an empty string (which all represent the absence of the attribute).
+We create a local variable `attributes` to hold the attributes of the lith, if any. If the second element of `input` is not an object, they will be undefined. Otherwise, we iterate them and build a new object, filtering out those attributes that have a value of `undefined`, `false`, `null` or an empty string (which all represent the absence of the attribute).
 
 Note that in case this is the lith of a reactive view, we do this *after* referencing the lith inside the corresponding responder. If we didn't do this, and the reactive view was nested and changed its own class, this change would not be reflected in the `attributes`. Another interesting observation is that the id of the nested reactive view would not change - indeed, this is one of the reasons for which we overwrite the ids of reactive views in `B.view`.
 
 ```javascript
       var attributes = type (input [1]) !== 'object' ? undefined : dale.obj (input [1], function (v, k) {
-         if (v !== undefined && v !== null && v !== '') return [k, v];
+         if (['', null, false, undefined].indexOf (v) === -1) return [k, v];
       });
 ```
 
@@ -2736,15 +2788,17 @@ The design entails two passes: we first iterate `diff` and construct a map of bo
 
 While a one-pass design is probably possible, a clear and understandable formulation of it has eluded me. The main difficulty in implementing it lies in how the DOM changes while changes are being implemented, which renders much harder to figure out the position of existing and new elements.
 
-We define four variables that we will need across the scope of the entire function:
+We define five variables that we will need across the scope of the entire function:
 
 - `elements`, an array of DOM elements (both normal elements & text node elements), each corresponding to the k-th item on the diff. For example, if the first element of the diff refers to the `rootElement`, `elements [0]` will point to the `rootElement`.
 - `positions`, an array of arrays, one per each diff item. Each of the internal arrays has zero or more integers denoting the *desired position* of the item in question. For example, if the first element of the diff corresponds to the root element, `positions [0]` will be `[]`. If the k-th element of the diff is the second child of the root element, then `positions [k]` will be `[1]`. For deeply nested elements, the logic is extended. If, for example, the k-th element of the diff corresponds to the first child of the first child of the root element, then `positions [k]` will be `[0, 0]`.
 - `references`: this object will link a `position` with the index of a diff item. If, for example, the first child of the first child of the root element is on the k-th diff element, there will be an entry `0,0` equal to `k`. This is used later to find the DOM element corresponding to a parent (by looking it up in `elements` using the provided index).
 - `rootElementParent`: a mere reference to the parent of the `rootElement`. This is necessary later in case the actual `rootElement` is removed from the DOM.
+- `rootElementSibling`: a mere reference to the next sibling of `rootElement`. This is necessary later in case the actual `rootElement` is removed from the DOM.
+- `active`: a reference to the active element of the page (usually an input or textarea), if any.
 
 ```javascript
-      var elements = [], positions = [], references = {}, rootElementParent = rootElement.parentNode;
+      var elements = [], positions = [], references = {}, rootElementParent = rootElement.parentNode, rootElementSibling = rootElement.nextSibling, active;
 ```
 
 We define two variables that we'll only need in the first pass:
@@ -2861,6 +2915,12 @@ We set `elements [k]` to `element.`
             elements [k] = element;
 ```
 
+If `element` is the active element of the document, we set `active` to it.
+
+```javascript
+            if (element === document.activeElement) active = element;
+```
+
 We update the last element of `tree` with element.
 
 ```javascript
@@ -2937,10 +2997,10 @@ If we're keeping this element (rather than adding it), it may well be the case t
          if (operation === 'keep' && Parent.children [position [position.length - 1]] === element) return;
 ```
 
-We determine whether there is a DOM element inside `Parent` that will go after `element`. We store it in `nextSibling`. If there's no element that will go after `element`, we set `nextSibling` to `null`.
+We determine whether there is a DOM element inside `Parent` that will go after `element`. We store it in `nextSibling`. If there's no element that will go after `element`, we set `nextSibling` to `null`. In the case where we're positioning the `rootElement`, we use `rootElementSibling` as our `nextSibling`.
 
 ```javascript
-         var nextSibling = Parent.children [position [position.length - 1]] || null;
+         var nextSibling = Parent === rootElementParent ? rootElementSibling : Parent.children [position [position.length - 1]] || null;
 ```
 
 We invoke `insertBefore` on `Parent`, ppassing `element` and `nextSibling`; this will insert `element` just before `nextSibling`, inside `Parent`. If `nextSibling` is `null`, `element` will be placed as the last child of `Parent`.
@@ -2997,28 +3057,28 @@ If the first character of `elementString` is `P`, we're dealing with an opaque e
 
 The `elementString` of an opaque element (as constructed by `B.prediff`) has the following structure: `P LENGTH TAG {...} CONTENTS`. `LENGTH` is the length of `elementString` when it only has the following: `P TAG {...}`.
 
-What we want to do here is to extract the `contents` into another string and remove them from `elementString`. We first start by finding the `LENGTH`, which will be the first set of digits surrounded by whitespace.
+What we want to do here is to extract the `contents` into another string and remove them from `elementString`. We first start by finding the `LENGTH`, which will be the first set of digits surrounded by whitespace. We parse it into an integer.
 
 ```javascript
-            var length = elementString.match (/ \d+ /) [0].replace (/\s/g, '');
+            var length = parseInt (elementString.match (/ \d+ /) [0].replace (/\s/g, ''));
 ```
 
-We find the index at which `contents` start in `elementString`. This will be length, plus the number of characters of `length` (since those are included in `elementString` itself), plus two characters (one for the space that goes before `LENGTH`, another one for the space that goes after the `attributes` and before `contents`).
+We remove the `length` and its subsequent whitespace from `elementString`.
 
 ```javascript
-            var contentsIndex = length + (length + '').length + 2;
+            elementString = elementString.replace (length + ' ', '');
 ```
 
-We extract `contents` into its own variable.
+We extract `contents` into its own variable. The starting point is `length + 1` instead of `length`, because when the string is constructed, a space is added before the contents for readability purposes.
 
 ```javascript
-            var contents = elementString.replace (length + ' ', '').slice (contentsIndex);
+            var contents = elementString.slice (length + 1);
 ```
 
-We remove the `contents` (and the prepended space) from `elementString`. We also get rid of the length and its prepending space. Now `elementString` will now have the form `P TAG {...}`.
+We remove the `contents` (and the prepended space) from `elementString`. Now `elementString` will now have the form `P TAG {...}`.
 
 ```javascript
-            elementString = elementString.slice (0, contentsIndex).replace (/ \d+/, '');
+            elementString = elementString.slice (0, length);
 ```
 
 This concludes the logic that is exclusive to opaque elements. From now on, the function will deal with both opaque and normal DOM elements.
@@ -3039,10 +3099,10 @@ We extract the `attributes` using `extract` and iterate them:
          dale.go (extract (elementString, 'attributes'), function (v, k) {
 ```
 
-If `v` is neither an empty string nor `null`, we set the attribute on `element` using `setAttribute`.
+If `v` is neither an empty string nor `false` nor `null`, we set the attribute on `element` using `setAttribute`.
 
 ```javascript
-            if (v !== '' && v !== null) element.setAttribute (k, v);
+            if (['', null, false].indexOf (v) === -1) element.setAttribute (k, v);
          });
 ```
 
@@ -3071,20 +3131,20 @@ We extract the `oldAttributes` and `newAttributes` using `extract`.
          var oldAttributes = extract (old, 'attributes'), newAttributes = extract (New, 'attributes');
 ```
 
-We iterate `newAttributes` and set them on `element` if they are neither an empty string nor `null`.
+We iterate `newAttributes` and set them on `element` if they are neither an empty string nor `false` nor `null`.
 
 ```javascript
          dale.go (newAttributes, function (v, k) {
-            if (v !== '' && v !== null) element.setAttribute (k, v);
+            if (['', null, false].indexOf (v) === -1) element.setAttribute (k, v);
          });
 ```
 
-We iterate the `oldAttributes`. If they are an empty string or `null`, we ignore them. If there's no corresponding entry for them in `newAttributes`, we remove the attributes from `element`.
+We iterate the `oldAttributes`. If they are an empty string, `false` or `null`, we ignore them. If there's no corresponding entry for them in `newAttributes`, we remove the attributes from `element`.
 
 ```javascript
          dale.go (oldAttributes, function (v, k) {
-            if (v === '' || v === null) return;
-            if (newAttributes [k] === '' || newAttributes [k] === null || newAttributes [k] === undefined) el.removeAttribute (k);
+            if (['', null, false].indexOf (v) !== -1) return;
+            if (['', null, false, undefined].indexOf (newAttributes [k]) !== -1) element.removeAttribute (k);
          });
 ```
 
@@ -3107,16 +3167,32 @@ We now perform the second pass on the diff, to apply the changes to the DOM. As 
       dale.go (diff, function (v, k) {
 ```
 
-If we're closing an element, we don't need to do anything on this pass
+Since we'll be using it a few times, we note the type of element we're working with into a variable `elementType`.
 
 ```javascript
-         if (v [1].substr (0, 1) === 'C') return;
+         var elementType = v [1].substr (0, 1);
 ```
 
-If we're keeping an item, whether it is an element, a text element or an opaque element, we will invoke the `place` function defined above with three arguments: the operation (in this case, `'keep'`), the desired position of the item, and the corresponding DOM element. There's nothing else to do in this case, so we return.
+If we're closing an element, we don't need to do anything on this pass.
 
 ```javascript
-         if (v [0] === 'keep') return place ('keep', positions [k], elements [k]);
+         if (elementType === 'C') return;
+```
+
+If we're keeping an item that is not an opaque element (either a literal or a normal element), we will invoke the `place` function defined above with three arguments: the operation (in this case, `'keep'`), the desired position of the item, and the corresponding DOM element. There's nothing else to do in this case, so we return.
+
+```javascript
+         if (v [0] === 'keep') {
+            if (elementType !== 'P') return place ('keep', positions [k], elements [k]);
+```
+
+If we're keeping an opaque element, we will remove it from the DOM. The reason is that opaque elements could have been modified directly, so gotoв cannot know whether its contents are still those specified by the view functions. The only safe course here is to re-make the element from scratch and remove the old version. While the element (and not its contents) could be recycled, I don't think it's necessary.
+
+Note we don't return in this case, since we still need to add the new opaque element.
+
+```javascript
+            elements [k].parentNode.removeChild (elements [k]);
+         }
 ```
 
 If we're removing an item:
@@ -3130,7 +3206,7 @@ If the item is a DOM element, we mark the diff index (`k`) and store it into the
 This implementation of recycling is quite simplistic, but it seems to cover many cases. A more sophisticated implementation would implement a stack of elements per tag, or a queue (first-in first-out). This might be changed in the future, but for now seems to suffice.
 
 ```javascript
-            if (v [1].substr (0, 1) === 'O') recyclables [extract (v [1], 'tag')] = k;
+            if (elementType === 'O') recyclables [extract (v [1], 'tag')] = k;
 ```
 
 We remove the element from the DOM. There's nothing to do in the case of removing an item, so we return and close the conditional.
@@ -3140,12 +3216,12 @@ We remove the element from the DOM. There's nothing to do in the case of removin
          }
 ```
 
-If we're here, we're adding a new item.
+If we're here, we're either adding a new item or keeping an opaque item.
 
-If the item is not a normal DOM element (either a text element or an opaque element), we only invoke `place`, passing three arguments: the operation (`'add'`), the desired position and the actual element. The actual element is built through the `make` function defined above.
+If the item is not a normal DOM element (either a text element or an opaque element), we only invoke `place`, passing three arguments: the operation (`'add'`), the desired position and the actual element. The actual element is built through the `make` function defined above. This also covers the case when an opaque element is kept - we previously removed the old version and now we add the new version.
 
 ```javascript
-         if (v [1].substr (0, 1) !== 'O') return place ('add', positions [k], make (v [1]));
+         if (elementType !== 'O') return place ('add', positions [k], make (v [1]));
 ```
 
 If we're here, we're going to add a normal DOM element. We note the `tag` of the element and the index of a recyclable element of the same tag, if any. We also set up a variable to hold the DOM element that we'll either create or recycle.
@@ -3180,16 +3256,19 @@ Now that we have a DOM element (either new or recycled) that matches with this d
          elements [k] = element;
 ```
 
-Finally, we invoke `place`, passing the operation (`'add'`), the desired position and the actual DOM element.
+Finally, we invoke `place`, passing the operation (`'add'`), the desired position and the actual DOM element. We close the loop of the second pass over the diff.
 
 ```javascript
          place ('add', positions [k], element);
+      });
 ```
 
-There's nothing else to do. We close the loop of the second pass and the function itself.
+If there's an `active` element and it is still in the body, we set it as active through `focus` or `setActive`.
+
+After this, there's nothing else to do, so we close the function.
 
 ```javascript
-      });
+      if (active && document.body.contains (active)) active.focus ? active.focus () : active.setActive ();
    }
 ```
 

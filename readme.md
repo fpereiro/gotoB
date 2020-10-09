@@ -1143,6 +1143,8 @@ common errors:
 - Creating a B.view that is not placed in the DOM (dangling)
 - Modifying the DOM of a B.view without using opaque
 
+prod mode performance: speed up drawing. diff and dom applying is the same.
+
 ### Advanced topics
 
 TODO

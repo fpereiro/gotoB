@@ -854,8 +854,8 @@
 
                   if ([
                      '<div id="в1" path="Data:view"></div>',
-                     // IE<=8
-                     // '<DIV id="\\u04321" path="Data:view"> </DIV>'
+                     // Compatibility: IE<=8 removes the quotes around id and uppercases the tag name
+                     '<DIV id=в1 path="Data:view"></DIV>'
                   ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted #1: ' + document.body.innerHTML;
 
                   var responder = B.responders [B.B + 1];
@@ -877,7 +877,15 @@
                   if (c.get ('#' + B.B + 1, 'path').path !== 'Data:view') return 'Invalid path in DOM #1.';
 
                   if ([
-                     '<div id="в1" path="Data:view" class="hello"></div>'
+                     '<div id="в1" path="Data:view" class="hello"></div>',
+                     // Compatibility: IE10-11, FF<=48 put the class first
+                     '<div class="hello" id="в1" path="Data:view"></div>',
+                     // Compatibility: IE9 puts the class in the middle
+                     '<div id="в1" class="hello" path="Data:view"></div>',
+                     // Compatibility: IE8 puts the class in the middle, removes the quotes around id & class and uppercases the tag name
+                     '<DIV id=в1 class=hello path="Data:view"></DIV>',
+                     // Compatibility: IE<=7 removes the quotes around id & class and uppercases the tag name
+                     '<DIV id=в1 path="Data:view" class="hello"></DIV>'
                   ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted #2: ' + document.body.innerHTML;
 
                   var llog = teishi.last (B.log);
@@ -890,7 +898,9 @@
                   if (c ('#' + B.B + 1) !== DOMElement) return 'DOM element not recycled #3.';
 
                   if ([
-                     '<div id="в1" path="Data:view"></div>'
+                     '<div id="в1" path="Data:view"></div>',
+                     // Compatibility: IE<=8 removes the quotes around id and uppercases the tag name
+                     '<DIV id=в1 path="Data:view"></DIV>'
                   ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted #3: ' + document.body.innerHTML;
 
                   // ADD CLASS AGAIN
@@ -898,7 +908,15 @@
                   B.call (x, 'set', ['Data', 'view'], ['div', {'class': 'вla'}]);
 
                   if ([
-                     '<div id="в1" path="Data:view" class="вla"></div>'
+                     '<div id="в1" path="Data:view" class="вla"></div>',
+                     // Compatibility: IE10-11, FF<=48 put the class first
+                     '<div class="вla" id="в1" path="Data:view"></div>',
+                     // Compatibility: IE9 puts the class in the middle
+                     '<div id="в1" class="вla" path="Data:view"></div>',
+                     // Compatibility: IE8 removes the quotes around id & class and uppercases the tag name
+                     '<DIV id=в1 class=вla path="Data:view"></DIV>',
+                     // Compatibility: IE<=7 removes the quotes around id & class and uppercases the tag name
+                     '<DIV id=в1 path="Data:view" class="вla"></DIV>'
                   ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted #4: ' + document.body.innerHTML;
 
                   // REMOVE CLASS WITH null
@@ -906,7 +924,9 @@
                   B.call (x, 'set', ['Data', 'view'], ['div', {'class': null}]);
 
                   if ([
-                     '<div id="в1" path="Data:view"></div>'
+                     '<div id="в1" path="Data:view"></div>',
+                     // Compatibility: IE<=8 removes the quotes around id and uppercases the tag name
+                     '<DIV id=в1 path="Data:view"></DIV>'
                   ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted #5: ' + document.body.innerHTML;
 
                   // ADD CLASS AGAIN AND REMOVE WITH ''
@@ -915,7 +935,9 @@
                   B.call (x, 'set', ['Data', 'view'], ['div', {'class': ''}]);
 
                   if ([
-                     '<div id="в1" path="Data:view"></div>'
+                     '<div id="в1" path="Data:view"></div>',
+                     // Compatibility: IE<=8 removes the quotes around id and uppercases the tag name
+                     '<DIV id=в1 path="Data:view"></DIV>'
                   ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted #6: ' + document.body.innerHTML;
 
                   // ADD CONTENT
@@ -923,7 +945,15 @@
                   B.call (x, 'set', ['Data', 'view'], ['div', {'class': 'foo'}, 'content']);
 
                   if ([
-                     '<div id="в1" path="Data:view" class="foo">content</div>'
+                     '<div id="в1" path="Data:view" class="foo">content</div>',
+                     // Compatibility: IE10-11, FF<=48 put the class first
+                     '<div class="foo" id="в1" path="Data:view">content</div>',
+                     // Compatibility: IE9 puts the class in the middle
+                     '<div id="в1" class="foo" path="Data:view">content</div>',
+                     // Compatibility: IE<=8 removes the quotes around id & class, puts the class in the middle and uppercases the tag name
+                     '<DIV id=в1 class=foo path="Data:view">content</DIV>',
+                     // Compatibility: IE<=7 removes the quotes around id and uppercases the tag name
+                     '<DIV id=в1 path="Data:view" class="foo">content</DIV>'
                   ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted #7: ' + document.body.innerHTML;
 
                   // REMOVE CONTENT
@@ -931,7 +961,15 @@
                   B.call (x, 'set', ['Data', 'view'], ['div', {'class': 'foo'}]);
 
                   if ([
-                     '<div id="в1" path="Data:view" class="foo"></div>'
+                     '<div id="в1" path="Data:view" class="foo"></div>',
+                     // Compatibility: IE10-11, FF<=48 put the class first
+                     '<div class="foo" id="в1" path="Data:view"></div>',
+                     // Compatibility: IE9 puts the class in the middle
+                     '<div id="в1" class="foo" path="Data:view"></div>',
+                     // Compatibility: IE8 removes the quotes around id & class, puts the class in the middle and uppercases the tag name
+                     '<DIV id=в1 class=foo path="Data:view"></DIV>',
+                     // Compatibility: IE<=7 removes the quotes around id and uppercases the tag name
+                     '<DIV id=в1 path="Data:view" class="foo"></DIV>'
                   ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted #8: ' + document.body.innerHTML;
 
                   // ADD CONTENT, REMOVE CLASS
@@ -941,7 +979,9 @@
                   if (c ('#' + B.B + 1) !== DOMElement) return 'DOM element not recycled #9.';
 
                   if ([
-                     '<div id="в1" path="Data:view">content</div>'
+                     '<div id="в1" path="Data:view">content</div>',
+                     // Compatibility: IE<=8 removes the quotes around id and uppercases the tag name
+                     '<DIV id=в1 path="Data:view">content</DIV>'
                   ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted #9: ' + document.body.innerHTML;
 
                   // ADD MULTIPLE ATTRIBUTES
@@ -949,7 +989,19 @@
                   B.call (x, 'set', ['Data', 'view'], ['div', {'class': 'foo', style: 'color: red'}, 'content']);
 
                   if ([
-                     '<div id="в1" path="Data:view" class="foo" style="color: red">content</div>'
+                     '<div id="в1" path="Data:view" class="foo" style="color: red">content</div>',
+                     // Compatibility: IE10-11 changes the order of attributes and adds a semicolon to the style
+                     '<div class="foo" id="в1" style="color: red;" path="Data:view">content</div>',
+                     // Compatibility: FF<=48 puts the style first
+                     '<div style="color: red" class="foo" id="в1" path="Data:view">content</div>',
+                     // Compatibility: FF<=3.6 puts the style first and adds a semicolon to the style
+                     '<div style="color: red;" class="foo" id="в1" path="Data:view">content</div>',
+                     // Compatibility: IE9 puts the class in the middle and adds a semicolon to the style
+                     '<div style="color: red;" id="в1" class="foo" path="Data:view">content</div>',
+                     // Compatibility: IE8 puts the style first and uppercases the attribute names, puts the class in the middle, removes quotes from id & class and uppercases the tag name
+                     '<DIV style="COLOR: red" id=в1 class=foo path="Data:view">content</DIV>',
+                     // Compatibility: IE<=7 removes quotes from id and removes altogether the style element!
+                     '<DIV id=в1 path="Data:view" class="foo">content</DIV>'
                   ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted #10: ' + document.body.innerHTML;
 
                   // LITHBAG CONTENT
@@ -957,7 +1009,19 @@
                   B.call (x, 'set', ['Data', 'view'], ['div', {'class': 'foo', style: 'color: red'}, ['A', ['B', ['C'], 'D'], 'E']]);
 
                   if ([
-                     '<div id="в1" path="Data:view" class="foo" style="color: red">ABCDE</div>'
+                     '<div id="в1" path="Data:view" class="foo" style="color: red">ABCDE</div>',
+                     // Compatibility: IE10-11 changes the order of attributes and adds a semicolon to the style
+                     '<div class="foo" id="в1" style="color: red;" path="Data:view">ABCDE</div>',
+                     // Compatibility: FF<=48 puts the style first
+                     '<div style="color: red" class="foo" id="в1" path="Data:view">ABCDE</div>',
+                     // Compatibility: FF<=3.6 puts the style first and adds a semicolon to the style
+                     '<div style="color: red;" class="foo" id="в1" path="Data:view">ABCDE</div>',
+                     // Compatibility: IE9 puts the class in the middle and adds a semicolon to the style
+                     '<div style="color: red;" id="в1" class="foo" path="Data:view">ABCDE</div>',
+                     // Compatibility: IE8 puts the style first and uppercases the attribute names, puts the class in the middle, removes quotes from id & class and uppercases the tag name
+                     '<DIV style="COLOR: red" id=в1 class=foo path="Data:view">ABCDE</DIV>',
+                     // Compatibility: IE<=7 removes quotes from id and removes altogether the style element!
+                     '<DIV id=в1 path="Data:view" class="foo">ABCDE</DIV>'
                   ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted #11: ' + document.body.innerHTML;
 
                   // REMOVE ALL ATTRIBUTES
@@ -967,7 +1031,9 @@
                   if (c ('#' + B.B + 1) !== DOMElement) return 'DOM element not recycled #12.';
 
                   if ([
-                     '<div id="в1" path="Data:view">ABCDE</div>'
+                     '<div id="в1" path="Data:view">ABCDE</div>',
+                     // Compatibility: IE<=8 removes quotes from id and uppercases the tag name
+                     '<DIV id=в1 path="Data:view">ABCDE</DIV>'
                   ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted #12: ' + document.body.innerHTML;
 
                   // ADD ATTRIBUTES THAT WILL BE IGNORED
@@ -977,7 +1043,9 @@
                   B.call (x, 'set', ['Data', 'view'], ['div', {id: 'foo', PATH: 'bar'}, ['A', ['B', ['C'], 'D'], 'E']]);
 
                   if ([
-                     '<div id="в1" path="Data:view">ABCDE</div>'
+                     '<div id="в1" path="Data:view">ABCDE</div>',
+                     // Compatibility: IE<=8 removes quotes from id and uppercases the tag name
+                     '<DIV id=в1 path="Data:view">ABCDE</DIV>'
                   ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted #13: ' + document.body.innerHTML;
 
                   // SPECIAL CHARACTERS IN CONTENT #1
@@ -985,7 +1053,9 @@
                   B.call (x, 'set', ['Data', 'view'], ['div', '&lt;`Me &amp; you too!`&gt;']);
 
                   if ([
-                     '<div id="в1" path="Data:view">&amp;lt;`Me &amp;amp; you too!`&amp;gt;</div>'
+                     '<div id="в1" path="Data:view">&amp;lt;`Me &amp;amp; you too!`&amp;gt;</div>',
+                     // Compatibility: IE<=8 removes quotes from id and uppercases the tag name
+                     '<DIV id=в1 path="Data:view">&amp;lt;`Me &amp;amp; you too!`&amp;gt;</DIV>'
                   ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted #14: ' + document.body.innerHTML;
 
                   // SPECIAL CHARACTERS IN CONTENT #2
@@ -993,7 +1063,9 @@
                   B.call (x, 'set', ['Data', 'view'], ['div', '"I have \'quotes\'!"']);
 
                   if ([
-                     '<div id="в1" path="Data:view">"I have \'quotes\'!"</div>'
+                     '<div id="в1" path="Data:view">"I have \'quotes\'!"</div>',
+                     // Compatibility: IE<=8 removes quotes from id and uppercases the tag name
+                     '<DIV id=в1 path="Data:view">"I have \'quotes\'!"</DIV>'
                   ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted #15: ' + document.body.innerHTML;
 
                   // SPECIAL CHARACTERS IN CONTENT #3
@@ -1001,7 +1073,9 @@
                   B.call (x, 'set', ['Data', 'view'], ['div', '<`Me & you too!`>']);
 
                   if ([
-                     '<div id="в1" path="Data:view">&lt;`Me &amp; you too!`&gt;</div>'
+                     '<div id="в1" path="Data:view">&lt;`Me &amp; you too!`&gt;</div>',
+                     // Compatibility: IE<=8 removes quotes from id and uppercases the tag name
+                     '<DIV id=в1 path="Data:view">&lt;`Me &amp; you too!`&gt;</DIV>'
                   ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted #16: ' + document.body.innerHTML;
 
                   // SPECIAL CHARACTERS IN CONTENT #4
@@ -1009,7 +1083,9 @@
                   B.call (x, 'set', ['Data', 'view'], ['div', '<script>hack ()</' + 'script>']);
 
                   if ([
-                     '<div id="в1" path="Data:view">&lt;script&gt;hack ()&lt;/script&gt;</div>'
+                     '<div id="в1" path="Data:view">&lt;script&gt;hack ()&lt;/script&gt;</div>',
+                     // Compatibility: IE<=8 removes quotes from id and uppercases the tag name
+                     '<DIV id=в1 path="Data:view">&lt;script&gt;hack ()&lt;/script&gt;</DIV>'
                   ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted #17: ' + document.body.innerHTML;
 
                   // LITERAL CONTENT
@@ -1017,7 +1093,11 @@
                   B.call (x, 'set', ['Data', 'view'], ['div', ['LITERAL', 'a&nbsp;b']]);
 
                   if ([
-                     '<div id="в1" path="Data:view">a&nbsp;b</div>'
+                     '<div id="в1" path="Data:view">a&nbsp;b</div>',
+                     // Compatibility: Opera<=10.6 converts &nbsp; to character with code 160
+                     '<div id="в1" path="Data:view">a' + String.fromCharCode (160) + 'b</div>',
+                     // Compatibility: IE<=8 removes quotes from id and uppercases the tag name
+                     '<DIV id=в1 path="Data:view">a&nbsp;b</DIV>',
                   ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted #18: ' + document.body.innerHTML;
 
                   // NESTED ELEMENT
@@ -1025,7 +1105,9 @@
                   B.call (x, 'set', ['Data', 'view'], ['div', dale.go (dale.times (3), function (v) {return ['p', v]})]);
 
                   if ([
-                     '<div id="в1" path="Data:view"><p>1</p><p>2</p><p>3</p></div>'
+                     '<div id="в1" path="Data:view"><p>1</p><p>2</p><p>3</p></div>',
+                     // Compatibility: IE<=8 removes quotes from id, uppercases the tag name and adds \r\n
+                     '<DIV id=в1 path="Data:view">\r\n<P>1</P>\r\n<P>2</P>\r\n<P>3</P></DIV>'
                   ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted #19: ' + document.body.innerHTML;
 
                   var ps = c ('p');
@@ -1035,7 +1117,9 @@
                   B.call (x, 'set', ['Data', 'view'], ['div', dale.go (dale.times (2), function (v) {return ['p', v === 1 ? 1 : 3]})]);
 
                   if ([
-                     '<div id="в1" path="Data:view"><p>1</p><p>3</p></div>'
+                     '<div id="в1" path="Data:view"><p>1</p><p>3</p></div>',
+                     // Compatibility: IE<=8 removes quotes from id, uppercases the tag name and adds \r\n
+                     '<DIV id=в1 path="Data:view">\r\n<P>1</P>\r\n<P>3</P></DIV>'
                   ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted #20: ' + document.body.innerHTML;
 
                   if (c ('p') [0] !== ps [0]) return 'First paragraph changed unnecessarily #20';
@@ -1043,14 +1127,18 @@
 
                   // REMOVE INTERNAL ELEMENT FROM THE MIDDLE (ATTRIBUTE CHANGE)
 
-                  B.call (x, 'set', ['Data', 'view'], ['div', dale.go (dale.times (3), function (v) {return ['p', {class: v}]})]);
+                  B.call (x, 'set', ['Data', 'view'], ['div', dale.go (dale.times (3), function (v) {return ['p', {'class': v}]})]);
 
                   ps = c ('p');
 
-                  B.call (x, 'set', ['Data', 'view'], ['div', dale.go (dale.times (2), function (v) {return ['p', {class: v === 1 ? 1 : 3}]})]);
+                  B.call (x, 'set', ['Data', 'view'], ['div', dale.go (dale.times (2), function (v) {return ['p', {'class': v === 1 ? 1 : 3}]})]);
 
                   if ([
-                     '<div id="в1" path="Data:view"><p class="1"></p><p class="3"></p></div>'
+                     '<div id="в1" path="Data:view"><p class="1"></p><p class="3"></p></div>',
+                     // Compatibility: IE8 removes quotes from id & class, uppercases the tag name and adds \r\n
+                     '<DIV id=в1 path="Data:view">\r\n<P class=1></P>\r\n<P class=3></P></DIV>',
+                     // Compatibility: IE<=7 removes quotes from id, uppercases the tag name and adds \r\n
+                     '<DIV id=в1 path="Data:view">\r\n<P class="1"></P>\r\n<P class="3"></P></DIV>'
                   ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted #21: ' + document.body.innerHTML;
 
                   if (c ('p') [0] !== ps [0]) return 'First paragraph changed unnecessarily #21';
@@ -1058,10 +1146,16 @@
 
                   // REPLACE OUTERMOST ELEMENT
 
-                  B.call (x, 'set', ['Data', 'view'], ['section', dale.go (dale.times (2), function (v) {return ['p', {class: v === 1 ? 1 : 3}]})]);
+                  B.call (x, 'set', ['Data', 'view'], ['section', dale.go (dale.times (2), function (v) {return ['p', {'class': v === 1 ? 1 : 3}]})]);
 
                   if ([
-                     '<section id="в1" path="Data:view"><p class="1"></p><p class="3"></p></section>'
+                     '<section id="в1" path="Data:view"><p class="1"></p><p class="3"></p></section>',
+                     // Compatibility: FF<=48 changes the order of path & id
+                     '<section path="Data:view" id="в1"><p class="1"></p><p class="3"></p></section>',
+                     // Compatibility: IE8 removes quotes from id & class, uppercases the tag name and adds \r\n
+                     '<section id=в1 path="Data:view">\r\n<P class=1></P>\r\n<P class=3></P></section>',
+                     // Compatibility: IE<=7 removes quotes from id, uppercases the tag name and adds \r\n
+                     '<section id=в1 path="Data:view">\r\n<P class="1"></P>\r\n<P class="3"></P></section>'
                   ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted #22: ' + document.body.innerHTML;
 
                   if (c ('p') [0] !== ps [0]) return 'First paragraph changed unnecessarily #22';
@@ -1075,21 +1169,27 @@
                   B.call (x, 'set', ['Data', 'view'], ['div']);
                   B.mount ('body', function () {
                      return ['div', [
-                        ['header'],
+                        ['b'],
                         B.view (['Data', 'view'], function (view) {
                            return view;
                         }),
-                        ['footer']
+                        ['em']
                      ]];
                   });
 
                   if ([
-                     '<div><header></header><div id="в1" path="Data:view"></div><footer></footer></div>'
+                     '<div><b></b><div id="в1" path="Data:view"></div><em></em></div>',
+                     // Compatibility: IE<=8 removes quotes from id & class, uppercases the tag name and adds \r\n
+                     '<DIV><B></B>\r\n<DIV id=в1 path="Data:view"></DIV><EM></EM></DIV>'
                   ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted #23: ' + document.body.innerHTML;
 
                   B.call (x, 'set', ['Data', 'view'], ['p']);
                   if ([
-                     '<div><header></header><p id="в1" path="Data:view"></p><footer></footer></div>'
+                     '<div><b></b><p id="в1" path="Data:view"></p><em></em></div>',
+                     // Compatibility: FF<=48 changes the order of path & id
+                     '<div><b></b><p path="Data:view" id="в1"></p><em></em></div>',
+                     // Compatibility: IE<=8 removes quotes from id & class, uppercases the tag name and adds \r\n
+                     '<DIV><B></B>\r\n<P id=в1 path="Data:view"></P><EM></EM></DIV>'
                   ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted #24: ' + document.body.innerHTML;
 
                });
@@ -1134,7 +1234,7 @@
                   if (responder.children.length !== 0) return 'Invalid children #3.';
 
                   if ([
-                     '<pre id="в3" path=":">' + JSON.stringify (B.store) + '</pre>',
+                     '<pre id="в3" path=":">' + JSON.stringify (B.store) + '</pre>'
                   ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted, view with path []: ' + document.body.innerHTML;
 
                   if (draws !== 1) return 'View with path [] drawn more than once.';
@@ -1435,33 +1535,43 @@
                   c ('textarea') [2].focus ? c ('textarea') [2].focus () : c ('textarea') [2].setActive ();
 
                   if ([
-                     '<div id="в18" path="State:textarea"><textarea>&lt;' + State.textarea.join ('&amp;</textarea><textarea>&lt;') + '&amp;</textarea></div>'
+                     '<div id="в18" path="State:textarea"><textarea>&lt;' + State.textarea.join ('&amp;</textarea><textarea>&lt;') + '&amp;</textarea></div>',
+                     // Compatibility: Safari 4 doesn't escape text nodes inside textareas
+                     '<div id="в18" path="State:textarea"><textarea><' + State.textarea.join ('&</textarea><textarea><') + '&</textarea></div>'
                   ].indexOf (document.body.innerHTML) === -1) return 'Textareas #2: ' + document.body.innerHTML;
 
                   B.call (x, 'set', ['State', 'textarea'], [5, 4, 1, 2, 3]);
                   if (document.activeElement !== c ('textarea') [2]) return 'Textarea lost focus #1.';
                   if ([
-                     '<div id="в18" path="State:textarea"><textarea>&lt;' + State.textarea.join ('&amp;</textarea><textarea>&lt;') + '&amp;</textarea></div>'
+                     '<div id="в18" path="State:textarea"><textarea>&lt;' + State.textarea.join ('&amp;</textarea><textarea>&lt;') + '&amp;</textarea></div>',
+                     // Compatibility: Safari 4 doesn't escape text nodes inside textareas
+                     '<div id="в18" path="State:textarea"><textarea><' + State.textarea.join ('&</textarea><textarea><') + '&</textarea></div>'
                   ].indexOf (document.body.innerHTML) === -1) return 'Textareas #3: ' + document.body.innerHTML;
 
                   B.call (x, 'set', ['State', 'textarea'], [2, 1, 4, 3, 5]);
                   // Here the diff will move the 2nd textarea to the 4th position through recycling.
                   if (document.activeElement !== c ('textarea') [4]) return 'Textarea lost focus #2.';
                   if ([
-                     '<div id="в18" path="State:textarea"><textarea>&lt;' + State.textarea.join ('&amp;</textarea><textarea>&lt;') + '&amp;</textarea></div>'
+                     '<div id="в18" path="State:textarea"><textarea>&lt;' + State.textarea.join ('&amp;</textarea><textarea>&lt;') + '&amp;</textarea></div>',
+                     // Compatibility: Safari 4 doesn't escape text nodes inside textareas
+                     '<div id="в18" path="State:textarea"><textarea><' + State.textarea.join ('&</textarea><textarea><') + '&</textarea></div>'
                   ].indexOf (document.body.innerHTML) === -1) return 'Textareas #4: ' + document.body.innerHTML;
 
                   B.call (x, 'set', ['State', 'textarea'], [1, 2, 5, 3, 4]);
                   if (document.activeElement !== c ('textarea') [4]) return 'Textarea lost focus #3.';
                   if ([
-                     '<div id="в18" path="State:textarea"><textarea>&lt;' + State.textarea.join ('&amp;</textarea><textarea>&lt;') + '&amp;</textarea></div>'
+                     '<div id="в18" path="State:textarea"><textarea>&lt;' + State.textarea.join ('&amp;</textarea><textarea>&lt;') + '&amp;</textarea></div>',
+                     // Compatibility: Safari 4 doesn't escape text nodes inside textareas
+                     '<div id="в18" path="State:textarea"><textarea><' + State.textarea.join ('&</textarea><textarea><') + '&</textarea></div>'
                   ].indexOf (document.body.innerHTML) === -1) return 'Textareas #5: ' + document.body.innerHTML;
 
                   B.call (x, 'set', ['State', 'textarea'], [1, 2, 5, 3, 6]);
                   if (document.activeElement !== c ('textarea') [4]) return 'Textarea lost focus #4.';
                   if ([
-                     '<div id="в18" path="State:textarea"><textarea>&lt;' + State.textarea.slice (0, 4).join ('&amp;</textarea><textarea>&lt;') + '&amp;</textarea><textarea></textarea></div>'
-                  ].indexOf (document.body.innerHTML) === -1) return 'Textareas #5: ' + document.body.innerHTML;
+                     '<div id="в18" path="State:textarea"><textarea>&lt;' + State.textarea.slice (0, 4).join ('&amp;</textarea><textarea>&lt;') + '&amp;</textarea><textarea></textarea></div>',
+                     // Compatibility: Safari 4 doesn't escape text nodes inside textareas
+                     '<div id="в18" path="State:textarea"><textarea><' + State.textarea.slice (0, 4).join ('&</textarea><textarea><') + '&</textarea><textarea></textarea></div>'
+                  ].indexOf (document.body.innerHTML) === -1) return 'Textareas #6: ' + document.body.innerHTML;
 
                });
 
@@ -1631,7 +1741,8 @@
 
                   B.call (x, 'set', ['Data', 'i7'], true);
 
-                  if (document.activeElement !== c ('body')) return 'focus was preserved when it shouldn\'t.';
+                  // Compatibility: IE<=11 don't set back the focus to body when the focused element is removed
+                  if (document.activeElement !== c ('body') && document.activeElement !== null) return 'focus was preserved when it shouldn\'t.';
 
                });
 
@@ -1722,7 +1833,11 @@
                   if (opaques.length !== 2) return 'Opaques were not created.';
                   opaques = c ('.something input');
                   if (opaques.length !== 2) return 'Opaque contents were not created.';
-                  if (c ('#d4').innerHTML !== '<svg class="c2"></svg>') return 'Opaque with literal svg has invalid content #1.';
+                  if ([
+                     '<svg class="c2"></svg>',
+                     // Compatibility: IE<=11 modifies the SVG
+                     '<svg xmlns="http://www.w3.org/2000/svg" class="c2" />'
+                  ].indexOf (c ('#d4').innerHTML) === -1) return 'Opaque with literal svg has invalid content #1: ' + c ('#d4').innerHTML;
 
                   c.fill ('.something', '<input><input>');
                   B.call (x, 'set', ['State', 'ltable'], 4);
@@ -1730,7 +1845,11 @@
                   if (opaques.length !== 4) return 'Opaques were not updated #1.';
                   opaques = c ('.something input');
                   if (opaques.length !== 4) return 'Opaque contents were not updated #1.';
-                  if (c ('#d4').innerHTML !== '<svg class="c4"></svg>') return 'Opaque with literal svg has invalid content #2.';
+                  if ([
+                     '<svg class="c4"></svg>',
+                     // Compatibility: IE<=11 modifies the SVG
+                     '<svg xmlns="http://www.w3.org/2000/svg" class="c4" />'
+                  ].indexOf (c ('#d4').innerHTML) === -1) return 'Opaque with literal svg has invalid content #2: ' + c ('#d4').innerHTML;
 
                   c.fill ('.something', 'boo');
                   if (c ('.something') [0].innerHTML !== 'boo') return 'Opaque contents were not updated.';
@@ -1742,7 +1861,11 @@
                   if (opaques.length !== 5) return 'Opaques were not updated #2.';
                   opaques = c ('.something input');
                   if (opaques.length !== 5) return 'Opaque contents were not updated #2.';
-                  if (c ('#d4').innerHTML !== '<svg class="c5"></svg>') return 'Opaque with literal svg has invalid content #3.';
+                  if ([
+                     '<svg class="c5"></svg>',
+                     // Compatibility: IE<=11 modifies the SVG
+                     '<svg xmlns="http://www.w3.org/2000/svg" class="c5" />'
+                  ].indexOf (c ('#d4').innerHTML) === -1) return 'Opaque with literal svg has invalid content #3: ' + c ('#d4').innerHTML;
 
                   c.fill ('.something', '<div><input><span></span></div>');
 
@@ -1757,7 +1880,11 @@
                   if (c ('#d1').innerHTML !== '') return 'Opaque empty has invalid content after redraw.';
                   if (c ('#d2').innerHTML !== '4') return 'Opaque text has invalid content after redraw.';
                   if (c ('#d3').innerHTML !== '<span></span><span></span>') return 'Opaque multiple has invalid content after redraw.';
-                  if (c ('#d4').innerHTML !== '<svg class="c4"></svg>') return 'Opaque with literal svg has invalid content #4.';
+                  if ([
+                     '<svg class="c4"></svg>',
+                     // Compatibility: IE<=11 modifies the SVG
+                     '<svg xmlns="http://www.w3.org/2000/svg" class="c4" />'
+                  ].indexOf (c ('#d4').innerHTML) === -1) return 'Opaque with literal svg has invalid content #4: ' + c ('#d4').innerHTML;
 
                });
 

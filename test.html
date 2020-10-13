@@ -478,7 +478,7 @@
 
                   var logs = [last (B.log, 2), last (B.log)];
 
-                  // IE<=8 adds other attributes to args, so we filter them out.
+                  // Compatibility: IE<=8 adds other attributes to args, so we filter them out.
                   logs [0].args = dale.go (logs [0].args, function (v) {
                      return dale.obj (v, function (v2, k2) {
                         if (k2 === 'class') return [k2, v2];
@@ -666,7 +666,7 @@
 
                   if ([
                      '<div id="first"><div id="third">c</div>a</div><div id="second">b</div>',
-                     // IE <= 8
+                     // Compatibility: IE<=8 removes the quotes of id, uppercases the tags and adds \r\n
                      '<DIV id=first>\r\n<DIV id=third>c</DIV>a</DIV>\r\n<DIV id=second>b</DIV>',
                   ].indexOf (document.body.innerHTML) === -1) return 'B.mount didn\'t mount element inside element.';
 
@@ -746,13 +746,13 @@
 
                   if (
                      ! eq (B.prediff (['a', {id: B.B + 1000}, 'u']), ['O a {"id":"' + B.B + 1000 + '"}', 'L u', 'C a']) &&
-                     // We use `\u0432` instead of `B.B` because of IE8 (but not IE6-7!)
+                     // Compatibility: We use `\u0432` instead of `B.B` because of IE8 (but not IE6-7!)
                      ! eq (B.prediff (['a', {id: B.B + 1000}, 'u']), ['O a {"id":"\\u0432' + 1000 + '"}', 'L u', 'C a'])
                   ) return 'Mismatch when prediffing up top-level reactive view: ' + B.prediff (['a', {id: B.B + 1000}, 'u']);
 
                   if (
                      ! eq (['O div', 'O a {"id":"' + B.B + 1000 + '"}', 'L z', 'C a', 'C div'], B.prediff (['div', ['a', {id: B.B + 1000}, 'u']])) &&
-                     // We use `\u0432` instead of `B.B` because of IE8 (but not IE6-7!)
+                     // Compatibility: We use `\u0432` instead of `B.B` because of IE8 (but not IE6-7!)
                      ! eq (['O div', 'O a {"id":"\\u0432' + 1000 + '"}', 'L z', 'C a', 'C div'], B.prediff (['div', ['a', {id: B.B + 1000}, 'u']]))
                   ) return 'Mismatch when looking up nested reactive view.';
 
@@ -1234,7 +1234,9 @@
                   if (responder.children.length !== 0) return 'Invalid children #3.';
 
                   if ([
-                     '<pre id="в3" path=":">' + JSON.stringify (B.store) + '</pre>'
+                     '<pre id="в3" path=":">' + JSON.stringify (B.store) + '</pre>',
+                     // Compatibility: IE<=8 uppercases the tag and removes the quotes around id
+                     '<PRE id=в3 path=":">' + JSON.stringify (B.store) + '</PRE>'
                   ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted, view with path []: ' + document.body.innerHTML;
 
                   if (draws !== 1) return 'View with path [] drawn more than once.';
@@ -1263,8 +1265,10 @@
                   if (responder.children.length !== 0) return 'Invalid children #4.';
 
                   if ([
-                     '<div id="в4" path="Data, State">' + '<textarea>' + JSON.stringify (Data) + '</textarea><textarea>' + JSON.stringify (State) + '</textarea><textarea>2</textarea></div>'
-                  ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted, view with multiple paths: ' + document.body.innerHTML;
+                     '<div id="в4" path="Data, State">' + '<textarea>' + JSON.stringify (Data) + '</textarea><textarea>' + JSON.stringify (State) + '</textarea><textarea>2</textarea></div>',
+                     // Compatibility: IE<=8 uppercases the tag and removes the quotes around id
+                     '<DIV id=в4 path="Data, State">' + '<TEXTAREA>' + JSON.stringify (Data) + '</TEXTAREA><TEXTAREA>' + JSON.stringify (State) + '</TEXTAREA><TEXTAREA>2</TEXTAREA></DIV>'
+                  ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted, view with multiple paths #1: ' + document.body.innerHTML;
 
                   if (draws !== 4) return 'View with multiple paths drawn more than once.';
                   B.call (x, 'change', ['bla']);
@@ -1294,8 +1298,10 @@
                   if (responder.children.length !== 0) return 'Invalid children #5.';
 
                   if ([
-                     '<div id="в5" path="Data">' + '<textarea>' + JSON.stringify (Data) + '</textarea><textarea>1</textarea></div>'
-                  ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted, view with multiple paths: ' + document.body.innerHTML;
+                     '<div id="в5" path="Data">' + '<textarea>' + JSON.stringify (Data) + '</textarea><textarea>1</textarea></div>',
+                     // Compatibility: IE<=8 uppercases the tag and removes the quotes around id
+                     '<DIV id=в5 path="Data">' + '<TEXTAREA>' + JSON.stringify (Data) + '</TEXTAREA><TEXTAREA>1</TEXTAREA></DIV>'
+                  ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted, view with multiple paths #2: ' + document.body.innerHTML;
                });
 
                Test ('B.view, nested views', function () {
@@ -1315,7 +1321,9 @@
                   });
 
                   if ([
-                     '<div id="в6" path="Data:view"><div></div><pre id="в7" path="State">{}</pre></div>'
+                     '<div id="в6" path="Data:view"><div></div><pre id="в7" path="State">{}</pre></div>',
+                     // Compatibility: IE<=8 uppercases the tag, removes the quotes around id and adds \r\n
+                     '<DIV id=в6 path="Data:view">\r\n<DIV></DIV><PRE id=в7 path="State">{}</PRE></DIV>'
                   ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted, double nested: ' + document.body.innerHTML;
 
                   responder = B.responders [B.B + 6];
@@ -1357,8 +1365,10 @@
                   });
 
                   if ([
-                     '<div id="в8" path="Data:view"><div></div><div id="в9" path="State"><pre id="в10" path="Data"></pre><pre id="в11" path="Data:view"></pre></div></div>'
-                  ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted, triple nested: ' + document.body.innerHTML;
+                     '<div id="в8" path="Data:view"><div></div><div id="в9" path="State"><pre id="в10" path="Data"></pre><pre id="в11" path="Data:view"></pre></div></div>',
+                     // Compatibility: IE<=8 uppercases the tag, removes the quotes around id and adds \r\n
+                     '<DIV id=в8 path="Data:view">\r\n<DIV></DIV>\r\n<DIV id=в9 path="State"><PRE id=в10 path="Data"></PRE><PRE id=в11 path="Data:view"></PRE></DIV></DIV>',
+                  ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted, triple nested #1: ' + document.body.innerHTML;
 
                   responder = B.responders [B.B + 8];
                   if (responder.priority !== -1) return 'Invalid priority #8.';
@@ -1384,8 +1394,10 @@
                   B.call (x, 'set', ['Data', 'view'], ['section']);
 
                   if ([
-                     '<div id="в8" path="Data:view"><section></section><div id="в12" path="State"><pre id="в13" path="Data"></pre><pre id="в14" path="Data:view"></pre></div></div>'
-                  ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted, triple nested: ' + document.body.innerHTML;
+                     '<div id="в8" path="Data:view"><section></section><div id="в12" path="State"><pre id="в13" path="Data"></pre><pre id="в14" path="Data:view"></pre></div></div>',
+                     // Compatibility: IE<=8 uppercases the tag, removes the quotes around id and adds \r\n
+                     '<DIV id=в8 path="Data:view"><section></section>\r\n<DIV id=в12 path="State"><PRE id=в13 path="Data"></PRE><PRE id=в14 path="Data:view"></PRE></DIV></DIV>'
+                  ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted, triple nested #2: ' + document.body.innerHTML;
 
                   if (! eq (draws, {outer: 2, medium: 2, inner0: 2, inner1: 2})) return 'Invalid draws count #1.';
 
@@ -1414,7 +1426,6 @@
 
                });
 
-
                Test ('B.view, tables', function () {
 
                   B.unmount ('body');
@@ -1426,22 +1437,32 @@
                   });
 
                   if ([
-                     '<table id="в15" path="Data:view"></table>'
+                     '<table id="в15" path="Data:view"></table>',
+                     // Compatibility: IE8 uppercases the tag and removes the quotes around id
+                     '<TABLE id=в15 path="Data:view"></TABLE>',
+                     // Compatibility: IE<=7 uppercases the tag, adds a tbody and removes the quotes around id
+                     '<TABLE id=в15 path="Data:view">\r\n<TBODY></TBODY></TABLE>'
                   ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted, table #1: ' + document.body.innerHTML;
 
                   B.call (x, 'set', ['Data', 'view'], ['table', ['tr']]);
                   if ([
-                     '<table id="в15" path="Data:view"><tbody><tr></tr></tbody></table>'
+                     '<table id="в15" path="Data:view"><tbody><tr></tr></tbody></table>',
+                     // Compatibility: IE<=8 uppercases the tag, removes the quotes around id and adds \r\n
+                     '<TABLE id=в15 path="Data:view">\r\n<TBODY>\r\n<TR></TR></TBODY></TABLE>'
                   ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted, table #2: ' + document.body.innerHTML;
 
                   B.call (x, 'set', ['Data', 'view'], ['table', ['thead', ['tr']]]);
                   if ([
-                     '<table id="в15" path="Data:view"><thead><tr></tr></thead></table>'
+                     '<table id="в15" path="Data:view"><thead><tr></tr></thead></table>',
+                     // Compatibility: IE<=8 uppercases the tag, removes the quotes around id and adds \r\n
+                     '<TABLE id=в15 path="Data:view">\r\n<THEAD>\r\n<TR></TR></THEAD></TABLE>'
                   ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted, table #3: ' + document.body.innerHTML;
 
                   B.call (x, 'set', ['Data', 'view'], ['table', [['thead', ['tr']], [['tbody', ['tr']]]]]);
                   if ([
-                     '<table id="в15" path="Data:view"><thead><tr></tr></thead><tbody><tr></tr></tbody></table>'
+                     '<table id="в15" path="Data:view"><thead><tr></tr></thead><tbody><tr></tr></tbody></table>',
+                     // Compatibility: IE<=8 uppercases the tag, removes the quotes around id and adds \r\n
+                     '<TABLE id=в15 path="Data:view">\r\n<THEAD>\r\n<TR></TR></THEAD>\r\n<TBODY>\r\n<TR></TR></TBODY></TABLE>'
                   ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted, table #4: ' + document.body.innerHTML;
 
                });
@@ -1457,31 +1478,41 @@
                   });
 
                   if ([
-                     '<ul id="в16" path="Data:list"></ul>'
+                     '<ul id="в16" path="Data:list"></ul>',
+                     // Compatibility: IE<=8 uppercases the tag and removes the quotes around id
+                     '<UL id=в16 path="Data:list"></UL>'
                   ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted, list #1: ' + document.body.innerHTML;
 
                   B.call (x, 'set', ['Data', 'list'], [1, 2, 3, 4]);
 
                   if ([
-                     '<ul id="в16" path="Data:list"><li>1</li><li>2</li><li>3</li><li>4</li></ul>'
+                     '<ul id="в16" path="Data:list"><li>1</li><li>2</li><li>3</li><li>4</li></ul>',
+                     // Compatibility: IE<=8 uppercases the tag, removes the quotes around id and adds \r\n
+                     '<UL id=в16 path="Data:list">\r\n<LI>1</LI>\r\n<LI>2</LI>\r\n<LI>3</LI>\r\n<LI>4</LI></UL>'
                   ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted, list #2: ' + document.body.innerHTML;
 
                   B.call (x, 'set', ['Data', 'list', 1], 9);
 
                   if ([
-                     '<ul id="в16" path="Data:list"><li>1</li><li>9</li><li>3</li><li>4</li></ul>'
+                     '<ul id="в16" path="Data:list"><li>1</li><li>9</li><li>3</li><li>4</li></ul>',
+                     // Compatibility: IE<=8 uppercases the tag, removes the quotes around id and adds \r\n
+                     '<UL id=в16 path="Data:list">\r\n<LI>1</LI>\r\n<LI>9</LI>\r\n<LI>3</LI>\r\n<LI>4</LI></UL>'
                   ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted, list #3: ' + document.body.innerHTML;
 
                   B.call (x, 'rem', ['Data', 'list'], 2);
 
                   if ([
-                     '<ul id="в16" path="Data:list"><li>1</li><li>9</li><li>4</li></ul>'
+                     '<ul id="в16" path="Data:list"><li>1</li><li>9</li><li>4</li></ul>',
+                     // Compatibility: IE<=8 uppercases the tag, removes the quotes around id and adds \r\n
+                     '<UL id=в16 path="Data:list">\r\n<LI>1</LI>\r\n<LI>9</LI>\r\n<LI>4</LI></UL>'
                   ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted, list #4: ' + document.body.innerHTML;
 
                   B.call (x, 'add', ['Data', 'list'], 'a > b');
 
                   if ([
-                     '<ul id="в16" path="Data:list"><li>1</li><li>9</li><li>4</li><li>a &gt; b</li></ul>'
+                     '<ul id="в16" path="Data:list"><li>1</li><li>9</li><li>4</li><li>a &gt; b</li></ul>',
+                     // Compatibility: IE<=8 uppercases the tag, removes the quotes around id and adds \r\n
+                     '<UL id=в16 path="Data:list">\r\n<LI>1</LI>\r\n<LI>9</LI>\r\n<LI>4</LI>\r\n<LI>a &gt; b</LI></UL>'
                   ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted, list #5: ' + document.body.innerHTML;
 
                });
@@ -1512,8 +1543,8 @@
                   Test ('Focus & value tests', function () {
                      if (document.activeElement !== c ('#user')) return 'focus wasn\'t preserved when it should.';
 
-                     if (c ('#user').value !== 'hello!') return 'value wasn\'t preserved when it should.';
-                     if (c ('#pass').value !== 'secreto') return 'value wasn\'t preserved when it should.';
+                     if (c ('#user').value !== 'hello!')  return 'value wasn\'t preserved when it should: ' + c ('#user').value;
+                     if (c ('#pass').value !== 'secreto') return 'value wasn\'t preserved when it should: ' + c ('#pass').value;
                   });
                });
 
@@ -1528,49 +1559,63 @@
                   });
 
                   if ([
-                     '<div id="в18" path="State:textarea"></div>'
+                     '<div id="в18" path="State:textarea"></div>',
+                     // Compatibility: IE<=8 uppercases the tag and removes the quotes around id
+                     '<DIV id=в18 path="State:textarea"></DIV>'
                   ].indexOf (document.body.innerHTML) === -1) return 'Textareas #1: ' + document.body.innerHTML;
 
                   B.call (x, 'set', ['State', 'textarea'], [1, 2, 3, 4, 5]);
                   c ('textarea') [2].focus ? c ('textarea') [2].focus () : c ('textarea') [2].setActive ();
+                  // Compatibility: IE<=8 requires a timeout to set an element as active, so we skip checking this to not complicate the tests.
+                  var ie8 = document.activeElement === document.body;
 
                   if ([
                      '<div id="в18" path="State:textarea"><textarea>&lt;' + State.textarea.join ('&amp;</textarea><textarea>&lt;') + '&amp;</textarea></div>',
                      // Compatibility: Safari 4 doesn't escape text nodes inside textareas
-                     '<div id="в18" path="State:textarea"><textarea><' + State.textarea.join ('&</textarea><textarea><') + '&</textarea></div>'
+                     '<div id="в18" path="State:textarea"><textarea><' + State.textarea.join ('&</textarea><textarea><') + '&</textarea></div>',
+                     // Compatibility: IE<=8 uppercases the tag and removes the quotes around id
+                     '<DIV id=в18 path="State:textarea"><TEXTAREA>&lt;' + State.textarea.join ('&amp;</TEXTAREA><TEXTAREA>&lt;') + '&amp;</TEXTAREA></DIV>'
                   ].indexOf (document.body.innerHTML) === -1) return 'Textareas #2: ' + document.body.innerHTML;
 
                   B.call (x, 'set', ['State', 'textarea'], [5, 4, 1, 2, 3]);
-                  if (document.activeElement !== c ('textarea') [2]) return 'Textarea lost focus #1.';
+                  if (! ie8 && document.activeElement !== c ('textarea') [2]) return 'Textarea lost focus #1.';
                   if ([
                      '<div id="в18" path="State:textarea"><textarea>&lt;' + State.textarea.join ('&amp;</textarea><textarea>&lt;') + '&amp;</textarea></div>',
                      // Compatibility: Safari 4 doesn't escape text nodes inside textareas
-                     '<div id="в18" path="State:textarea"><textarea><' + State.textarea.join ('&</textarea><textarea><') + '&</textarea></div>'
+                     '<div id="в18" path="State:textarea"><textarea><' + State.textarea.join ('&</textarea><textarea><') + '&</textarea></div>',
+                     // Compatibility: IE<=8 uppercases the tag and removes the quotes around id
+                     '<DIV id=в18 path="State:textarea"><TEXTAREA>&lt;' + State.textarea.join ('&amp;</TEXTAREA><TEXTAREA>&lt;') + '&amp;</TEXTAREA></DIV>'
                   ].indexOf (document.body.innerHTML) === -1) return 'Textareas #3: ' + document.body.innerHTML;
 
                   B.call (x, 'set', ['State', 'textarea'], [2, 1, 4, 3, 5]);
                   // Here the diff will move the 2nd textarea to the 4th position through recycling.
-                  if (document.activeElement !== c ('textarea') [4]) return 'Textarea lost focus #2.';
+                  if (! ie8 && document.activeElement !== c ('textarea') [4]) return 'Textarea lost focus #2.';
                   if ([
                      '<div id="в18" path="State:textarea"><textarea>&lt;' + State.textarea.join ('&amp;</textarea><textarea>&lt;') + '&amp;</textarea></div>',
                      // Compatibility: Safari 4 doesn't escape text nodes inside textareas
-                     '<div id="в18" path="State:textarea"><textarea><' + State.textarea.join ('&</textarea><textarea><') + '&</textarea></div>'
+                     '<div id="в18" path="State:textarea"><textarea><' + State.textarea.join ('&</textarea><textarea><') + '&</textarea></div>',
+                     // Compatibility: IE<=8 uppercases the tag and removes the quotes around id
+                     '<DIV id=в18 path="State:textarea"><TEXTAREA>&lt;' + State.textarea.join ('&amp;</TEXTAREA><TEXTAREA>&lt;') + '&amp;</TEXTAREA></DIV>'
                   ].indexOf (document.body.innerHTML) === -1) return 'Textareas #4: ' + document.body.innerHTML;
 
                   B.call (x, 'set', ['State', 'textarea'], [1, 2, 5, 3, 4]);
-                  if (document.activeElement !== c ('textarea') [4]) return 'Textarea lost focus #3.';
+                  if (! ie8 && document.activeElement !== c ('textarea') [4]) return 'Textarea lost focus #3.';
                   if ([
                      '<div id="в18" path="State:textarea"><textarea>&lt;' + State.textarea.join ('&amp;</textarea><textarea>&lt;') + '&amp;</textarea></div>',
                      // Compatibility: Safari 4 doesn't escape text nodes inside textareas
-                     '<div id="в18" path="State:textarea"><textarea><' + State.textarea.join ('&</textarea><textarea><') + '&</textarea></div>'
+                     '<div id="в18" path="State:textarea"><textarea><' + State.textarea.join ('&</textarea><textarea><') + '&</textarea></div>',
+                     // Compatibility: IE<=8 uppercases the tag and removes the quotes around id
+                     '<DIV id=в18 path="State:textarea"><TEXTAREA>&lt;' + State.textarea.join ('&amp;</TEXTAREA><TEXTAREA>&lt;') + '&amp;</TEXTAREA></DIV>'
                   ].indexOf (document.body.innerHTML) === -1) return 'Textareas #5: ' + document.body.innerHTML;
 
                   B.call (x, 'set', ['State', 'textarea'], [1, 2, 5, 3, 6]);
-                  if (document.activeElement !== c ('textarea') [4]) return 'Textarea lost focus #4.';
+                  if (! ie8 && document.activeElement !== c ('textarea') [4]) return 'Textarea lost focus #4.';
                   if ([
                      '<div id="в18" path="State:textarea"><textarea>&lt;' + State.textarea.slice (0, 4).join ('&amp;</textarea><textarea>&lt;') + '&amp;</textarea><textarea></textarea></div>',
                      // Compatibility: Safari 4 doesn't escape text nodes inside textareas
-                     '<div id="в18" path="State:textarea"><textarea><' + State.textarea.slice (0, 4).join ('&</textarea><textarea><') + '&</textarea><textarea></textarea></div>'
+                     '<div id="в18" path="State:textarea"><textarea><' + State.textarea.slice (0, 4).join ('&</textarea><textarea><') + '&</textarea><textarea></textarea></div>',
+                     // Compatibility: IE<=8 uppercases the tag and removes the quotes around id
+                     '<DIV id=в18 path="State:textarea"><TEXTAREA>&lt;' + State.textarea.slice (0, 4).join ('&amp;</TEXTAREA><TEXTAREA>&lt;') + '&amp;</TEXTAREA><TEXTAREA></TEXTAREA></DIV>'
                   ].indexOf (document.body.innerHTML) === -1) return 'Textareas #6: ' + document.body.innerHTML;
 
                });
@@ -1602,7 +1647,9 @@
                   });
 
                   if ([
-                     '<div id="в19" path="State:select"><select><option>1</option><option selected="true">2</option><option>3</option></select></div>'
+                     '<div id="в19" path="State:select"><select><option>1</option><option selected="true">2</option><option>3</option></select></div>',
+                     // Compatibility: IE<=8 uppercases the tag, removes the quotes around id and changes the selected attribute
+                     '<DIV id=в19 path="State:select"><SELECT><OPTION>1</OPTION><OPTION selected>2</OPTION><OPTION>3</OPTION></SELECT></DIV>'
                   ].indexOf (document.body.innerHTML) === -1) return 'Checkboxes #1: ' + document.body.innerHTML;
 
                   if (c ('option') [1].selected !== true) return 'Option values not set #1.';
@@ -1610,7 +1657,9 @@
                   B.call (x, 'set', ['State', 'select'], true);
 
                   if ([
-                     '<div id="в19" path="State:select"><select><option>1</option><option>2</option><option>3</option></select><select><option>1</option><option selected="true">2</option><option>3</option></select></div>'
+                     '<div id="в19" path="State:select"><select><option>1</option><option>2</option><option>3</option></select><select><option>1</option><option selected="true">2</option><option>3</option></select></div>',
+                     // Compatibility: IE<=8 uppercases the tag, removes the quotes around id and changes the selected attribute
+                     '<DIV id=в19 path="State:select"><SELECT><OPTION>1</OPTION><OPTION>2</OPTION><OPTION>3</OPTION></SELECT><SELECT><OPTION>1</OPTION><OPTION selected>2</OPTION><OPTION>3</OPTION></SELECT></DIV>'
                   ].indexOf (document.body.innerHTML) === -1) return 'Checkboxes #2: ' + document.body.innerHTML;
                   if (c ('option') [1].selected !== false || c ('option') [4].selected !== true) return 'Option values not set #2.';
 

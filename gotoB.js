@@ -362,6 +362,13 @@ Please refer to readme.md to read the annotated source.
       return B.validateLitc (teishi.last (input));
    }
 
+   if (! document.body.contains) document.body.contains = function (el) {
+      while (el = el.parentNode) {
+         if (el === document.body) return true;
+      }
+      return false;
+   }
+
    B.redraw = function (x, id, oldElement, oldChildren, msCreate, fromQueue) {
 
       if (B.internal.redrawing && ! fromQueue) return B.internal.queue.push ([x, id, oldElement, oldChildren]);
@@ -494,8 +501,8 @@ Please refer to readme.md to read the annotated source.
 
       var place = function (operation, position, element) {
          var Parent = position.length === 0 ? rootElementParent : elements [references [position.slice (0, -1).join (',')]];
-         if (operation === 'keep' && Parent.children [position [position.length - 1]] === element) return;
-         var nextSibling = Parent === rootElementParent ? rootElementSibling : Parent.children [position [position.length - 1]] || null;
+         if (operation === 'keep' && (Parent.children || Parent.childNodes) [position [position.length - 1]] === element) return;
+         var nextSibling = Parent === rootElementParent ? rootElementSibling : (Parent.children || Parent.childNodes) [position [position.length - 1]] || null;
          Parent.insertBefore (element, nextSibling);
       }
 
@@ -521,8 +528,9 @@ Please refer to readme.md to read the annotated source.
          return element;
       }
 
-      var recycle = function (element, old, New) {
+      var oldIE = document.body.fireEvent && ! document.body.dispatchEvent, recycle = function (element, old, New) {
          var oldAttributes = extract (old, 'attributes'), newAttributes = extract (New, 'attributes');
+         if (oldIE && (oldAttributes.type || newAttributes.type)) return make (New);
          dale.go (newAttributes, function (v, k) {
             if (['', null, false].indexOf (v) === -1) element.setAttribute (k, v);
          });

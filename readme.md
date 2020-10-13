@@ -1186,7 +1186,7 @@ deterministic diff, deterministic id assignation.
 
 ## Source code
 
-The complete source code is contained in `gotoB.js`. gotoв itself is about 620 lines long; its dependencies are about 1380 lines; the whole thing is about 2000 lines.
+The complete source code is contained in `gotoB.js`. gotoв itself is about 630 lines long; its dependencies are about 1380 lines; the whole thing is about 2010 lines.
 
 Below is the annotated source.
 
@@ -2426,9 +2426,35 @@ If the contents are an array (another litc), we invoke `B.validateLitc` recursiv
    }
 ```
 
+We define a polyfill for `document.body.contains` - this will only be necessary for Firefox 8 and below. The purpose of this function is to determine if a node is in the body (as a direct or nested child) or not.
+
+```javascript
+   if (! document.body.contains) document.body.contains = function (el) {
+```
+
+While the element has a parent, we set `el` to its parent.
+
+```javascript
+      while (el = el.parentNode) {
+```
+
+If `el` is now the body, we return `true`.
+
+```javascript
+         if (el === document.body) return true;
+      }
+```
+
+Otherwise, we return `false` and close the function.
+
+```javascript
+      return false;
+   }
+```
+
 We define `B.redraw`, the main internal function of gotoв. This function is only invoked by the responder functions of reactive views and is in charge of updating the views.
 
-It takes sixe arguments: a context object (`x`), the `id` of the view to redraw, the lith of the old version of the view (`oldElement`), a list of the toplevel nested reactive views before the redraw (`oldChildren`), the amount of time it took to create the view (`msCreate`) and a boolean flag `fromQueue` (which we'll see in a moment).
+It takes six arguments: a context object (`x`), the `id` of the view to redraw, the lith of the old version of the view (`oldElement`), a list of the toplevel nested reactive views before the redraw (`oldChildren`), the amount of time it took to create the view (`msCreate`) and a boolean flag `fromQueue` (which we'll see in a moment).
 
 ```javascript
    B.redraw = function (x, id, oldElement, oldChildren, msCreate, fromQueue) {
@@ -2995,14 +3021,18 @@ For all the other cases, we must find the parent, we remove one element from `po
 
 If we're keeping this element (rather than adding it), it may well be the case that it is already where it should be. If `element` is already the k-th child of `Parent` (where `k` is the last element of `position`), then `element` is already a child of its parent and its placed in the right position. In this case, there's nothing else to do, so we return.
 
+In case we're in Firefox 3, we use `Parent.childNodes` instead of `Parent.children`, since the latter is not supported.
+
 ```javascript
-         if (operation === 'keep' && Parent.children [position [position.length - 1]] === element) return;
+         if (operation === 'keep' && (Parent.children || Parent.childNodes) [position [position.length - 1]] === element) return;
 ```
 
 We determine whether there is a DOM element inside `Parent` that will go after `element`. We store it in `nextSibling`. If there's no element that will go after `element`, we set `nextSibling` to `null`. In the case where we're positioning the `rootElement`, we use `rootElementSibling` as our `nextSibling`.
 
+In case we're in Firefox 3, we use `Parent.childNodes` instead of `Parent.children`, since the latter is not supported.
+
 ```javascript
-         var nextSibling = Parent === rootElementParent ? rootElementSibling : Parent.children [position [position.length - 1]] || null;
+         var nextSibling = Parent === rootElementParent ? rootElementSibling : (Parent.children || Parent.childNodes) [position [position.length - 1]] || null;
 ```
 
 We invoke `insertBefore` on `Parent`, ppassing `element` and `nextSibling`; this will insert `element` just before `nextSibling`, inside `Parent`. If `nextSibling` is `null`, `element` will be placed as the last child of `Parent`.
@@ -3123,14 +3153,22 @@ We return `element` and close the function.
 
 We define the fourth and last helper function, `recycle`, which updates the attributes of a DOM element that has been recycled. This function takes three arguments: `element`, `old` and `New`; the last two are `elementStrings` for elements that are not opaque and have the same tag.
 
+Before defining `recycle`, we set a boolean variable to determine whether we're in Internet Explorer 8 and below or not. We'll use this variable inside `recycle`.
+
 ```javascript
-      var recycle = function (element, old, New) {
+      var oldIE = document.body.fireEvent && ! document.body.dispatchEvent, recycle = function (element, old, New) {
 ```
 
 We extract the `oldAttributes` and `newAttributes` using `extract`.
 
 ```javascript
          var oldAttributes = extract (old, 'attributes'), newAttributes = extract (New, 'attributes');
+```
+
+If we're in Internet Explorer 8 and below and either the old or new version of the element has an attribute `type`, we skip recycling the element, since these browsers don't allow changing it. We instead make a new element through `make` and return that instead.
+
+```javascript
+         if (oldIE && (oldAttributes.type || newAttributes.type)) return make (New);
 ```
 
 We iterate `newAttributes` and set them on `element` if they are neither an empty string nor `false` nor `null`.
@@ -3356,7 +3394,7 @@ Early webapps generated all their HTML on the server and served a fully finished
 
 Around 1999, Microsoft had won the [first browser war](https://en.wikipedia.org/wiki/Browser_wars). Almost inadvertently, it introduced a feature that revolutionized webapps: [the ability for the browser to send and receive information with the server without triggering a page refresh](https://en.wikipedia.org/wiki/XMLHttpRequest#History). This is the second step in our journey: to understand the implications of the browser communicating with the server without a page refresh. This functionality is now known as AJAX (we'll explain the acronym a little later). For now, consider AJAX as a way to say *communication without a page refresh*.
 
-Thanks to AJAX, webapps could now offer a much better experience to users, even rivaling that of native applications. Before AJAX, every user interaction that either retrieved data or sent it required a page refresh. This represented three drawbacks:
+Thanks to AJAX, webapps could now offer a much better experience to users, even rivaling that of native applications. Before AJAX, every user interaction that either retrieved data or sent it required a page refresh. This entailed three drawbacks:
 
 1. **Performance**: it took some time to retrieve the full page from the server (the internet was also much slower back then), and then some more time to re-render the page in the browser.
 

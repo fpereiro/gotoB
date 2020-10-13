@@ -1153,7 +1153,9 @@ TODO
    - if literal, just for nbsp, not for inserting tags. otherwise, you need opaque.
    - if opaque within reactive view, redrawn every time.
 - negative priorities & nestedness
+- nested views can still reference the same DOM element, if one view returns another!
 - trample & perflogs
+- FF 3: autocomplete=off on selects.
 
 ## Internals
 
@@ -1186,7 +1188,7 @@ deterministic diff, deterministic id assignation.
 
 ## Source code
 
-The complete source code is contained in `gotoB.js`. gotoв itself is about 630 lines long; its dependencies are about 1380 lines; the whole thing is about 2010 lines.
+The complete source code is contained in `gotoB.js`. gotoв itself is about 640 lines long; its dependencies are about 1380 lines; the whole thing is about 2010 lines.
 
 Below is the annotated source.
 
@@ -2323,6 +2325,17 @@ We define `B.internal`, an object with the following keys:
    B.internal = {count: 1, timeout: 200, queue: [], redrawing: false}
 ```
 
+We create variables within `B.internal` for compatibility with old browsers:
+- `B.internal.oldIE` for Internet Explorer 8 or lower. We get this by checking for the presence of `fireEvent` (IE only) and the absence of `dispatchEvent` (IE>=9).
+- `B.internal.FF` for Firefox 3 or lower. We get this by making sure we're not in an old Internet Explorer *and* there's an absence of `querySelectorAll`.
+- `B.internal.oldOpera` for Opera 12 or lower. We get this by checking whether the user agent of the navigator contains `'Opera'` - [higher versions are based on a different engine](https://en.wikipedia.org/wiki/Opera_(web_browser)#History).
+
+```javascript
+   if (document.body.fireEvent && ! document.body.dispatchEvent) B.internal.oldIE    = true;
+   if (! document.querySelectorAll && ! B.internal.oldIE)        B.internal.oldFF    = true;
+   if (navigator.userAgent.match ('Opera'))                      B.internal.oldOpera = true;
+```
+
 We define `B.validateLith`, a helper function to determine the validity of a lith or lithbag (which will be the first argument, `input`). This function is a wrapper around `lith.v` and `lith.css.v`. This wrapper is needed to 1) perform a deep validation on the lith/lithbag; and 2) return the error instead of reporting it directly to the console.
 
 This function will return `'Lith'` if the input is a lith, `'Lithbag'` if its a lithbag, and a string with an error if the input is invalid.
@@ -3153,10 +3166,8 @@ We return `element` and close the function.
 
 We define the fourth and last helper function, `recycle`, which updates the attributes of a DOM element that has been recycled. This function takes three arguments: `element`, `old` and `New`; the last two are `elementStrings` for elements that are not opaque and have the same tag.
 
-Before defining `recycle`, we set a boolean variable to determine whether we're in Internet Explorer 8 and below or not. We'll use this variable inside `recycle`.
-
 ```javascript
-      var oldIE = document.body.fireEvent && ! document.body.dispatchEvent, recycle = function (element, old, New) {
+      var recycle = function (element, old, New) {
 ```
 
 We extract the `oldAttributes` and `newAttributes` using `extract`.
@@ -3168,7 +3179,7 @@ We extract the `oldAttributes` and `newAttributes` using `extract`.
 If we're in Internet Explorer 8 and below and either the old or new version of the element has an attribute `type`, we skip recycling the element, since these browsers don't allow changing it. We instead make a new element through `make` and return that instead.
 
 ```javascript
-         if (oldIE && (oldAttributes.type || newAttributes.type)) return make (New);
+         if (B.internal.oldIE && (oldAttributes.type || newAttributes.type)) return make (New);
 ```
 
 We iterate `newAttributes` and set them on `element` if they are neither an empty string nor `false` nor `null`.
@@ -3176,6 +3187,13 @@ We iterate `newAttributes` and set them on `element` if they are neither an empt
 ```javascript
          dale.go (newAttributes, function (v, k) {
             if (['', null, false].indexOf (v) === -1) element.setAttribute (k, v);
+```
+
+Before closing the iteration of `newAttributes`, we provide workarounds for bugs in old browsers. In the case of Firefox <= 3, we need to set `value` explicitly. In the case of Opera <= 12, we need to set explicitly the `selected` property.
+
+```javascript
+            if (B.internal.oldFF    && k === 'value')    element.value = v;
+            if (B.internal.oldOpera && k === 'selected') element.selected = v;
          });
 ```
 

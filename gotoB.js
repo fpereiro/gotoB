@@ -338,6 +338,9 @@ Please refer to readme.md to read the annotated source.
    // *** INTERNALS ***
 
    B.internal = {count: 1, timeout: 200, queue: [], redrawing: false}
+   if (document.body.fireEvent && ! document.body.dispatchEvent) B.internal.oldIE    = true;
+   if (! document.querySelectorAll && ! B.internal.oldIE)        B.internal.oldFF    = true;
+   if (navigator.userAgent.match ('Opera'))                      B.internal.oldOpera = true;
 
    B.validateLith = function (input) {
       var v = lith.v (input, true);
@@ -528,11 +531,13 @@ Please refer to readme.md to read the annotated source.
          return element;
       }
 
-      var oldIE = document.body.fireEvent && ! document.body.dispatchEvent, recycle = function (element, old, New) {
+      var recycle = function (element, old, New) {
          var oldAttributes = extract (old, 'attributes'), newAttributes = extract (New, 'attributes');
-         if (oldIE && (oldAttributes.type || newAttributes.type)) return make (New);
+         if (B.internal.oldIE && (oldAttributes.type || newAttributes.type)) return make (New);
          dale.go (newAttributes, function (v, k) {
             if (['', null, false].indexOf (v) === -1) element.setAttribute (k, v);
+            if (B.internal.oldFF    && k === 'value')    element.value = v;
+            if (B.internal.oldOpera && k === 'selected') element.selected = v;
          });
          dale.go (oldAttributes, function (v, k) {
             if (['', null, false].indexOf (v) !== -1) return;

@@ -1444,6 +1444,8 @@
                      '<TABLE id=в15 path="Data:view">\r\n<TBODY></TBODY></TABLE>'
                   ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted, table #1: ' + document.body.innerHTML;
 
+                  // TODO: fix in IE<=7
+                  // return;
                   B.call (x, 'set', ['Data', 'view'], ['table', ['tr']]);
                   if ([
                      '<table id="в15" path="Data:view"><tbody><tr></tr></tbody></table>',
@@ -1654,6 +1656,8 @@
 
                   if (c ('option') [1].selected !== true) return 'Option values not set #1.';
 
+                  // TODO: fix in IE<=8
+                  // return;
                   B.call (x, 'set', ['State', 'select'], true);
 
                   if ([
@@ -1697,6 +1701,8 @@
                   B.call (x, 'set', ['Data', 'filter'], '1');
                   if (c ('input') [0].checked !== false) return 'wrong checkbox was checked #3.';
                   B.call (x, 'set', ['Data', 'filter'], '2');
+                  // TODO: fix in IE<=7
+                  // return;
                   if (c ('input') [0].checked !== true) return 'checkbox wasn\'t checked #3.';
                   B.call (x, 'set', ['Data', 'filter'], '');
 
@@ -1722,7 +1728,7 @@
                               Data.i8 ? [] : ['input'],
                               Data.i7 ? [] : ['input', {id: 'i7'}],
                               ['input', {name: 'pass', type: 'password', value: B.get ('Data', 'i2', 'pass'), onchange: B.ev ('set', ['Data', 'i2', 'pass'])}],
-                              ['input', {type: 'button', value: 'Submit', onclick: B.ev ('upload', 'i2', '"a"', ',"b"')}]
+                              ['input', {id: 'button', type: 'button', value: 'Submit', onclick: B.ev ('upload', 'i2', '"a"', ',"b"')}]
                            ]],
                            ['textarea', {id: 'i3', onchange: B.ev ('set', ['Data', 'i3'])}, B.get ('Data', 'i3')],
                            ['form', {id: 'i4'}, [
@@ -1740,7 +1746,9 @@
                               ];
                            })],
                            ['br'],
-                           ['select', {onchange: B.ev ('set', ['Data', 'i6'])}, dale.go (['select one', 'leisure', 'ok computer', 'second coming'], function (v) {
+                           // Compatibility: Firefox<=3 requires autocomplete=off to update the values of select elements.
+                           // https://stackoverflow.com/questions/1479233/why-doesnt-firefox-show-the-correct-default-select-option#comment42017501_1505693
+                           ['select', {autocomplete: B.internal.oldFF ? 'off' : undefined, onchange: B.ev ('set', ['Data', 'i6'])}, dale.go (['select one', 'leisure', 'ok computer', 'second coming'], function (v) {
                               return ['option', {selected: B.get ('Data', 'i6') === v ? true : false, value: v}, v];
                            })]
                         ]];
@@ -1760,22 +1768,32 @@
                      matched = true;
                   });
 
-                  c.fire ('#i2 [type="button"]', 'click');
+                  c.fire ('#button', 'click');
                   if (matched === false) return 'event wasn\'t triggered on click.';
                   if (matched === null)  return 'event didn\'t receive proper arguments.';
 
                   B.call (x, 'set', ['Data', 'i3'], 'some text');
-                  if (c ('#i3').value !== 'some text') return 'textarea wasn\'t set properly';
+                  // Compatibility: Firefox<=3 doesn't return the value of a textarea.
+                  if (B.internal.oldFF) {
+                     if (c ('#i3').innerHTML !== 'some text') return 'textarea wasn\'t set properly.';
+                  }
+                  else {
+                     if (c ('#i3').value !== 'some text') return 'textarea wasn\'t set properly.';
+                  }
 
                   B.call (x, 'set', ['Data', 'i4', 'fries'], true);
-                  if (c ('#i4 input') [0].checked !== true) return 'checkbox wasn\'t checked.';
+                  // Compatibility: we use selectors of the form {form: ..., selector: ...} for FF3 & IE<=8
+                  // TODO IE<=7
+                  if (c ({from: c ('#i4'), selector: 'input'}) [0].checked !== true) return 'checkbox wasn\'t checked.';
 
-                  c.fire ('#i4 input', 'change');
+                  c.fire ({from: c ('#i4'), selector: 'input'}, 'change');
+                  // TODO IE<=7
                   if (B.get ('Data', 'i4', 'fries') !== false) return 'checkbox didn\'t change data after being changed.';
-                  if (c ('#i4 input') [0].checked !== false) return 'checkbox wasn\'t unchecked.';
+                  if (c ({from: c ('#i4'), selector: 'input'}) [0].checked !== false) return 'checkbox wasn\'t unchecked.';
 
                   B.call (x, 'set', ['Data', 'i5'], 'green');
-                  if (c ('#i5 input') [1].checked !== true) return 'radio wasn\'t selected.';
+                  // TODO IE<=7
+                  if (c ({from: c ('#i5'), selector: 'input'}) [1].checked !== true) return 'radio wasn\'t selected.';
 
                   B.call (x, 'set', ['Data', 'i6'], 'ok computer');
 
@@ -1791,7 +1809,8 @@
                   B.call (x, 'set', ['Data', 'i7'], true);
 
                   // Compatibility: IE<=11 don't set back the focus to body when the focused element is removed
-                  if (document.activeElement !== c ('body') && document.activeElement !== null) return 'focus was preserved when it shouldn\'t.';
+                  // Compatibility: IE<=8 set the focus to document.documentElement when the focused element is removed
+                  if ([null, document.body, document.documentElement].indexOf (document.activeElement) === -1) return 'focus was preserved when it shouldn\'t.';
 
                });
 
@@ -1809,7 +1828,9 @@
                   B.internal.timeout = 1;
                   B.call (x, 'set', ['Data', 'items'], dale.times (100));
                   if ([
-                     '<div><p>hello</p><ul id="в22" path="Data:items"><li>' + Data.items.join ('</li><li>') + '</li></ul></div>'
+                     '<div><p>hello</p><ul id="в22" path="Data:items"><li>' + Data.items.join ('</li><li>') + '</li></ul></div>',
+                     // IE<=8 removes the quotes around id, uppercases the tag and adds \r\n
+                     '<DIV>\r\n<P>hello</P>\r\n<UL id=в22 path="Data:items">\r\n<LI>' + Data.items.join ('</LI>\r\n<LI>') + '</LI></UL></DIV>'
                   ].indexOf (document.body.innerHTML) === -1) return 'Trample #1: ' + document.body.innerHTML;
                   var llog = teishi.last (B.log);
                   if (llog.args [0].diffLength !== false) return 'Trample #1 timeout was ignored.';
@@ -1826,7 +1847,9 @@
 
                   B.call (x, 'add', ['Data', 'items'], 0);
                   if ([
-                     '<div><p>hello</p><div id="в23" path="Data:items"><p>' + Data.items.join ('</p><p>') + '</p></div></div>'
+                     '<div><p>hello</p><div id="в23" path="Data:items"><p>' + Data.items.join ('</p><p>') + '</p></div></div>',
+                     // IE<=8 removes the quotes around id, uppercases the tag and adds \r\n
+                     '<DIV>\r\n<P>hello</P>\r\n<DIV id=в23 path="Data:items">\r\n<P>' + Data.items.join ('</P>\r\n<P>') + '</P></DIV></DIV>'
                   ].indexOf (document.body.innerHTML) === -1) return 'Trample #2: ' + document.body.innerHTML;
                   llog = teishi.last (B.log);
                   if (llog.args [0].diffLength !== false) return 'Trample #2 timeout was ignored.';
@@ -1845,7 +1868,9 @@
                   B.call (x, 'rem', ['Data', 'items'], 0);
 
                   if ([
-                     '<div><p>hello</p><ul id="в24" path="Data:items"><li>' + Data.items.join ('</li><li>') + '</li></ul><footer></footer></div>'
+                     '<div><p>hello</p><ul id="в24" path="Data:items"><li>' + Data.items.join ('</li><li>') + '</li></ul><footer></footer></div>',
+                     // IE<=8 removes the quotes around id, uppercases the tag and adds \r\n
+                     '<DIV>\r\n<P>hello</P>\r\n<UL id=в24 path="Data:items">\r\n<LI>' + Data.items.join ('</LI>\r\n<LI>') + '</LI></UL><FOOTER></FOOTER></DIV>'
                   ].indexOf (document.body.innerHTML) === -1) return 'Trample #3: ' + document.body.innerHTML;
                   llog = teishi.last (B.log);
                   if (llog.args [0].diffLength !== false) return 'Trample #3 timeout was ignored.';
@@ -1871,7 +1896,8 @@
                               ['span'],
                               ['span'],
                            ]],
-                           ['div', {id: 'd4', opaque: true}, ['LITERAL', '<svg class="c' + State.ltable + '"></svg>']]
+                           // Compatibility: IE<=8 doesn't support SVG
+                           ['div', {id: 'd4', opaque: true}, ['LITERAL', ! B.internal.oldIE ? '<svg class="c' + State.ltable + '"></svg>' : '<div id="a' + State.ltable + '"></div>']]
                         ]];
                      });
                   });
@@ -1879,41 +1905,49 @@
                   B.call (x, 'set', ['State', 'ltable'], 2);
 
                   var opaques = c ('.something');
+                  // TODO: fix in IE<=7 (selector returns empty)
+                  // return;
                   if (opaques.length !== 2) return 'Opaques were not created.';
-                  opaques = c ('.something input');
+                  opaques = c ('input');
                   if (opaques.length !== 2) return 'Opaque contents were not created.';
                   if ([
                      '<svg class="c2"></svg>',
                      // Compatibility: IE<=11 modifies the SVG
-                     '<svg xmlns="http://www.w3.org/2000/svg" class="c2" />'
+                     '<svg xmlns="http://www.w3.org/2000/svg" class="c2" />',
+                     // Compatibility: IE<=8 uppercases the tag and removes the quotes of id
+                     '<DIV id=a2></DIV>'
                   ].indexOf (c ('#d4').innerHTML) === -1) return 'Opaque with literal svg has invalid content #1: ' + c ('#d4').innerHTML;
 
                   c.fill ('.something', '<input><input>');
                   B.call (x, 'set', ['State', 'ltable'], 4);
                   opaques = c ('.something');
                   if (opaques.length !== 4) return 'Opaques were not updated #1.';
-                  opaques = c ('.something input');
+                  opaques = c ('input');
                   if (opaques.length !== 4) return 'Opaque contents were not updated #1.';
                   if ([
                      '<svg class="c4"></svg>',
                      // Compatibility: IE<=11 modifies the SVG
-                     '<svg xmlns="http://www.w3.org/2000/svg" class="c4" />'
+                     '<svg xmlns="http://www.w3.org/2000/svg" class="c4" />',
+                     // Compatibility: IE<=8 uppercases the tag and removes the quotes of id
+                     '<DIV id=a4></DIV>'
                   ].indexOf (c ('#d4').innerHTML) === -1) return 'Opaque with literal svg has invalid content #2: ' + c ('#d4').innerHTML;
 
                   c.fill ('.something', 'boo');
                   if (c ('.something') [0].innerHTML !== 'boo') return 'Opaque contents were not updated.';
-                  opaques = c ('.something input');
+                  opaques = c ('input');
                   if (opaques.length !== 0) return 'Opaque contents were not overwritten.';
 
                   B.call (x, 'set', ['State', 'ltable'], 5);
                   opaques = c ('.something');
                   if (opaques.length !== 5) return 'Opaques were not updated #2.';
-                  opaques = c ('.something input');
+                  opaques = c ('input');
                   if (opaques.length !== 5) return 'Opaque contents were not updated #2.';
                   if ([
                      '<svg class="c5"></svg>',
                      // Compatibility: IE<=11 modifies the SVG
-                     '<svg xmlns="http://www.w3.org/2000/svg" class="c5" />'
+                     '<svg xmlns="http://www.w3.org/2000/svg" class="c5" />',
+                     // Compatibility: IE<=8 uppercases the tag and removes the quotes of id
+                     '<DIV id=a5></DIV>'
                   ].indexOf (c ('#d4').innerHTML) === -1) return 'Opaque with literal svg has invalid content #3: ' + c ('#d4').innerHTML;
 
                   c.fill ('.something', '<div><input><span></span></div>');
@@ -1923,16 +1957,23 @@
 
                   opaques = c ('.style');
                   if (opaques.length !== 4) return 'Opaques were not updated #3.';
-                  opaques = c ('.style input');
+                  opaques = c ('input');
                   if (opaques.length !== 4) return 'Opaque contents were not updated #3.';
 
                   if (c ('#d1').innerHTML !== '') return 'Opaque empty has invalid content after redraw.';
                   if (c ('#d2').innerHTML !== '4') return 'Opaque text has invalid content after redraw.';
-                  if (c ('#d3').innerHTML !== '<span></span><span></span>') return 'Opaque multiple has invalid content after redraw.';
+                  if ([
+                     '<span></span><span></span>',
+                     // Compatibility: IE<=8 uppercases the tag
+                     '<SPAN></SPAN><SPAN></SPAN>'
+                  ].indexOf (c ('#d3').innerHTML) === -1) return 'Opaque multiple has invalid content after redraw.';
+
                   if ([
                      '<svg class="c4"></svg>',
                      // Compatibility: IE<=11 modifies the SVG
-                     '<svg xmlns="http://www.w3.org/2000/svg" class="c4" />'
+                     '<svg xmlns="http://www.w3.org/2000/svg" class="c4" />',
+                     // Compatibility: IE<=8 uppercases the tag and removes the quotes of id
+                     '<DIV id=a4></DIV>'
                   ].indexOf (c ('#d4').innerHTML) === -1) return 'Opaque with literal svg has invalid content #4: ' + c ('#d4').innerHTML;
 
                });

@@ -439,11 +439,12 @@
                });
 
                Test ('B.ev valid input', function () {
+                  var defaultValue = ! B.internal.oldFF ? 'this.value' : 'this.value || (this.attributes.value ? this.attributes.value.nodeValue : "")';
 
                   var error = dale.stopNot ([
                      [[], ''],
-                     [['a', 'b'], ' B.call ({"from": id}, "a", "b", this.value);'],
-                     [['a', ['b']], ' B.call ({"from": id}, "a", ["b"], this.value);'],
+                     [['a', 'b'], ' B.call ({"from": id}, "a", "b", ' + defaultValue + ');'],
+                     [['a', ['b']], ' B.call ({"from": id}, "a", ["b"], ' + defaultValue + ');'],
                      [['a', 'b', 'c'], ' B.call ({"from": id}, "a", "b", "c");'],
                      [['a', 'b', undefined], ' B.call ({"from": id}, "a", "b", undefined);'],
                      [['a', 'b', null], ' B.call ({"from": id}, "a", "b", null);'],
@@ -457,8 +458,8 @@
                      [['a', 'b', 'c', {raw: ['not', 'a', 'string']}], ' B.call ({"from": id}, "a", "b", "c", {"raw": ["not", "a", "string"]});'],
                      [['a', 'b', 'c', {raw: 'event', ignored: 'field'}], ' B.call ({"from": id}, "a", "b", "c", event);'],
                      [['a', 'b', '"two', {raw: 'event'}, {raw: 'this'}], ' B.call ({"from": id}, "a", "b", "\\"two", event, this);'],
-                     [[['a', 'b'], ['c', 'd']], ' B.call ({"from": id}, "a", "b", this.value); B.call ({"from": id}, "c", "d", this.value);', true],
-                     [[['a', 'b'], ['c', 'd', {raw: 'event.preventDefault'}]], ' B.call ({"from": id}, "a", "b", this.value); B.call ({"from": id}, "c", "d", event.preventDefault);', true]
+                     [[['a', 'b'], ['c', 'd']], ' B.call ({"from": id}, "a", "b", ' + defaultValue + '); B.call ({"from": id}, "c", "d", ' + defaultValue + ');', true],
+                     [[['a', 'b'], ['c', 'd', {raw: 'event.preventDefault'}]], ' B.call ({"from": id}, "a", "b", ' + defaultValue + '); B.call ({"from": id}, "c", "d", event.preventDefault);', true]
                   ], undefined, function (v, k) {
                      var result = 'var id = B.call ("ev", event ? event.type : "undefined event", B.evh (this));' + v [1];
                      if (B.ev.apply (null, v [0]) !== result) return 'B.ev error with valid arguments #' + (k + 1) + ': ' + B.ev.apply (null, v [0]) + ' Expected: ' + result;
@@ -705,37 +706,37 @@
 
                Test ('B.prediff', function () {
                   var error = dale.stopNot ([
-                     [['a'], ['O a','C a']],
-                     [['a', {}], ['O a {}','C a']],
-                     [['table'], ['O table','C table']],
-                     [['table', ['tr']], ['O table','O tbody','O tr','C tr','C tbody','C table']],
-                     [['table', ['tr', ['td', ['table', ['tr']]]]], ['O table','O tbody','O tr','O td','O table','O tbody','O tr','C tr','C tbody','C table','C td','C tr','C tbody','C table']],
-                     [['table', ['thead', ['tr']]], ['O table','O thead','O tr','C tr','C thead','C table']],
-                     [['table', [['thead', ['tr']], ['tr']]], ['O table','O thead','O tr','C tr','C thead','O tbody','O tr','C tr','C tbody','C table']],
-                     [['a', undefined], ['O a','C a']],
-                     [['a', ''], ['O a','C a']],
-                     [['a', ['']], ['O a','C a']],
-                     [['a', 'a'], ['O a','L a','C a']],
-                     [['a', ['z', '']], ['O a','L z','C a']],
-                     [['a', ['z', 'b']], ['O a','L zb','C a']],
-                     [['a', ['z', ' b']], ['O a','L z b','C a']],
-                     [['a', [1, 'z', ' b']], ['O a','L 1z b','C a']],
-                     [['a', [[[['z']]], 'b']], ['O a','L zb','C a']],
-                     [['a', {b: 'c'}], ['O a {"b":"c"}','C a']],
-                     [['a', {b: null}], ['O a {}','C a']],
-                     [['a', {b: false}], ['O a {}','C a']],
-                     [['a', {b: ''}], ['O a {}','C a']],
-                     [['a', {a: '', b: 'c', d: null, e: false, f: 'g'}], ['O a {"b":"c","f":"g"}','C a']],
-                     [['a', {b: ''}], ['O a {}','C a']],
-                     [['a', {b: undefined}], ['O a {}','C a']],
-                     [['a', {b: 0}], ['O a {"b":0}','C a']],
-                     [['a', {b: 'c'}, 'd'], ['O a {"b":"c"}','L d','C a']],
-                     [['a', {b: 'c'}, ['d', 'e']], ['O a {"b":"c"}','L de','C a']],
-                     [['a', ['LITERAL', '<svg></svg>']], ['O a','L <svg></svg>','C a']],
+                     [['a'], ['O a', 'C a']],
+                     [['a', {}], ['O a {}', 'C a']],
+                     [['table'], B.internal.olderIE ? ['O table', 'O tbody', 'C tbody', 'C table'] : ['O table', 'C table']],
+                     [['table', ['tr']], ['O table', 'O tbody', 'O tr', 'C tr', 'C tbody', 'C table']],
+                     [['table', ['tr', ['td', ['table', ['tr']]]]], ['O table', 'O tbody', 'O tr', 'O td', 'O table', 'O tbody', 'O tr', 'C tr', 'C tbody', 'C table', 'C td', 'C tr', 'C tbody', 'C table']],
+                     [['table', ['thead', ['tr']]], B.internal.olderIE ? ['O table', 'O thead', 'O tr', 'C tr', 'C thead', 'O tbody', 'C tbody', 'C table'] : ['O table', 'O thead', 'O tr', 'C tr', 'C thead', 'C table']],
+                     [['table', [['thead', ['tr']], ['tr']]], ['O table', 'O thead', 'O tr', 'C tr', 'C thead', 'O tbody', 'O tr', 'C tr', 'C tbody', 'C table']],
+                     [['a', undefined], ['O a', 'C a']],
+                     [['a', ''], ['O a', 'C a']],
+                     [['a', ['']], ['O a', 'C a']],
+                     [['a', 'a'], ['O a', 'L a', 'C a']],
+                     [['a', ['z', '']], ['O a', 'L z', 'C a']],
+                     [['a', ['z', 'b']], ['O a', 'L zb', 'C a']],
+                     [['a', ['z', ' b']], ['O a', 'L z b', 'C a']],
+                     [['a', [1, 'z', ' b']], ['O a', 'L 1z b', 'C a']],
+                     [['a', [[[['z']]], 'b']], ['O a', 'L zb', 'C a']],
+                     [['a', {b: 'c'}], ['O a {"b":"c"}', 'C a']],
+                     [['a', {b: null}], ['O a {}', 'C a']],
+                     [['a', {b: false}], ['O a {}', 'C a']],
+                     [['a', {b: ''}], ['O a {}', 'C a']],
+                     [['a', {a: '', b: 'c', d: null, e: false, f: 'g'}], ['O a {"b":"c","f":"g"}', 'C a']],
+                     [['a', {b: ''}], ['O a {}', 'C a']],
+                     [['a', {b: undefined}], ['O a {}', 'C a']],
+                     [['a', {b: 0}], ['O a {"b":0}', 'C a']],
+                     [['a', {b: 'c'}, 'd'], ['O a {"b":"c"}', 'L d', 'C a']],
+                     [['a', {b: 'c'}, ['d', 'e']], ['O a {"b":"c"}', 'L de', 'C a']],
+                     [['a', ['LITERAL', '<svg></svg>']], ['O a', 'L <svg></svg>', 'C a']],
                      [['a', {opaque: true}, ['LITERAL', '<svg></svg>']], ['P 19 a {"opaque":true} <svg></svg>']],
                      [['a', {opaque: true}, '<svg></svg>'], ['P 19 a {"opaque":true} &lt;svg&gt;&lt;/svg&gt;']],
-                     [['a', '<svg></svg>'], ['O a', 'L &lt;svg&gt;&lt;/svg&gt;','C a']],
-                     [['div', [['a', {href: 'c'}], ['p', 2]]], ['O div','O a {"href":"c"}','C a','O p','L 2','C p','C div']]
+                     [['a', '<svg></svg>'], ['O a', 'L &lt;svg&gt;&lt;/svg&gt;', 'C a']],
+                     [['div', [['a', {href: 'c'}], ['p', 2]]], ['O div', 'O a {"href":"c"}', 'C a', 'O p', 'L 2', 'C p', 'C div']]
                   ], undefined, function (v, k) {
                      if (! eq (B.prediff (v [0]), v [1])) return 'B.prediff mismatch: ' + (k + 1) + ' ' + JSON.stringify (v) + '   ' + B.prediff (v [0]);
                   });
@@ -821,7 +822,8 @@
                      {path: [3], fun: function () {return [377, 'a']}},
                      {path: [4], fun: function () {return /boo/}},
                      {path: [5], fun: function () {return null}},
-                     {path: [6], fun: function () {return ['div.green', {color: 'green'}]}}
+                     {path: [6], fun: function () {return ['div.green', {color: 'green'}]}},
+                     {path: [7], fun: function () {return ['div', {id: 'a'}]}}
                   ], undefined, function (args, k) {
                      if (B.view (args.path, args.fun) !== false) return 'B.view - invalid arguments accepted as valid: ' + B.str (args);
                      if (B.log.length !== logLength + k + 1) return 'Error not reported: ' + B.str (args);
@@ -874,7 +876,8 @@
                   B.call (x, 'set', ['Data', 'view'], ['div', {'class': 'hello'}]);
 
                   if (c ('#' + B.B + 1) !== DOMElement) return 'DOM element not recycled #2.';
-                  if (c.get ('#' + B.B + 1, 'path').path !== 'Data:view') return 'Invalid path in DOM #1.';
+                  if (c.get ('#' + B.B + 1, 'path').path !== 'Data:view') return 'Invalid path in DOM #2.';
+                  if (c.get ('.hello').length !== 1) return 'Class not applied #2.';
 
                   if ([
                      '<div id="в1" path="Data:view" class="hello"></div>',
@@ -882,10 +885,10 @@
                      '<div class="hello" id="в1" path="Data:view"></div>',
                      // Compatibility: IE9 puts the class in the middle
                      '<div id="в1" class="hello" path="Data:view"></div>',
-                     // Compatibility: IE8 puts the class in the middle, removes the quotes around id & class and uppercases the tag name
+                     // Compatibility: IE<=8 puts the class in the middle, removes the quotes around id & class and uppercases the tag name
                      '<DIV id=в1 class=hello path="Data:view"></DIV>',
-                     // Compatibility: IE<=7 removes the quotes around id & class and uppercases the tag name
-                     '<DIV id=в1 path="Data:view" class="hello"></DIV>'
+                     // Compatibility: IE<=7 puts the class at the beginning
+                     '<DIV class=hello id=в1 path="Data:view"></DIV>'
                   ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted #2: ' + document.body.innerHTML;
 
                   var llog = teishi.last (B.log);
@@ -896,6 +899,7 @@
                   B.call (x, 'set', ['Data', 'view'], ['div']);
 
                   if (c ('#' + B.B + 1) !== DOMElement) return 'DOM element not recycled #3.';
+                  if (c.get ('.hello').length !== 0) return 'Class not removed #3.';
 
                   if ([
                      '<div id="в1" path="Data:view"></div>',
@@ -906,6 +910,7 @@
                   // ADD CLASS AGAIN
 
                   B.call (x, 'set', ['Data', 'view'], ['div', {'class': 'вla'}]);
+                  if (c.get ('.вla').length !== 1) return 'Class not added #4.';
 
                   if ([
                      '<div id="в1" path="Data:view" class="вla"></div>',
@@ -913,15 +918,16 @@
                      '<div class="вla" id="в1" path="Data:view"></div>',
                      // Compatibility: IE9 puts the class in the middle
                      '<div id="в1" class="вla" path="Data:view"></div>',
-                     // Compatibility: IE8 removes the quotes around id & class and uppercases the tag name
+                     // Compatibility: IE<=8 removes the quotes around id & class and uppercases the tag name
                      '<DIV id=в1 class=вla path="Data:view"></DIV>',
-                     // Compatibility: IE<=7 removes the quotes around id & class and uppercases the tag name
-                     '<DIV id=в1 path="Data:view" class="вla"></DIV>'
+                     // Compatibility: IE<=7 puts the class at the beginning
+                     '<DIV class=вla id=в1 path="Data:view"></DIV>'
                   ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted #4: ' + document.body.innerHTML;
 
                   // REMOVE CLASS WITH null
 
                   B.call (x, 'set', ['Data', 'view'], ['div', {'class': null}]);
+                  if (c.get ('.вla').length !== 0) return 'Class not removed #5.';
 
                   if ([
                      '<div id="в1" path="Data:view"></div>',
@@ -933,6 +939,7 @@
 
                   B.call (x, 'set', ['Data', 'view'], ['div', {'class': 'foo'}]);
                   B.call (x, 'set', ['Data', 'view'], ['div', {'class': ''}]);
+                  if (c.get ('.foo').length !== 0) return 'Class not removed #6.';
 
                   if ([
                      '<div id="в1" path="Data:view"></div>',
@@ -943,6 +950,7 @@
                   // ADD CONTENT
 
                   B.call (x, 'set', ['Data', 'view'], ['div', {'class': 'foo'}, 'content']);
+                  if (c.get ('.foo').length !== 1) return 'Class not added #7.';
 
                   if ([
                      '<div id="в1" path="Data:view" class="foo">content</div>',
@@ -952,8 +960,8 @@
                      '<div id="в1" class="foo" path="Data:view">content</div>',
                      // Compatibility: IE<=8 removes the quotes around id & class, puts the class in the middle and uppercases the tag name
                      '<DIV id=в1 class=foo path="Data:view">content</DIV>',
-                     // Compatibility: IE<=7 removes the quotes around id and uppercases the tag name
-                     '<DIV id=в1 path="Data:view" class="foo">content</DIV>'
+                     // Compatibility: IE<=7 changes the order of class
+                     '<DIV class=foo id=в1 path="Data:view">content</DIV>'
                   ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted #7: ' + document.body.innerHTML;
 
                   // REMOVE CONTENT
@@ -966,10 +974,10 @@
                      '<div class="foo" id="в1" path="Data:view"></div>',
                      // Compatibility: IE9 puts the class in the middle
                      '<div id="в1" class="foo" path="Data:view"></div>',
-                     // Compatibility: IE8 removes the quotes around id & class, puts the class in the middle and uppercases the tag name
+                     // Compatibility: IE<=8 removes the quotes around id & class, puts the class in the middle and uppercases the tag name
                      '<DIV id=в1 class=foo path="Data:view"></DIV>',
-                     // Compatibility: IE<=7 removes the quotes around id and uppercases the tag name
-                     '<DIV id=в1 path="Data:view" class="foo"></DIV>'
+                     // Compatibility: IE<=7 changes the order of class
+                     '<DIV class=foo id=в1 path="Data:view"></DIV>'
                   ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted #8: ' + document.body.innerHTML;
 
                   // ADD CONTENT, REMOVE CLASS
@@ -1000,8 +1008,8 @@
                      '<div style="color: red;" id="в1" class="foo" path="Data:view">content</div>',
                      // Compatibility: IE8 puts the style first and uppercases the attribute names, puts the class in the middle, removes quotes from id & class and uppercases the tag name
                      '<DIV style="COLOR: red" id=в1 class=foo path="Data:view">content</DIV>',
-                     // Compatibility: IE<=7 removes quotes from id and removes altogether the style element!
-                     '<DIV id=в1 path="Data:view" class="foo">content</DIV>'
+                     // Compatibility: IE<=7 removes quotes from id & class and removes altogether the style element!
+                     '<DIV class=foo id=в1 path="Data:view">content</DIV>'
                   ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted #10: ' + document.body.innerHTML;
 
                   // LITHBAG CONTENT
@@ -1021,7 +1029,7 @@
                      // Compatibility: IE8 puts the style first and uppercases the attribute names, puts the class in the middle, removes quotes from id & class and uppercases the tag name
                      '<DIV style="COLOR: red" id=в1 class=foo path="Data:view">ABCDE</DIV>',
                      // Compatibility: IE<=7 removes quotes from id and removes altogether the style element!
-                     '<DIV id=в1 path="Data:view" class="foo">ABCDE</DIV>'
+                     '<DIV class=foo id=в1 path="Data:view">ABCDE</DIV>'
                   ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted #11: ' + document.body.innerHTML;
 
                   // REMOVE ALL ATTRIBUTES
@@ -1040,7 +1048,7 @@
 
                   if (c ('#' + B.B + 1) !== DOMElement) return 'DOM element not recycled #13.';
 
-                  B.call (x, 'set', ['Data', 'view'], ['div', {id: 'foo', PATH: 'bar'}, ['A', ['B', ['C'], 'D'], 'E']]);
+                  B.call (x, 'set', ['Data', 'view'], ['div', {PATH: 'bar'}, ['A', ['B', ['C'], 'D'], 'E']]);
 
                   if ([
                      '<div id="в1" path="Data:view">ABCDE</div>',
@@ -1135,10 +1143,8 @@
 
                   if ([
                      '<div id="в1" path="Data:view"><p class="1"></p><p class="3"></p></div>',
-                     // Compatibility: IE8 removes quotes from id & class, uppercases the tag name and adds \r\n
-                     '<DIV id=в1 path="Data:view">\r\n<P class=1></P>\r\n<P class=3></P></DIV>',
-                     // Compatibility: IE<=7 removes quotes from id, uppercases the tag name and adds \r\n
-                     '<DIV id=в1 path="Data:view">\r\n<P class="1"></P>\r\n<P class="3"></P></DIV>'
+                     // Compatibility: IE<=8 removes quotes from id & class, uppercases the tag name and adds \r\n
+                     '<DIV id=в1 path="Data:view">\r\n<P class=1></P>\r\n<P class=3></P></DIV>'
                   ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted #21: ' + document.body.innerHTML;
 
                   if (c ('p') [0] !== ps [0]) return 'First paragraph changed unnecessarily #21';
@@ -1152,10 +1158,8 @@
                      '<section id="в1" path="Data:view"><p class="1"></p><p class="3"></p></section>',
                      // Compatibility: FF<=48 changes the order of path & id
                      '<section path="Data:view" id="в1"><p class="1"></p><p class="3"></p></section>',
-                     // Compatibility: IE8 removes quotes from id & class, uppercases the tag name and adds \r\n
-                     '<section id=в1 path="Data:view">\r\n<P class=1></P>\r\n<P class=3></P></section>',
-                     // Compatibility: IE<=7 removes quotes from id, uppercases the tag name and adds \r\n
-                     '<section id=в1 path="Data:view">\r\n<P class="1"></P>\r\n<P class="3"></P></section>'
+                     // Compatibility: IE<=8 removes quotes from id & class, uppercases the tag name and adds \r\n
+                     '<section id=в1 path="Data:view">\r\n<P class=1></P>\r\n<P class=3></P></section>'
                   ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted #22: ' + document.body.innerHTML;
 
                   if (c ('p') [0] !== ps [0]) return 'First paragraph changed unnecessarily #22';
@@ -1444,8 +1448,6 @@
                      '<TABLE id=в15 path="Data:view">\r\n<TBODY></TBODY></TABLE>'
                   ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted, table #1: ' + document.body.innerHTML;
 
-                  // TODO: fix in IE<=7
-                  // return;
                   B.call (x, 'set', ['Data', 'view'], ['table', ['tr']]);
                   if ([
                      '<table id="в15" path="Data:view"><tbody><tr></tr></tbody></table>',
@@ -1457,7 +1459,9 @@
                   if ([
                      '<table id="в15" path="Data:view"><thead><tr></tr></thead></table>',
                      // Compatibility: IE<=8 uppercases the tag, removes the quotes around id and adds \r\n
-                     '<TABLE id=в15 path="Data:view">\r\n<THEAD>\r\n<TR></TR></THEAD></TABLE>'
+                     '<TABLE id=в15 path="Data:view">\r\n<THEAD>\r\n<TR></TR></THEAD></TABLE>',
+                     // Compatibility: IE<=7 uppercases the tag, removes the quotes around id, adds \r\n and adds a TBODY
+                     '<TABLE id=в15 path="Data:view">\r\n<THEAD>\r\n<TR></TR></THEAD>\r\n<TBODY></TBODY></TABLE>',
                   ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted, table #3: ' + document.body.innerHTML;
 
                   B.call (x, 'set', ['Data', 'view'], ['table', [['thead', ['tr']], [['tbody', ['tr']]]]]);
@@ -1466,6 +1470,15 @@
                      // Compatibility: IE<=8 uppercases the tag, removes the quotes around id and adds \r\n
                      '<TABLE id=в15 path="Data:view">\r\n<THEAD>\r\n<TR></TR></THEAD>\r\n<TBODY>\r\n<TR></TR></TBODY></TABLE>'
                   ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted, table #4: ' + document.body.innerHTML;
+
+                  B.call (x, 'set', ['Data', 'view'], ['table', ['thead', [['tr'], ['tr']]]]);
+                  if ([
+                     '<table id="в15" path="Data:view"><thead><tr></tr><tr></tr></thead></table>',
+                     // Compatibility: IE<=8 uppercases the tag, removes the quotes around id and adds \r\n
+                     '<TABLE id=в15 path="Data:view">\r\n<THEAD>\r\n<TR></TR>\r\n<TR></TR></THEAD></TABLE>',
+                     // Compatibility: IE<=7 uppercases the tag, removes the quotes around id, adds \r\n and adds a TBODY
+                     '<TABLE id=в15 path="Data:view">\r\n<THEAD>\r\n<TR></TR>\r\n<TR></TR></THEAD>\r\n<TBODY></TBODY></TABLE>'
+                  ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted, table #5: ' + document.body.innerHTML;
 
                });
 
@@ -1656,16 +1669,14 @@
 
                   if (c ('option') [1].selected !== true) return 'Option values not set #1.';
 
-                  // TODO: fix in IE<=8
-                  // return;
                   B.call (x, 'set', ['State', 'select'], true);
 
                   if ([
                      '<div id="в19" path="State:select"><select><option>1</option><option>2</option><option>3</option></select><select><option>1</option><option selected="true">2</option><option>3</option></select></div>',
-                     // Compatibility: IE<=8 uppercases the tag, removes the quotes around id and changes the selected attribute
-                     '<DIV id=в19 path="State:select"><SELECT><OPTION>1</OPTION><OPTION>2</OPTION><OPTION>3</OPTION></SELECT><SELECT><OPTION>1</OPTION><OPTION selected>2</OPTION><OPTION>3</OPTION></SELECT></DIV>'
+                     // Compatibility: IE<=8 uppercases the tag, removes the quotes around id, changes the selected attribute and selects the first option of a select without a selected option
+                     '<DIV id=в19 path="State:select"><SELECT><OPTION selected>1</OPTION><OPTION>2</OPTION><OPTION>3</OPTION></SELECT><SELECT><OPTION>1</OPTION><OPTION selected>2</OPTION><OPTION>3</OPTION></SELECT></DIV>'
                   ].indexOf (document.body.innerHTML) === -1) return 'Checkboxes #2: ' + document.body.innerHTML;
-                  if (c ('option') [1].selected !== false || c ('option') [4].selected !== true) return 'Option values not set #2.';
+                  if (c ('option') [4].selected !== true) return 'Option values not set #2.';
 
                });
 
@@ -1700,12 +1711,11 @@
 
                   B.call (x, 'set', ['Data', 'filter'], '1');
                   if (c ('input') [0].checked !== false) return 'wrong checkbox was checked #3.';
-                  B.call (x, 'set', ['Data', 'filter'], '2');
-                  // TODO: fix in IE<=7
-                  // return;
-                  if (c ('input') [0].checked !== true) return 'checkbox wasn\'t checked #3.';
-                  B.call (x, 'set', ['Data', 'filter'], '');
 
+                  B.call (x, 'set', ['Data', 'filter'], '2');
+                  if (c ('input') [0].checked !== true) return 'checkbox wasn\'t checked #3.';
+
+                  B.call (x, 'set', ['Data', 'filter'], '');
                   if (c ('input') [0].checked !== false) return 'wrong checkbox was checked #4.';
                   if (c ('input') [3].checked !== false) return 'wrong checkbox was checked #5.';
                   if (c ('input') [1].checked !== true)  return 'checkbox wasn\'t checked #4.';
@@ -1714,7 +1724,8 @@
                   // For some reason, dispatching `click` doesn't work, even on the newest browsers!
                   c.fire (c ('input') [0], 'change');
 
-                  if (c ('input') [0].checked !== true) return 'checkbox not checked after event.';
+                  // Compatibility: firing the change event doesn't work on IE<=7, so we skip the check.
+                  if (c ('input') [0].checked !== true && ! B.internal.olderIE) return 'checkbox not checked after event.';
                });
 
                Test ('B.view, events', function () {
@@ -1724,10 +1735,10 @@
                         return ['div', [
                            ['input', {id: 'i1', value: B.get ('Data', 'i1'), onchange: B.ev ('set', ['Data', 'i1'])}],
                            ['form', {id: 'i2'}, [
-                              ['input', {name: 'user', type: 'text', value: B.get ('Data', 'i2', 'user'), onchange: B.ev ('set', ['Data', 'i2', 'user'])}],
+                              ['input', {id: 'user', type: 'text', value: B.get ('Data', 'i2', 'user'), onchange: B.ev ('set', ['Data', 'i2', 'user'])}],
                               Data.i8 ? [] : ['input'],
                               Data.i7 ? [] : ['input', {id: 'i7'}],
-                              ['input', {name: 'pass', type: 'password', value: B.get ('Data', 'i2', 'pass'), onchange: B.ev ('set', ['Data', 'i2', 'pass'])}],
+                              ['input', {id: 'pass', type: 'password', value: B.get ('Data', 'i2', 'pass'), onchange: B.ev ('set', ['Data', 'i2', 'pass'])}],
                               ['input', {id: 'button', type: 'button', value: 'Submit', onclick: B.ev ('upload', 'i2', '"a"', ',"b"')}]
                            ]],
                            ['textarea', {id: 'i3', onchange: B.ev ('set', ['Data', 'i3'])}, B.get ('Data', 'i3')],
@@ -1760,8 +1771,11 @@
                   B.call (x, 'set', ['Data', 'i1'], 'i1plus');
                   if (c.get ('#i1', 'value').value !== 'i1plus') return 'input wasn\'t refreshed properly.';
 
-                  c.set ('#i2 [name="user"]', {value: 'Talk about'});
-                  c.set ('#i2 [name="pass"]', {value: 'thepassion'});
+
+                  c.set ('#user', {value: 'Talk about'});
+                  c.set ('#pass', {value: 'thepassion'});
+
+                  if (! eq (B.get ('Data', 'i2'), {user: 'Talk about', pass: 'thepassion'})) return 'updated inputs didn\'t refresh the state: ' + JSON.stringify (B.get ('Data', 'i2'));
 
                   var matched = false, upload = B.respond ('upload', 'i2', {burn: true}, function (x, arg1, arg2) {
                      if (arg1 !== '"a"' || arg2 !== ',"b"') matched = null;
@@ -1783,16 +1797,16 @@
 
                   B.call (x, 'set', ['Data', 'i4', 'fries'], true);
                   // Compatibility: we use selectors of the form {form: ..., selector: ...} for FF3 & IE<=8
-                  // TODO IE<=7
                   if (c ({from: c ('#i4'), selector: 'input'}) [0].checked !== true) return 'checkbox wasn\'t checked.';
 
                   c.fire ({from: c ('#i4'), selector: 'input'}, 'change');
-                  // TODO IE<=7
-                  if (B.get ('Data', 'i4', 'fries') !== false) return 'checkbox didn\'t change data after being changed.';
-                  if (c ({from: c ('#i4'), selector: 'input'}) [0].checked !== false) return 'checkbox wasn\'t unchecked.';
+                  // Compatibility: firing the change event doesn't work on IE<=7, so we skip the check.
+                  if (! B.internal.olderIE) {
+                     if (B.get ('Data', 'i4', 'fries') !== false) return 'checkbox didn\'t change data after being changed.';
+                     if (c ({from: c ('#i4'), selector: 'input'}) [0].checked !== false) return 'checkbox wasn\'t unchecked.';
+                  }
 
                   B.call (x, 'set', ['Data', 'i5'], 'green');
-                  // TODO IE<=7
                   if (c ({from: c ('#i5'), selector: 'input'}) [1].checked !== true) return 'radio wasn\'t selected.';
 
                   B.call (x, 'set', ['Data', 'i6'], 'ok computer');
@@ -1905,8 +1919,6 @@
                   B.call (x, 'set', ['State', 'ltable'], 2);
 
                   var opaques = c ('.something');
-                  // TODO: fix in IE<=7 (selector returns empty)
-                  // return;
                   if (opaques.length !== 2) return 'Opaques were not created.';
                   opaques = c ('input');
                   if (opaques.length !== 2) return 'Opaque contents were not created.';

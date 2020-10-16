@@ -228,7 +228,8 @@ Please refer to readme.md to read the annotated source.
       var output = 'var id = B.call ("ev", event ? event.type : "undefined event", B.evh (this));';
 
       dale.go (evs, function (ev) {
-         output += ' B.call ({"from": id}, ' + dale.go (ev.length === 2 ? ev.concat ({raw: 'this.value'}) : ev, function (v, k) {
+         var defaultValue = ! B.internal.oldFF ? 'this.value' : 'this.value || (this.attributes.value ? this.attributes.value.nodeValue : "")';
+         output += ' B.call ({"from": id}, ' + dale.go (ev.length === 2 ? ev.concat ({raw: defaultValue}) : ev, function (v, k) {
             if (k > 1 && type (v) === 'object' && type (v.raw) === 'string') return v.raw;
             return B.str (v);
          }).join (', ') + ');';
@@ -297,6 +298,7 @@ Please refer to readme.md to read the annotated source.
          var count = B.internal.count, children = [];
          var elem = fun.apply (null, dale.go (paths, B.get));
          if (! B.prod && B.validateLith (elem) !== 'Lith') return B.error ('B.view', 'View function must return a lith element but instead returned:', elem, 'Arguments:', {path: path});
+         if (! B.prod && type (elem [1]) === 'object' && elem [1].id !== undefined) return B.error ('B.view', 'View function must return a lith element without an id attribute but instead returned:', elem, 'Arguments:', {path: path});
 
          dale.go (dale.times (B.internal.count - count, count), function (k) {
             var responder = B.responders [B.B + k];
@@ -339,6 +341,7 @@ Please refer to readme.md to read the annotated source.
 
    B.internal = {count: 1, timeout: 200, queue: [], redrawing: false}
    if (document.body.fireEvent && ! document.body.dispatchEvent) B.internal.oldIE    = true;
+   if (! document.querySelectorAll && B.internal.oldIE)          B.internal.olderIE  = true;
    if (! document.querySelectorAll && ! B.internal.oldIE)        B.internal.oldFF    = true;
    if (navigator.userAgent.match ('Opera'))                      B.internal.oldOpera = true;
 
@@ -453,7 +456,9 @@ Please refer to readme.md to read the annotated source.
             output.splice (tableIndex, 0, 'O tbody');
             output.push ('C tbody');
          }
+         if (B.internal.olderIE && ! output [tableIndex]) output.splice (tableIndex, 0, 'O tbody', 'C tbody');
       }
+      if (B.internal.olderIE && input [0] === 'table' && ! output [tableIndex]) output.splice (tableIndex, 0, 'O tbody', 'C tbody');
       output.push ('C ' + input [0]);
       return output;
    }
@@ -509,6 +514,12 @@ Please refer to readme.md to read the annotated source.
          Parent.insertBefore (element, nextSibling);
       }
 
+      var processOpaque = function (elementString) {
+         var length = parseInt (elementString.match (/ \d+ /) [0].replace (/\s/g, ''));
+         elementString = elementString.replace (length + ' ', '');
+         return {element: elementString.slice (0, length), contents: elementString.slice (length + 1)};
+      }
+
       var make = function (elementString) {
          if (elementString.substr (0, 1) === 'L') {
             var container = document.createElement ('div');
@@ -517,17 +528,15 @@ Please refer to readme.md to read the annotated source.
          }
 
          if (elementString.substr (0, 1) === 'P') {
-            var length = parseInt (elementString.match (/ \d+ /) [0].replace (/\s/g, ''));
-            elementString = elementString.replace (length + ' ', '');
-            var contents = elementString.slice (length + 1);
-            elementString = elementString.slice (0, length);
+            var processedOpaque = processOpaque (elementString);
+            elementString = processedOpaque.element;
          }
 
          var element = document.createElement (extract (elementString, 'tag'));
          dale.go (extract (elementString, 'attributes'), function (v, k) {
-            if (['', null, false].indexOf (v) === -1) element.setAttribute (k, v);
+            if (['', null, false].indexOf (v) === -1) element.setAttribute (B.internal.olderIE && k === 'class' ? 'className' : k, v);
          });
-         if (elementString.substr (0, 1) === 'P') element.innerHTML = contents;
+         if (elementString.substr (0, 1) === 'P') element.innerHTML = processedOpaque.contents;
          return element;
       }
 
@@ -535,13 +544,14 @@ Please refer to readme.md to read the annotated source.
          var oldAttributes = extract (old, 'attributes'), newAttributes = extract (New, 'attributes');
          if (B.internal.oldIE && (oldAttributes.type || newAttributes.type)) return make (New);
          dale.go (newAttributes, function (v, k) {
-            if (['', null, false].indexOf (v) === -1) element.setAttribute (k, v);
+            if (['', null, false].indexOf (v) !== -1) return;
+            element.setAttribute (B.internal.olderIE && k === 'class' ? 'className' : k, v);
             if (B.internal.oldFF    && k === 'value')    element.value = v;
             if (B.internal.oldOpera && k === 'selected') element.selected = v;
          });
          dale.go (oldAttributes, function (v, k) {
             if (['', null, false].indexOf (v) !== -1) return;
-            if (['', null, false, undefined].indexOf (newAttributes [k]) !== -1) element.removeAttribute (k);
+            if (['', null, false, undefined].indexOf (newAttributes [k]) !== -1) element.removeAttribute (B.internal.olderIE && k === 'class' ? 'className' : k, v);
          });
          return element;
       }
@@ -552,6 +562,7 @@ Please refer to readme.md to read the annotated source.
          var elementType = v [1].substr (0, 1);
          if (elementType === 'C') return;
          if (v [0] === 'keep') {
+            if (B.internal.olderIE && elementType === 'O' && extract (v [1], 'attributes').checked) elements [k].setAttribute ('checked', true);
             if (elementType !== 'P') return place ('keep', positions [k], elements [k]);
             elements [k].parentNode.removeChild (elements [k]);
          }
@@ -560,16 +571,19 @@ Please refer to readme.md to read the annotated source.
             return elements [k].parentNode.removeChild (elements [k]);
          }
 
-         if (elementType !== 'O') return place ('add', positions [k], make (v [1]));
+         if (elementType === 'L') return place ('add', positions [k], make (v [1]));
          var tag = extract (v [1], 'tag'), recycleIndex = recyclables [tag], element;
 
-         if (recycleIndex === undefined) element = make (v [1]);
+         if (elementType === 'P' || recycleIndex === undefined) element = make (v [1]);
          else {
             element = recycle (elements [recycleIndex], diff [recycleIndex] [1], v [1]);
             recyclables [tag] = undefined;
          }
          elements [k] = element;
          place ('add', positions [k], element);
+         var olderIEAttributes = B.internal.olderIE ? extract (elementType === 'O' ? v [1] : processOpaque (v [1]).element, 'attributes') : {};
+         if (olderIEAttributes.checked)   element.setAttribute ('checked', true);
+         if (olderIEAttributes ['class']) element.className = olderIEAttributes ['class'];
       });
 
       if (active && document.body.contains (active)) active.focus ? active.focus () : active.setActive ();

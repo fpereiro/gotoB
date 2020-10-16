@@ -393,7 +393,7 @@ And, of course, gotoв must be very useful for building a real webapp.
 - **Batteries included**: the core functionality for building a webapp is all provided. Whatever libraries you add on top will probably be for specific things (nice CSS, a calendar widget, etc.)
 - **Trivial to set up**: add `<script src="https://cdn.jsdelivr.net/gh/fpereiro/gotob@/gotoB.min.js"></script>` at the top of the `<body>`.
 - **Everything in plain sight**: all properties and state are directly accessible from the javascript console of the browser. DOM elements have stringified event handlers that can be inspected with any modern browser.
-- **Performance**: gotoв itself is small (~13kb when minified and gzipped, including all dependencies) so it is loaded and parsed quickly. Its view redrawing mechanism is reasonably fast.
+- **Performance**: gotoв itself is small (~14kb when minified and gzipped, including all dependencies) so it is loaded and parsed quickly. Its view redrawing mechanism is reasonably fast.
 - **Cross-browser compatibility**: gotoв is intended to work on virtually all the browsers you may encounter. See browser current compatibility above in the *Installation* section.
 
 ### What does gotoв *not* care about?
@@ -1153,7 +1153,7 @@ TODO
    - if literal, just for nbsp, not for inserting tags. otherwise, you need opaque.
    - if opaque within reactive view, redrawn every time.
 - negative priorities & nestedness
-- nested views can still reference the same DOM element, if one view returns another!
+- nested views cannot reference the same DOM element! One view cannot just return another. Use a view with multiple paths instead.
 - trample & perflogs
 - FF 3: autocomplete=off on selects.
 
@@ -1188,7 +1188,7 @@ deterministic diff, deterministic id assignation.
 
 ## Source code
 
-The complete source code is contained in `gotoB.js`. gotoв itself is about 640 lines long; its dependencies are about 1380 lines; the whole thing is about 2010 lines.
+The complete source code is contained in `gotoB.js`. gotoв itself is about 650 lines long; its dependencies are about 1380 lines; the whole thing is about 2030 lines.
 
 Below is the annotated source.
 
@@ -1934,17 +1934,23 @@ We iterate each of the events to be called. For each of them, we will append to 
       dale.go (evs, function (ev) {
 ```
 
-We invoke `B.call` passing as its first argument a context object with the `from` key set to `id` (so that this event can be tracked to the DOM event that generated it.
-
-After this, we iterate the elements of `ev` - notice that if this `ev` has only a verb and a path, we add a third argument `{raw: 'this.value'}`, which we'll review in a minute.
+We define a `defaultValue` that we will use if `ev` only has a verb and a path. In all browsers except for Firefox 3 and below, it will be `'this.value'`, which is a reference to the value of the element. To work around a quirk of Firefox <= 3, if that value is not present we default to  `this.attributes.value.nodeValue`, or an empty string if that value is also falsy.
 
 ```javascript
-         output += ' B.call ({"from": id}, ' + dale.go (ev.length === 2 ? ev.concat ({raw: 'this.value'}) : ev, function (v, k) {
+         var defaultValue = ! B.internal.oldFF ? 'this.value' : 'this.value || (this.attributes.value ? this.attributes.value.nodeValue : "")';
+```
+
+We invoke `B.call` passing as its first argument a context object with the `from` key set to `id` (so that this event can be tracked to the DOM event that generated it.
+
+After this, we iterate the elements of `ev` - notice that if this `ev` has only a verb and a path, we add a third argument `{raw: defaultValue}`, which we'll review in a minute.
+
+```javascript
+         output += ' B.call ({"from": id}, ' + dale.go (ev.length === 2 ? ev.concat ({raw: defaultValue}) : ev, function (v, k) {
 ```
 
 `B.ev` has a mechanism to allow you to pass raw arguments to `B.call`. A raw event is a string that is not stringified, and thus can be used to access the event properties directly. For example, if you want to access the value of an `input` field, you would need the raw argument `this.value`. To represent raw elements, `B.ev` expects an object with a key `raw` and a value that is a string.
 
-Going back to the default value of `{raw: 'this.value'}`: when no arguments are passed, a very useful default is to return the value of the element - for example, for handlers with `<input>` or `<textarea>` elements.
+Going back to the default value of `{raw: defaultValue}`: when no arguments are passed, a very useful default is to return the value of the element - for example, for handlers with `<input>` or `<textarea>` elements.
 
 If we're iterating the third element of the `ev` onwards (which means that we've already covered `verb` and `path`) and the object has a `raw` key with a string as value, we merely return the value without stringifying it. Notice that if any other keys are present in the object, we ignore them.
 
@@ -2156,6 +2162,12 @@ If we're not in production mode, we validate `elem` with `B.validateLith` (which
          if (! B.prod && B.validateLith (elem) !== 'Lith') return B.error ('B.view', 'View function must return a lith element but instead returned:', elem, 'Arguments:', {path: path});
 ```
 
+If we're not in production mode, we check that `elem` doesn't contain an `id` attribute, since that attribute must be set by `B.view`. This also prevents a vfun returning the direct output of another vfun, which would break the 1:1 correspondence between a responder and a reactive DOM element.
+
+```javascript
+         if (! B.prod && type (elem [1]) === 'object' && elem [1].id !== undefined) return B.error ('B.view', 'View function must return a lith element without an id attribute but instead returned:', elem, 'Arguments:', {path: path});
+```
+
 We now find the reactive views that are children of the current one (if any). To do this, we make use of the fact that all reactive views have as id `в` followed by a number. Nested calls to `B.view` will by now have been executed, so `B.internal.count` will be updated.
 
 For example, if this invocation to `B.view` has id `в1`, and it has two nested reactive views (`в2` and `в3`), `count` will be 2 and `B.internal.count` will be 4. We create a list of integers, starting with `count` and continuing until the number of the last reactive view. For each of the children:
@@ -2327,11 +2339,13 @@ We define `B.internal`, an object with the following keys:
 
 We create variables within `B.internal` for compatibility with old browsers:
 - `B.internal.oldIE` for Internet Explorer 8 or lower. We get this by checking for the presence of `fireEvent` (IE only) and the absence of `dispatchEvent` (IE>=9).
+- `B.internal.oldIE` for Internet Explorer 7 or lower. We get this by checking whether we're in an old IE *and* there's an abasence of `querySelectorAll`.
 - `B.internal.FF` for Firefox 3 or lower. We get this by making sure we're not in an old Internet Explorer *and* there's an absence of `querySelectorAll`.
 - `B.internal.oldOpera` for Opera 12 or lower. We get this by checking whether the user agent of the navigator contains `'Opera'` - [higher versions are based on a different engine](https://en.wikipedia.org/wiki/Opera_(web_browser)#History).
 
 ```javascript
    if (document.body.fireEvent && ! document.body.dispatchEvent) B.internal.oldIE    = true;
+   if (! document.querySelectorAll && B.internal.oldIE)          B.internal.olderIE  = true;
    if (! document.querySelectorAll && ! B.internal.oldIE)        B.internal.oldFF    = true;
    if (navigator.userAgent.match ('Opera'))                      B.internal.oldOpera = true;
 ```
@@ -2798,13 +2812,25 @@ We assume there's nothing in the `<table>` after the `<tbody>`, so we push an el
 
 ```javascript
             output.push ('C tbody');
+         }
+```
+
+If we're in Internet Explorer 7 or older and there's no `<tbody>`, we add it ourselves. This is necessary because the browser adds a `<tbody>` automatically when the `<table>` has a `<thead>` but no `<tbody>`.
+
+```javascript
+         if (B.internal.olderIE && ! output [tableIndex]) output.splice (tableIndex, 0, 'O tbody', 'C tbody');
 ```
 
 This closes the case of a `<table>`.
 
 ```javascript
-         }
       }
+```
+
+If we're in Internet Explorer 7 or older and the table has no contents, we add a `<tbody>` to match what the browser does.
+
+```javascript
+      if (B.internal.olderIE && input [0] === 'table' && ! output [tableIndex]) output.splice (tableIndex, 0, 'O tbody', 'C tbody');
 ```
 
 Finally, we push an element to `output` to denote the closing of the tag. We return `output` and close the function.
@@ -2987,9 +3013,10 @@ If `errorIndex` is not `undefined`, we return it to interrupt the function's cou
       if (errorIndex !== undefined) return errorIndex;
 ```
 
-Before going into the second pass, we now define four helper functions:
+Before going into the second pass, we now define five helper functions:
 - `extract`, to get either the tag or the attributes from a diff item.
 - `place`, to place an element into the DOM in a desired position.
+- `processOpaque`, which splits an opaque element string into a normal element string and the contents of the opaque element.
 - `make`, to create a normal DOM element, an opaque element or a text/literal element.
 - `recycle`, to take a DOM element and update its attributes so it can be reused.
 
@@ -3059,6 +3086,35 @@ This concludes the function.
       }
 ```
 
+We now define `processOpaque`, a function that takes the element string of an opaque element and separates the tag + attributes from the contents.
+
+```javascript
+      var processOpaque = function (elementString) {
+```
+
+The `elementString` of an opaque element (as constructed by `B.prediff`) has the following structure: `P LENGTH TAG {...} CONTENTS`. `LENGTH` is the length of `elementString` when it only has the following: `P TAG {...}`.
+
+What we want to do here is to extract the `contents` into another string and remove them from `elementString`. We first start by finding the `LENGTH`, which will be the first set of digits surrounded by whitespace. We parse it into an integer.
+
+```javascript
+         var length = parseInt (elementString.match (/ \d+ /) [0].replace (/\s/g, ''));
+```
+
+We remove the `length` and its subsequent whitespace from `elementString`.
+
+```javascript
+         elementString = elementString.replace (length + ' ', '');
+```
+
+We return an object of the form `{element: ..., contents: ...}`, each of the values being a string. We use `length` to know where the tag & attributes finish and where the contents start. Note that we use `length + 1` in the case of contents to ignore the whitespace that was added by `B.prediff` to separate them from the attributes.
+
+This concludes the function.
+
+```javascript
+         return {element: elementString.slice (0, length), contents: elementString.slice (length + 1)};
+      }
+```
+
 We now define `make`, the function that will make and return a new text element, normal DOM element or opaque DOM element. This function takes a single argument, `elementString`, which is the second element of a diff item.
 
 ```javascript
@@ -3100,30 +3156,16 @@ If the first character of `elementString` is `P`, we're dealing with an opaque e
          if (elementString.substr (0, 1) === 'P') {
 ```
 
-The `elementString` of an opaque element (as constructed by `B.prediff`) has the following structure: `P LENGTH TAG {...} CONTENTS`. `LENGTH` is the length of `elementString` when it only has the following: `P TAG {...}`.
-
-What we want to do here is to extract the `contents` into another string and remove them from `elementString`. We first start by finding the `LENGTH`, which will be the first set of digits surrounded by whitespace. We parse it into an integer.
+We split with `processOpaque` the tag & attributes from the contents and store it in a variable `processedOpaque`.
 
 ```javascript
-            var length = parseInt (elementString.match (/ \d+ /) [0].replace (/\s/g, ''));
+            var processedOpaque = processOpaque (elementString);
 ```
 
-We remove the `length` and its subsequent whitespace from `elementString`.
+We overwrite `elementString` with the version of the `elementString` that has no contents or length and thus has the same format as the `elementString` of a normal element.
 
 ```javascript
-            elementString = elementString.replace (length + ' ', '');
-```
-
-We extract `contents` into its own variable. The starting point is `length + 1` instead of `length`, because when the string is constructed, a space is added before the contents for readability purposes.
-
-```javascript
-            var contents = elementString.slice (length + 1);
-```
-
-We remove the `contents` (and the prepended space) from `elementString`. Now `elementString` will now have the form `P TAG {...}`.
-
-```javascript
-            elementString = elementString.slice (0, length);
+            elementString = processedOpaque.element;
 ```
 
 This concludes the logic that is exclusive to opaque elements. From now on, the function will deal with both opaque and normal DOM elements.
@@ -3144,17 +3186,17 @@ We extract the `attributes` using `extract` and iterate them:
          dale.go (extract (elementString, 'attributes'), function (v, k) {
 ```
 
-If `v` is neither an empty string nor `false` nor `null`, we set the attribute on `element` using `setAttribute`.
+If `v` is neither an empty string nor `false` nor `null`, we set the attribute on `element` using `setAttribute`. If we're in Internet Explorer 7 and below, we set `className` instead of `class`.
 
 ```javascript
-            if (['', null, false].indexOf (v) === -1) element.setAttribute (k, v);
+            if (['', null, false].indexOf (v) === -1) element.setAttribute (B.internal.olderIE && k === 'class' ? 'className' : k, v);
          });
 ```
 
-If we're constructing an opaque element, we set its `innerHTML` to `contents`.
+If we're constructing an opaque element, we set its `innerHTML` to its contents.
 
 ```javascript
-         if (elementString.substr (0, 1) === 'P') element.innerHTML = contents;
+         if (elementString.substr (0, 1) === 'P') element.innerHTML = processedOpaque.contents;
 ```
 
 We return `element` and close the function.
@@ -3164,7 +3206,7 @@ We return `element` and close the function.
       }
 ```
 
-We define the fourth and last helper function, `recycle`, which updates the attributes of a DOM element that has been recycled. This function takes three arguments: `element`, `old` and `New`; the last two are `elementStrings` for elements that are not opaque and have the same tag.
+We define the fifth and last helper function, `recycle`, which updates the attributes of a DOM element that has been recycled. This function takes three arguments: `element`, `old` and `New`; the last two are `elementStrings` for elements that are not opaque and have the same tag.
 
 ```javascript
       var recycle = function (element, old, New) {
@@ -3182,11 +3224,17 @@ If we're in Internet Explorer 8 and below and either the old or new version of t
          if (B.internal.oldIE && (oldAttributes.type || newAttributes.type)) return make (New);
 ```
 
-We iterate `newAttributes` and set them on `element` if they are neither an empty string nor `false` nor `null`.
+We iterate `newAttributes` and ignore those attributes that are neither an empty string nor `false` nor `null`.
 
 ```javascript
          dale.go (newAttributes, function (v, k) {
-            if (['', null, false].indexOf (v) === -1) element.setAttribute (k, v);
+            if (['', null, false].indexOf (v) !== -1) return;
+```
+
+We set the attribute on `element` using `setAttribute`. If we're in Internet Explorer 7 and below, we set `className` instead of `class`.
+
+```javascript
+            element.setAttribute (B.internal.olderIE && k === 'class' ? 'className' : k, v);
 ```
 
 Before closing the iteration of `newAttributes`, we provide workarounds for bugs in old browsers. In the case of Firefox <= 3, we need to set `value` explicitly. In the case of Opera <= 12, we need to set explicitly the `selected` property.
@@ -3197,12 +3245,12 @@ Before closing the iteration of `newAttributes`, we provide workarounds for bugs
          });
 ```
 
-We iterate the `oldAttributes`. If they are an empty string, `false` or `null`, we ignore them. If there's no corresponding entry for them in `newAttributes`, we remove the attributes from `element`.
+We iterate the `oldAttributes`. If they are an empty string, `false` or `null`, we ignore them. If there's no corresponding entry for them in `newAttributes`, we remove the attributes from `element`. In the case of Internet Explorer 7 and below, we remove `className` instead of `class`.
 
 ```javascript
          dale.go (oldAttributes, function (v, k) {
             if (['', null, false].indexOf (v) !== -1) return;
-            if (['', null, false, undefined].indexOf (newAttributes [k]) !== -1) element.removeAttribute (k);
+            if (['', null, false, undefined].indexOf (newAttributes [k]) !== -1) element.removeAttribute (B.internal.olderIE && k === 'class' ? 'className' : k, v);
          });
 ```
 
@@ -3237,10 +3285,21 @@ If we're closing an element, we don't need to do anything on this pass.
          if (elementType === 'C') return;
 ```
 
-If we're keeping an item that is not an opaque element (either a literal or a normal element), we will invoke the `place` function defined above with three arguments: the operation (in this case, `'keep'`), the desired position of the item, and the corresponding DOM element. There's nothing else to do in this case, so we return.
+We start with the case where we want to keep an element.
 
 ```javascript
          if (v [0] === 'keep') {
+```
+
+If we're in Internet Explorer 7 and below and we're dealing with a normal element that has a `checked` attribute, we need to set explicitly the attribute. This is actually only actually required on Internet Explorer 6 (!).
+
+```javascript
+            if (B.internal.olderIE && elementType === 'O' && extract (v [1], 'attributes').checked) elements [k].setAttribute ('checked', true);
+```
+
+If we're keeping an item that is not an opaque element (either a literal or a normal element), we will invoke the `place` function defined above with three arguments: the operation (in this case, `'keep'`), the desired position of the item, and the corresponding DOM element. There's nothing else to do in this case, so we return.
+
+```javascript
             if (elementType !== 'P') return place ('keep', positions [k], elements [k]);
 ```
 
@@ -3274,24 +3333,24 @@ We remove the element from the DOM. There's nothing to do in the case of removin
          }
 ```
 
-If we're here, we're either adding a new item or keeping an opaque item.
+If we're here, we're either adding a new item of any kind or keeping an opaque item.
 
-If the item is not a normal DOM element (either a text element or an opaque element), we only invoke `place`, passing three arguments: the operation (`'add'`), the desired position and the actual element. The actual element is built through the `make` function defined above. This also covers the case when an opaque element is kept - we previously removed the old version and now we add the new version.
+If the item is a literal/text element, we invoke `place`, passing three arguments: the operation (`'add'`), the desired position and the actual element. The actual element is built through the `make` function defined above. This also covers the case when an opaque element is kept - we previously removed the old version and now we add the new version.
 
 ```javascript
-         if (elementType !== 'O') return place ('add', positions [k], make (v [1]));
+         if (elementType === 'L') return place ('add', positions [k], make (v [1]));
 ```
 
-If we're here, we're going to add a normal DOM element. We note the `tag` of the element and the index of a recyclable element of the same tag, if any. We also set up a variable to hold the DOM element that we'll either create or recycle.
+If we're here, we're going to add a normal DOM element or add/keep an opaque element. We note the `tag` of the element and the index of a recyclable element of the same tag, if any. We also set up a variable to hold the DOM element that we'll either create or recycle.
 
 ```javascript
          var tag = extract (v [1], 'tag'), recycleIndex = recyclables [tag], element;
 ```
 
-We now either create or recycle a DOM element, depending on whether `recycleIndex` is present or not. If it's not, we create the element from scratch using `make`.
+We now either create or recycle a DOM element, depending on we're dealing with an opaque element or not and whether `recycleIndex` is present or not. If we're dealing with an opaque element, or there's no recyclable element with the tag we need, we create the element from scratch using `make`.
 
 ```javascript
-         if (recycleIndex === undefined) element = make (v [1]);
+         if (elementType === 'P' || recycleIndex === undefined) element = make (v [1]);
 ```
 
 Otherwise, we use `elements [recycleIndex]` as our DOM element. We pass it to `recycle`, a function we defined above, also passing the diff element of this item (which has the info for the desired attributes of the element) and the diff element of the old entry (which has the existing attributes of the element). `recycle` modifies the `element` and returns it.
@@ -3314,10 +3373,37 @@ Now that we have a DOM element (either new or recycled) that matches with this d
          elements [k] = element;
 ```
 
-Finally, we invoke `place`, passing the operation (`'add'`), the desired position and the actual DOM element. We close the loop of the second pass over the diff.
+We invoke `place`, passing the operation (`'add'`), the desired position and the actual DOM element.
+
+This is a good moment to ask: why do we remake a kept opaque element from scratch? The answer is that because opaque elements can change because of direct DOM manipulation, the only way to ensure that they contain whatever the view function initially determines is to remake them from scratch (and apply the DOM manipulations again, wherever needed). This means that opaque elements not only are never recycled; they always are remade from scratch in the case of a redraw.
 
 ```javascript
          place ('add', positions [k], element);
+```
+
+We define a variable `olderIEAttributes` that will contain the attributes if we're in Internet Explorer 7 or lower. We extract the attributes with the `extract` function defined above.
+
+Note that if we're working with an opaque element, we use `processOpaque` to normalize the shape of the `elementString` before passing it to `extract`.
+
+```javascript
+         var olderIEAttributes = B.internal.olderIE ? extract (elementType === 'O' ? v [1] : processOpaque (v [1]).element, 'attributes') : {};
+```
+
+If we're in Internet Explorer 7 or lower and the element has a `checked` attribute, we need to set it explicitly.
+
+```javascript
+         if (olderIEAttributes.checked)   element.setAttribute ('checked', true);
+```
+
+If we're in Internet Explorer 7 or lower and the element has a `class` attribute, we need to set it explicitly - note we set `className` instead of `class`.
+
+```javascript
+         if (olderIEAttributes ['class']) element.className = olderIEAttributes ['class'];
+```
+
+We close the loop of the second pass over the diff.
+
+```javascript
       });
 ```
 

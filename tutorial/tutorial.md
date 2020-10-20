@@ -56,13 +56,13 @@ This tutorial only covers the frontend aspect of webapp development. We will how
 
 ### Is it a webpage or is it a webapp?
 
-In the beginning of the web, we only had webpages. Webpages are easy to understand: each webpage is a merely some HTML, CSS & js that gets loaded on the browser. Every time the user opens the page, that HTML, CSS & js gets loaded and the page is displayed. And, unless the owner of the webpage decides to change it, the webpage will be the same from here until the end of time.
+In the beginning of the web, we only had webpages. Webpages are easy to understand: each webpage is merely some HTML, CSS & js that gets loaded on the browser. Every time the user opens the page, that HTML, CSS & js gets loaded and the page is displayed. And, unless the owner of the webpage decides to change it, the webpage will be the same from here until the end of time.
 
 Because webpages are always the same (unless updated), we consider them to be **static**.
 
-An example of this is the homepage of a newspaper. Sure, it might be updated all the time, but between updates, the page is the same for everyone. The newspaper is a set of documents, and each [Uniform Resource Locator](https://en.wikipedia.org/wiki/URL) gives you one document. The information flows in one way, from the webpage to the user.
+An example of this is the homepage of a newspaper. Sure, it might be updated very often, but between updates, the page is the same for everyone. The newspaper is a set of documents, and each [Uniform Resource Locator (URL)](https://en.wikipedia.org/wiki/URL) gives you one document. The information flows in one way, from the webpage to the user.
 
-Webapps are a different game, because the HTML, CSS & js depends on **the state of the application**.
+Webapps are a different game, because the HTML, CSS & js depend on **the state of the application**.
 
 An example of a webapp is the inbox of your web email, such as Gmail or Outlook.com. It is still HTML, CSS & js, but it will depend on what emails you have in your inbox! Your inbox may have a single URL, but the information of your inbox will likely change because of user interaction. The information flows both ways, from the webapp to the user and from the user to the webapp.
 
@@ -74,13 +74,44 @@ In the case of an email application, the state would be comprised of the followi
 - The name of the user.
 - The current view (Inbox, Sent, Drafts, Account, etc.).
 - The emails currently displayed.
-- Other user preferences.
+- Other user preferences, such as your preferred language.
 
 (This is not an exhaustive list; there might be a lot more under the hood!)
 
 The state is *shared information* between the webapp and the user. In some webapps, only the user can change their own state. In others (like an email application), users can affect each others' mutual state. For example, if someone sends you an email, that affects the state of your inbox.
 
-The takeaway from this section (which is probably the hardest in the entire tutorial!) is that a webapp is about *state*, the shared information between the user and the app. If you understand that, all the following concepts will fall into place.
+The takeaway from this section (which is probably the hardest in the entire tutorial!) is that a webapp is about *state*, the shared information between the user and the app. If you understand this, all the following concepts will fall into place.
+
+### The parts of a webapp
+
+state <-> interface <-> user
+
+The interface is a vehicle that allows the user to interact with the webapp.
+
+
+- New user arrives to the app. No user: interface shows a sign in page.
+- User fills form through the interface. Sends the data.
+- Account created! The state changes, so the interface: shows inbox.
+- inbox allows certain interactions.
+- User picks an interaction: start writing an email.
+- State is updated (new email view). So is the interface.
+
+In short:
+
+initial state -> initial interface -> user picks an interaction -> state is updated -> interface is updated -> user picks another interaction
+
+This is the core cycle of any application with an interface.
+
+### What is an interface, really?
+
+The interface is made of HTML, CSS & js.
+
+The interface allows the user two things: 1) see their state; 2) allow them to change the state.
+
+The interface is not static. It depends on the state!
+
+
+
 
 
 

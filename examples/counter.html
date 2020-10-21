@@ -7,28 +7,25 @@
    <body>
       <script src="../gotoB.min.js"></script>
       <script>
-         var dale = window.dale, teishi = window.teishi, lith = window.lith, c = window.c, B = window.B;
+         var B = window.B;
 
          var mainView = function () {
-            return B.view ('counter', {ondraw: function () {
-
-               if (B.get ('counter') === undefined) B.do ('set', 'counter', 0);
-
-            }}, function (x, counter) {
-               return [
+            return B.view ('counter', function (counter) {
+               if (counter === undefined) counter = 0;
+               return ['div', [
                   ['h3', 'My counter app.'],
                   ['p', [
                      'Current value of counter is: ',
                      ['strong', counter]
                   ]],
-                  ['input', B.ev ({type: 'button', value: 'Increment counter'}, ['onclick', 'set', 'counter', counter + 1])],
+                  ['input', {type: 'button', value: 'Increment counter', onclick: B.ev ('set', 'counter', counter + 1)}],
                   ['br'], ['br'],
-                  ['input', B.ev ({type: 'button', value: 'Reset counter'}, ['onclick', 'set', 'counter', 0])]
-               ];
+                  ['input', {type: 'button', value: 'Reset counter', onclick: B.ev ('set', 'counter', 0)}]
+               ]];
             });
          }
 
-         B.mount ('body', mainView ());
+         B.mount ('body', mainView);
 
       </script>
    </body>

@@ -66,9 +66,27 @@ Webapps are a different game, because the HTML, CSS & js depend on **the state o
 
 An example of a webapp is the inbox of your web email, such as Gmail or Outlook.com. It is still HTML, CSS & js, but it will depend on what emails you have in your inbox! Your inbox may have a single URL, but the information of your inbox will likely change because of user interaction. The information flows both ways, from the webapp to the user and from the user to the webapp.
 
-Diagrams:
-Webpage/static: URL -> HTML
-Webapp/dynamic: URL + state -> HTML
+```
+┌──╌ Webpage (static) ╌─────────┐
+│                               │
+│  ┌───────┐       ┌────────┐   │
+│  │  URL  │ ────> │  HTML  │   │
+│  └───────┘       └────────┘   │
+│                               │
+└───────────────────────────────┘
+
+┌──╌ Webapp (dynamic) ╌─────────┐
+│                               │
+│  ┌───────┐                    │
+│  │  URL  │ ─╮                 │
+│  └───────┘  │    ┌────────┐   │
+│             ├──> │  HTML  │   │
+│  ┌───────┐  │    └────────┘   │
+│  │ state │ ─╯                 │
+│  └───────┘                    │
+│                               │
+└───────────────────────────────┘
+```
 
 In the case of an email application, the state would be comprised of the following things:
 - The name of the user.
@@ -82,27 +100,37 @@ The state is *shared information* between the webapp and the user. In some webap
 
 The takeaway from this section (which is probably the hardest in the entire tutorial!) is that a webapp is about *state*, the shared information between the user and the app. If you understand this, all the following concepts will fall into place.
 
-### The parts of a webapp
+### What is the purpose of the state?
 
-state <-> interface <-> user
+Why and how a state is central to a webapp? Before we explain, let's look at the following flow for an email webapp.
 
-The interface is a vehicle that allows the user to interact with the webapp.
+1. A new user arrives to the app.
+2. Because the user has no account, the user sees a sign up page.
+3. The user fills the sign up form and sends the data.
+4. The account is created successfully!
+5. The user now sees her inbox. No emails yet!
+6. The user clicks on the "Compose" button to start an email.
+7. A textbox appears where the user can write her email.
+8. When the user clicks on "Send", the email is sent.
+9. The textbox with the composed email disappears.
+10. When the user goes to the "Sent" screen, the sent email appears there.
+11. Someone else sends the user an email.
+12. The user can now see the new email sent to her on the inbox.
 
+Let's now explore the changes in the state on the relevant steps.
+- On step 2: an empty form is created to hold the user sign up info.
+- On step 3: the form is filled and sent.
+- On step 4: there's now account information for the user in the state.
+- On step 6: a draft is created.
+- On step 8: a new email is created to another user and stored in the "Sent" folder of the current user.
+- On step 10: the user sets "Sent" as the current view of the webapp.
+- On step 11: a new email is added to the user's inbox.
 
-- New user arrives to the app. No user: interface shows a sign in page.
-- User fills form through the interface. Sends the data.
-- Account created! The state changes, so the interface: shows inbox.
-- inbox allows certain interactions.
-- User picks an interaction: start writing an email.
-- State is updated (new email view). So is the interface.
+The state matters for two things:
+- It determines the interface.
+- It determines possible actions for the user.
 
-In short:
-
-initial state -> initial interface -> user picks an interaction -> state is updated -> interface is updated -> user picks another interaction
-
-This is the core cycle of any application with an interface.
-
-### What is an interface, really?
+The interface is a vehicle that allows the user to interact with the webapp. The user cannot interact with the state directly.
 
 The interface is made of HTML, CSS & js.
 
@@ -110,10 +138,10 @@ The interface allows the user two things: 1) see their state; 2) allow them to c
 
 The interface is not static. It depends on the state!
 
-
-
-
-
+The flow goes in one direction (the karmic wheel of the app):
+initial state -> initial interface -> user picks an interaction -> state is updated -> interface is updated -> user picks another interaction
+create account  -> initial state -> draw initial version of the HTML -> this allows certain interactions -> user picks an interaction -> state changes -> HTML is updated -> user picks another interaction -> state changes -> ...
+This is the core cycle of any application with an interface.
 
 - user starts using app with a basic state (only username).
 - app holds state for *each user*.
@@ -122,7 +150,7 @@ The interface is not static. It depends on the state!
 - user interacts with app and generates further state (emails, account preferences). others users may interact too. each interaction can create a change in the state.
 - the state is a sum/crystallization of all past interactions.
 
-create account  -> initial state -> draw initial version of the HTML -> this allows certain interactions -> user picks an interaction -> state changes -> HTML is updated -> user picks another interaction -> state changes -> ...
+- The state goes both locally on the browser/client and also on the server. Some state might be just held on the client.
 
 ### The birth of templates
 

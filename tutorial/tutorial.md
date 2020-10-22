@@ -30,6 +30,24 @@ What are the benefits of webapps?
 
 ### How does a webapp work?
 
+- frontend & backend.
+- frontend: an user's device (computer, phone, tablet) + browser + client program. The client program runs in the browser. The browser runs in the user's device.
+- backend: a server (a computer running 24/7 connected to the internet) + runtime + server program. The server program runs in the runtime. The runtime runs in the server.
+- an application developer is the one in charge of writing the client program and the server program. The browser is a given. You can choose a runtime but you don't normally have to write your own. Examples of runtimes: node.js (js on the server), PHP, Python.
+- when the user goes to a certain address (URL), the server program provides the browser with a client program. A client program is a bunch of HTML, CSS & js files. These files are text files that conform to a specific format.
+- The browser loads the client program. Now the user sees the interface.
+- When the user performs an action, the client program makes a requests to the server program.
+- All the communication between the browser and the server is done through the web.
+
+- the interaction between frontend and backend happens through the internet (or more precisely, the web, but that's a distinction to be explained some other time).
+
+HTML: markup.
+CSS: styles (affects how the markup looks).
+js: logic.
+
+
+
+
 As we just saw, a webapp is an application that runs on a web browser. When you click on a link (or write an address in the URL bar of a browser), a webpage is loaded. This webpage contains HTML, CSS and usually some js.
 
 The HTML and CSS represent the actual content of the page. HTML is what is shown on the page, while the CSS changes the way that the HTML looks. js is usually there to produce some changes on the HTML and CSS, but it is not strictly necessary and it is actually possible to write webapps without js.
@@ -42,9 +60,9 @@ The browser, when receiving HTML, CSS and js, starts putting things on the scree
 
 ### The two sides of a webapp
 
-You might have heard the terms *frontend*, *backend*, *client* and *server* in the context of webapps. These terms are fundamentally important.
+You might have heard the terms *frontend*, *backend*, *browser* and *server* in the context of webapps. These terms are fundamentally important.
 
-The terms *frontend* and *client* refer to the same thing: the HTML, CSS and js that gets loaded in the browser and is seen by your users. The client code is the program that a web browser runs.
+The terms *frontend* and *browser* refer to the same thing: the HTML, CSS and js that gets loaded in the browser and is seen by your users. The client code is the program that a web browser runs.
 
 The terms *backend* and *server* refer to the same thing: a program that provides files (like HTML, CSS and js, plus images) to a web browser, and also handles other operations like storing user data. The backend code is a program run on a server connected to the internet (if you're starting out, it might also be good to know that a server is merely a computer running somewhere 24/7).
 
@@ -118,8 +136,9 @@ Why and how a state is central to a webapp? Before we explain, let's look at the
 12. The user can now see the new email sent to her on the inbox.
 
 Let's now explore the changes in the state on the relevant steps.
-- On step 2: an empty form is created to hold the user sign up info.
-- On step 3: the form is filled and sent.
+- On step 1: there's no state for the user yet! The app is a blank slate. At this point, everybody without an account will see the same thing: the sign up page.
+- On step 2: an empty form is created to hold the user sign up info. As the user starts filling the form, her data goes into the state of the webapp. This is where the state begins for the user. Notice that the state of any other user, at this stage, would already be different, since the personal info of each user is unique.
+- On step 3: the form is filled and sent. The state gets sent from the client (browser) to the server.
 - On step 4: there's now account information for the user in the state.
 - On step 6: a draft is created.
 - On step 8: a new email is created to another user and stored in the "Sent" folder of the current user.

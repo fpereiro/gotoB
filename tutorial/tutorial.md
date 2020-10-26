@@ -30,20 +30,50 @@ What are the benefits of webapps?
 
 ### How does a webapp work?
 
-- frontend & backend.
-- frontend: an user's device (computer, phone, tablet) + browser + client program. The client program runs in the browser. The browser runs in the user's device.
-- backend: a server (a computer running 24/7 connected to the internet) + runtime + server program. The server program runs in the runtime. The runtime runs in the server.
-- an application developer is the one in charge of writing the client program and the server program. The browser is a given. You can choose a runtime but you don't normally have to write your own. Examples of runtimes: node.js (js on the server), PHP, Python.
-- when the user goes to a certain address (URL), the server program provides the browser with a client program. A client program is a bunch of HTML, CSS & js files. These files are text files that conform to a specific format.
-- The browser loads the client program. Now the user sees the interface.
-- When the user performs an action, the client program makes a requests to the server program.
-- All the communication between the browser and the server is done through the web.
+```
+┌──╌ User device ╌─────────┐               ┌──╌ Server ╌──────────────┐
+│                          │               │                          │
+│  ┌──╌ Browser ╌───────┐  │               │  ┌──╌ Runtime ╌───────┐  │
+│  │                    │  │               │  │                    │  │
+│  │  ┌─╌ Frontend ╌─┐  │  │               │  │  ┌─╌ Backend ╌─┐   │  │
+│  │  │       <──────┼──┼──┼────╌ web ╌────┼──┼──┼──────>      │   │  │
+│  │  └──────────────┘  │  │               │  │  └─────────────┘   │  │
+│  └────────────────────┘  │               │  └────────────────────┘  │
+└──────────────────────────┘               └──────────────────────────┘
+```
 
-- the interaction between frontend and backend happens through the internet (or more precisely, the web, but that's a distinction to be explained some other time).
+A webapp is made of two programs:
+- The frontend, which is a program that runs on a web browser.
+- The backend, which is a program that runs on a web server.
+
+The frontend and backend exchange information through the web to make a webapp possible.
+
+The main roles of each part are the following:
+- Frontend: show information to the user; provide an interface so that the user can use the app; collect data provided by the user and send it to the backend.
+- Backend: provide information to the frontend; validate and store data.
+
+A web developer needs to write both programs to develop a complete webapp.
+
+The frontend doesn't directly run on the user's device. Rather, it runs on a [web browser](https://en.wikipedia.org/wiki/Web_browser), which in turn runs on the user's device. Likewise, the backend doesn't directly run on a web server. Rather, it runs on a [runtime system](https://en.wikipedia.org/wiki/Runtime_system), which is a space you can run a server program. Examples of runtimes for backends are [node.js](https://en.wikipedia.org/wiki/Node.js) and [PHP](https://en.wikipedia.org/wiki/PHP).
+
+This is a good moment to clarify a doubt: what is a web server, really? The simplest definition: a computer running 24/7/365 that is connected to the internet. The [cloud](https://en.wikipedia.org/wiki/Cloud_computing) is essentially a bunch of computers somewhere, usually on several datacenters.
+
+### The initial conversation
+
+load is a conversation:
+- when the user goes to a certain address (URL) (url is the address of a server & the address of a certain resource), the browser asks the server for an HTML page.
+- the server program answers with a single HTML file.
+- inside the HTML there might be references to CSS and js files. Show examples: `<link> <script>`
+- Browser asks for each of these files and the server responds with them.
+- Once all the files are there, the browser runs the frontend.
+
+HTML, CSS and js are just text files!
 
 HTML: markup.
 CSS: styles (affects how the markup looks).
 js: logic.
+
+url: host & path.
 
 
 

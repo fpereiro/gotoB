@@ -29,21 +29,9 @@ var build = function (files, dev) {
       });
    }
 
-   try {
-      var lines = 0;
-      dale.go (files, function (v) {
-         lines += fs.readFileSync (v, 'utf8').split ('\n').length - 1;
-      });
-   }
-   catch (error) {
-      clog ('Error', 'A source file is missing.');
-      throw new Error (error);
-   }
-
-   var code = UglifyJS.minify (code, {ie8: true}).code;
-   if (! code) {
-      clog ('Error', 'js build error.');
-   }
+   var lines = code.split ('\n').length - 1;
+   code = UglifyJS.minify (code, {ie8: true}).code;
+   if (! code) return clog ('Error', 'js build error.');
 
    zlib.gzip (code, function (error, zipcode) {
       zlib.gunzip (zipcode, function (error, check) {

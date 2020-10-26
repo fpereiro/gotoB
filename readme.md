@@ -6,7 +6,7 @@ gotoв is a framework for making the frontend of a web application (henceforth *
 
 ## Current status of the project
 
-The current version of gotoв, v2.0.0, is considered to be *somewhat stable* and *mostly complete*. [Suggestions](https://github.com/fpereiro/gotoB/issues) and [patches](https://github.com/fpereiro/gotoB/pulls) are welcome. Besides bug fixes, there are no changes planned.
+The current version of gotoв, v2.0.0, is considered to be *mostly stable* and *mostly complete*. [Suggestions](https://github.com/fpereiro/gotoB/issues) and [patches](https://github.com/fpereiro/gotoB/pulls) are welcome. Besides bug fixes, there are no changes planned.
 
 gotoв is part of the [ustack](https://github.com/fpereiro/ustack), a set of libraries to build webapps which aims to be fully understandable by those who use it.
 
@@ -14,7 +14,7 @@ gotoв is part of the [ustack](https://github.com/fpereiro/ustack), a set of lib
 
 gotoв is a framework optimized for understanding. Its purpose is to allow you to write webapps in a way that you can fully understand what's going on.
 
-In my experience, understanding leads to short and beautiful code that can last for years in a production setting. It is my sincere hope that you'll be able to use gotoв to create webapps and have a lot of fun while at it.
+In my experience, understanding leads to short and beautiful code that can last for years in a production setting. It is my sincere hope that you'll be able to use gotoв to create reliable webapps and have a lot of fun while at it.
 
 ## Installation
 
@@ -362,7 +362,7 @@ The combination of these two characteristics mean that I must constantly spend a
 Rather than submit to this grind or reject it altogether (and missing out the possibility of creating my webapps), I took a third way out, by deciding to write a frontend framework that:
 
 1. Is optimized for understanding.
-2. Built on fundamentals, so that the framework will change [less and less as times goes by](https://en.wikipedia.org/wiki/Asymptote).
+2. Built on fundamentals, so that the framework will change [less and less as time goes by](https://en.wikipedia.org/wiki/Asymptote).
 
 And, of course, gotoв must be very useful for building a real webapp.
 
@@ -387,7 +387,7 @@ And, of course, gotoв must be very useful for building a real webapp.
 
 ### What does gotoв care about?
 
-- **Ease of use**: 90% of the functionality you need is contained in three functions (one for calling an event (`B.call`), one for stringifying an event call into a DOM attribute (`B.ev`) and one for creating dynamic elements which are updated automatically (`B.view`)). There's also three more events for performing data changes that you'll use often. But that's pretty much it.
+- **Ease of use**: 90% of the functionality you need is contained in four functions (one for calling an event (`B.call`), one for setting event responders (`B.respond`), one for stringifying an event call into a DOM attribute (`B.ev`) and one for creating dynamic elements which are updated when the store changes (`B.view`)). There's also three more events for performing data changes that you'll use often. But that's pretty much it.
 - **Fast reload**: the edit-reload cycle should take under two seconds. No need to wait until no bundle is completed.
 - **Smallness**: gotoв and its dependencies are < 2k lines of consistent, annotated javascript. In other words, it is less than 2048 lines on top of [vanilla.js](http://vanilla-js.com/).
 - **Batteries included**: the core functionality for building a webapp is all provided. Whatever libraries you add on top will probably be for specific things (nice CSS, a calendar widget, etc.)
@@ -401,7 +401,7 @@ And, of course, gotoв must be very useful for building a real webapp.
 - **Browsers without javascript**: gotoв is 100% reliant on client-side javascript - if you want to create webapps that don't require javascript, gotoв cannot possibly help you create them.
 - **Post-2009 javascript**: everything's written in a subset of ES5 javascript. This means no transpilation, no different syntaxes, and no type declarations. You can of course write your application in ES6 or above and gotoв will still work.
 - **Module loading**: gotoв and its dependencies happily and unavoidably bind to the global object. No CommonJS or AMD.
-- **Build/toolchain integration**: there's no integration with any standard tool for compiling HTML, CSS and js. gotoв itself is pre-built with a 70-line javascript file.
+- **Build/toolchain integration**: there's no integration with any standard tool for compiling HTML, CSS and js. gotoв itself is pre-built with a 50-line javascript file.
 - **Hot-reloading**: better get that refresh finger ready!
 - **Plugin system**: gotoв tries to give provide you all the essentials out of the box, without installation or configuration.
 - **Object-oriented programming**: gotoв uses objects mostly as namespaces. There's no inheritance and no use of `bind`. Classes are nowhere to be found.
@@ -2338,9 +2338,9 @@ We define `B.internal`, an object with the following keys:
 ```
 
 We create variables within `B.internal` for compatibility with old browsers:
-- `B.internal.oldIE` for Internet Explorer 8 or lower. We get this by checking for the presence of `fireEvent` (IE only) and the absence of `dispatchEvent` (IE>=9).
-- `B.internal.oldIE` for Internet Explorer 7 or lower. We get this by checking whether we're in an old IE *and* there's an abasence of `querySelectorAll`.
-- `B.internal.FF` for Firefox 3 or lower. We get this by making sure we're not in an old Internet Explorer *and* there's an absence of `querySelectorAll`.
+- `B.internal.oldIE` for Internet Explorer 8 or lower. We get this by checking for the presence of `fireEvent` (IE only) and the absence of `dispatchEvent` (present in IE>=9).
+- `B.internal.olderIE` for Internet Explorer 7 or lower. We get this by checking whether we're in an old IE *and* there's an abasence of `querySelectorAll`.
+- `B.internal.oldFF` for Firefox 3 or lower. We get this by making sure we're not in an old Internet Explorer *and* there's an absence of `querySelectorAll`.
 - `B.internal.oldOpera` for Opera 12 or lower. We get this by checking whether the user agent of the navigator contains `'Opera'` - [higher versions are based on a different engine](https://en.wikipedia.org/wiki/Opera_(web_browser)#History).
 
 ```javascript

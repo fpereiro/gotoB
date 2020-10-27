@@ -46,7 +46,7 @@ A webapp is made of two programs:
 - The frontend, which is a program that runs on a web browser.
 - The backend, which is a program that runs on a web server.
 
-The frontend and backend exchange information through the web to make a webapp possible.
+The frontend and backend exchange information through the [web](https://en.wikipedia.org/wiki/World_Wide_Web).
 
 The main roles of each part are the following:
 - Frontend: show information to the user; provide an interface so that the user can use the app; collect data provided by the user and send it to the backend.
@@ -58,27 +58,71 @@ The frontend doesn't directly run on the user's device. Rather, it runs on a [we
 
 This is a good moment to clarify a doubt: what is a web server, really? The simplest definition: a computer running 24/7/365 that is connected to the internet. The [cloud](https://en.wikipedia.org/wiki/Cloud_computing) is essentially a bunch of computers somewhere, usually on several datacenters.
 
-### The initial conversation
+### How is a webapp loaded into the browser?
 
-load is a conversation:
-- when the user goes to a certain address (URL) (url is the address of a server & the address of a certain resource), the browser asks the server for an HTML page.
-- the server program answers with a single HTML file.
-- inside the HTML there might be references to CSS and js files. Show examples: `<link> <script>`
-- Browser asks for each of these files and the server responds with them.
-- Once all the files are there, the browser runs the frontend.
+```
+Step 1:
 
-HTML, CSS and js are just text files!
+┌──╌ Browser ╌─────────┐                     ┌──╌ Backend ╌─────────────┐
+│                 ─────┼──╌ request URL ╌────┼─────>                    │
+└──────────────────────┘                     └──────────────────────────┘
 
-HTML: markup.
-CSS: styles (affects how the markup looks).
-js: logic.
+Step 2:
 
-url: host & path.
+┌──╌ Browser ╌─────────┐                     ┌──╌ Backend ╌─────────────┐
+│                <─────┼──╌ main HTML file ╌─┼─────                     │
+└──────────────────────┘                     └──────────────────────────┘
+
+Step 3:
+
+┌──╌ Browser ╌─────────┐                     ┌──╌ Backend ╌─────────────┐
+│                 ─────┼──╌ request CSS ╌────┼─────>                    │
+└──────────────────────┘     & js files      └──────────────────────────┘
+
+Step 4:
+
+┌──╌ Browser ╌─────────┐                     ┌──╌ Backend ╌─────────────┐
+│                <─────┼──╌ CSS & js files ╌─┼─────                     │
+└──────────────────────┘                     └──────────────────────────┘
+
+Step 5:
+
+┌──╌ Browser ╌─────────┐
+│  Frontend is loaded! │
+└──────────────────────┘
+```
+
+Once you set up your backend program, this program will be constantly running on a server. The frontend, however, is a different matter. The frontend program gets loaded every time that a user opens your webapp.
+
+It is important to understand how this happens; the diagram above explains the main steps:
+
+- Step 1:
+   - The user opens a tab in their browser and navigates to an URL where the webapp is available. This URL can be written manually, or it can be followed through a link. The browser doesn't care.
+   - The browser finds the backend that corresponds to that URL and requests an HTML file. This file is the *main file* of the webapp.
+- Step 2:
+   - The backend receives the request for the main HTML file. It finds the file and sends it back to the browser.
+   - The browser receives the main HTML file.
+- Step 3:
+   - Almost always there will be links to CSS & js files within the main HTML file. For example, a `<link>` tag can request a certain CSS file; and a `<script>` tag can request a certain js file. The browser will compile a list of these necessary files that are referenced by the main HTML file. It will then request each of these files to the backend.
+   - The backend receives requests for CSS and js files.
+- Step 4:
+   - The server replies to all the requests by the browser for additional CSS & js files.
+   - The browser receives all these files and now has everything it needs to launch the frontend program.
+- Step 5: the frontend program is loaded!
+
+A frontend is a group of HTML, CSS & js files. Once all of them are loaded, the program is ready to run.
+
+Why three types of files instead of one? Each type of file has its specific uses:
+
+- [HTML](https://en.wikipedia.org/wiki/HTML) files are *markup*, which is what is shown on the page.
+- [CSS](https://en.wikipedia.org/wiki/CSS) files are *stylesheets*, which determine how the HTML looks.
+- [js](https://en.wikipedia.org/wiki/JavaScript) files are *logic*, which can modify the HTML & CSS and communicate with the backend.
+
+Modern webapps - including those built with gotoв - are reliant on js. But they still use HTML & CSS.
 
 
+why js? apps without js.
 
-
-As we just saw, a webapp is an application that runs on a web browser. When you click on a link (or write an address in the URL bar of a browser), a webpage is loaded. This webpage contains HTML, CSS and usually some js.
 
 The HTML and CSS represent the actual content of the page. HTML is what is shown on the page, while the CSS changes the way that the HTML looks. js is usually there to produce some changes on the HTML and CSS, but it is not strictly necessary and it is actually possible to write webapps without js.
 

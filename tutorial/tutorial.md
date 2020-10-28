@@ -37,26 +37,41 @@ What are the benefits of webapps?
 │  │                    │  │               │  │                    │  │
 │  │  ┌─╌ Frontend ╌─┐  │  │               │  │  ┌─╌ Backend ╌─┐   │  │
 │  │  │       <──────┼──┼──┼────╌ web ╌────┼──┼──┼──────>      │   │  │
-│  │  └──────────────┘  │  │               │  │  └─────────────┘   │  │
+│  │  └──────────────┘  │  │   (internet)  │  │  └─────────────┘   │  │
 │  └────────────────────┘  │               │  └────────────────────┘  │
 └──────────────────────────┘               └──────────────────────────┘
 ```
 
 A webapp is made of two programs:
-- The frontend, which is a program that runs on a web browser.
-- The backend, which is a program that runs on a web server.
-
-The frontend and backend exchange information through the [web](https://en.wikipedia.org/wiki/World_Wide_Web).
-
-The main roles of each part are the following:
-- Frontend: show information to the user; provide an interface so that the user can use the app; collect data provided by the user and send it to the backend.
-- Backend: provide information to the frontend; validate and store data.
+- The frontend, a program that runs on a browser.
+- The backend, a program that runs on a server.
 
 A web developer needs to write both programs to develop a complete webapp.
 
-The frontend doesn't directly run on the user's device. Rather, it runs on a [web browser](https://en.wikipedia.org/wiki/Web_browser), which in turn runs on the user's device. Likewise, the backend doesn't directly run on a web server. Rather, it runs on a [runtime system](https://en.wikipedia.org/wiki/Runtime_system), which is a space you can run a server program. Examples of runtimes for backends are [node.js](https://en.wikipedia.org/wiki/Node.js) and [PHP](https://en.wikipedia.org/wiki/PHP).
+The main functions of the frontend are:
+- Show information to the user.
+- Provide an user interface.
+- Collect data provided by the user and send it to the backend.
 
-This is a good moment to clarify a doubt: what is a web server, really? The simplest definition: a computer running 24/7/365 that is connected to the internet. The [cloud](https://en.wikipedia.org/wiki/Cloud_computing) is essentially a bunch of computers somewhere, usually on several datacenters.
+The main functions of the backend are:
+- Provide information to the frontend.
+- Validate and store data.
+
+The *frontend* doesn't directly run on the *user device*. Rather, it runs on a *[browser](https://en.wikipedia.org/wiki/Web_browser)*, which in turn runs on the user device. Likewise, the *backend* doesn't directly run on a *server*. Rather, it runs on a *[runtime](https://en.wikipedia.org/wiki/Runtime_system)*, which is a place to run a program in the server. Examples of runtimes for backends are [node.js](https://en.wikipedia.org/wiki/Node.js) and [PHP](https://en.wikipedia.org/wiki/PHP).
+
+This is a good moment to clarify a common question: what is a server? The simplest definition: a computer running 24/7/365 that is connected to the internet. The [cloud](https://en.wikipedia.org/wiki/Cloud_computing) is essentially a bunch of servers somewhere, usually on several datacenters.
+
+You are probably acquainted with user devices: they mainly consist of personal computers, smartphones and tablets. The device where you're reading this is also a user device.
+
+TODO: how do they communicate?
+
+The frontend and backend exchange information through the [web](https://en.wikipedia.org/wiki/World_Wide_Web). The web is a way to exchange information that runs on top of the [internet](https://en.wikipedia.org/wiki/Internet). How are the web and the internet related? Think of it in this way:
+
+- The internet is the *highway system*.
+- The web is the *vehicles* that run on the highway.
+- The user device and the server are *locations* that can be connected through vehicles running in the highway.
+
+The browser always initiates. The server always responds. (exception: websockets)
 
 ### How is a webapp loaded into the browser?
 

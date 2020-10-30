@@ -63,17 +63,11 @@ This is a good moment to clarify a common question: what is a server? The simple
 
 You are probably acquainted with user devices: they mainly consist of personal computers, smartphones and tablets. The device where you're reading this is also a user device.
 
-TODO: how do they communicate?
+### How is a webapp loaded?
 
-The frontend and backend exchange information through the [web](https://en.wikipedia.org/wiki/World_Wide_Web). The web is a way to exchange information that runs on top of the [internet](https://en.wikipedia.org/wiki/Internet). How are the web and the internet related? Think of it in this way:
+Loading the backend is easy: you put it in the server and you run it. The backend is a program that will run constantly and forever, until you stop it.
 
-- The internet is the *highway system*.
-- The web is the *vehicles* that run on the highway.
-- The user device and the server are *locations* that can be connected through vehicles running in the highway.
-
-The browser always initiates. The server always responds. (exception: websockets)
-
-### How is a webapp loaded into the browser?
+The frontend, however, is different. When the user opens a new tab to go to a webapp, the frontend is not there yet. It must be *loaded* onto the browser first. How does this happen?
 
 ```
 Step 1:
@@ -107,8 +101,6 @@ Step 5:
 └──────────────────────┘
 ```
 
-Once you set up your backend program, this program will be constantly running on a server. The frontend, however, is a different matter. The frontend program gets loaded every time that a user opens your webapp.
-
 It is important to understand how this happens; the diagram above explains the main steps:
 
 - Step 1:
@@ -125,7 +117,30 @@ It is important to understand how this happens; the diagram above explains the m
    - The browser receives all these files and now has everything it needs to launch the frontend program.
 - Step 5: the frontend program is loaded!
 
-A frontend is a group of HTML, CSS & js files. Once all of them are loaded, the program is ready to run.
+A frontend is a group of HTML, CSS & js files. Once all of these files are loaded onto the browser, the frontend is ready to run.
+
+### How do the frontend and the backend communicate?
+
+The frontend and backend communicate through the [web](https://en.wikipedia.org/wiki/World_Wide_Web). The web is a way to exchange information that runs on top of the [internet](https://en.wikipedia.org/wiki/Internet). How are the web and the internet related? Think of it in this way:
+
+- The internet is the *highway system*.
+- The web is the *vehicles* that run on the highway.
+- The user device and the server are *locations* that can be connected through vehicles running in the highway.
+
+The frontend always starts the conversation by making a *request* to the backend. The backend replies to the frontend's request with a *response*. (There are exceptions to this, but in general it is true). The communication between frontend and backend is a sequence of requests and responses.
+
+
+TODO
+- html/css/js
+- state
+   - what is it
+   - cycle of change
+- templates
+   - replacement, conditional, iteration
+   - in the backend vs in the frontend
+
+
+
 
 Why three types of files instead of one? Each type of file has its specific uses:
 

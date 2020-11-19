@@ -650,25 +650,25 @@
                   c.empty ('body');
 
                   B.mount ('body', function () {
-                     return ['div', {id: 'second'}, 'b'];
+                     return ['div', {id: 'first'}, 'a'];
                   });
 
                   if (! c ('body div#second')) return 'B.mount didn\'t place element.';
 
                   B.mount ('body', function () {
-                     return ['div', {id: 'first'}, 'a'];
+                     return ['div', {id: 'second'}, 'b'];
                   });
 
-                  if (! eq (c.get ('div', 'id'), [{id: 'first'}, {id: 'second'}])) return 'B.mount didn\'t put element at the top of the target.';
+                  if (! eq (c.get ('div', 'id'), [{id: 'first'}, {id: 'second'}])) return 'B.mount didn\'t put element at the bottom of the target.';
 
                   B.mount ('#first', function () {
                      return ['div', {id: 'third'}, 'c'];
                   });
 
                   if ([
-                     '<div id="first"><div id="third">c</div>a</div><div id="second">b</div>',
+                     '<div id="first">a<div id="third">c</div></div><div id="second">b</div>',
                      // Compatibility: IE<=8 removes the quotes of id, uppercases the tags and adds \r\n
-                     '<DIV id=first>\r\n<DIV id=third>c</DIV>a</DIV>\r\n<DIV id=second>b</DIV>',
+                     '<DIV id=first>a\r\n<DIV id=third>c</DIV></DIV>\r\n<DIV id=second>b</DIV>'
                   ].indexOf (document.body.innerHTML) === -1) return 'B.mount didn\'t mount element inside element.';
 
                   c.empty ('#first');
@@ -1561,6 +1561,42 @@
                      if (c ('#user').value !== 'hello!')  return 'value wasn\'t preserved when it should: ' + c ('#user').value;
                      if (c ('#pass').value !== 'secreto') return 'value wasn\'t preserved when it should: ' + c ('#pass').value;
                   });
+
+                  B.unmount ('body');
+
+                  // This test checks that values are indeed overridden when inputs change,
+                  // not just when the store is updated.
+                  // This corner case has been found through the 7GUIs Celsius/Fahrenheit example
+                  // and simplified further here for automatic testing.
+
+                  B.mount ('body', function () {
+                     return ['div', [
+                        B.view (['Data', 'c'], function (c) {
+                           return ['input', {value: c, onchange: B.ev ('set', ['Data', 'c'])}];
+                        }),
+                        B.view (['Data', 'f'], function (f) {
+                           return ['input', {value: f, onchange: B.ev ('set', ['Data', 'f'])}];
+                        })
+                     ]];
+                  });
+                  var cresponder = B.respond ('change', ['Data', /c|f/], function (x, value) {
+                     if (x.path [1] === 'c') B.call (x, 'set', ['Data', 'f'], parseInt (value) * 2);
+                     if (x.path [1] === 'f') B.call (x, 'set', ['Data', 'c'], parseInt (value) / 2);
+                  });
+
+                  // Compatibility: we skip this tests in IE<=7 since its onchange event is buggy.
+                  if (! B.internal.olderIE) {
+                     c ('input') [0].value = 1;
+                     c.fire (c ('input') [0], 'change');
+                     if (c ('input') [1].value !== '2') return 'Invalid input value #1.';
+                     c ('input') [1].value = 4;
+                     c.fire (c ('input') [1], 'change');
+                     if (c ('input') [0].value !== '2') return 'Invalid input value #2.';
+                  }
+                  B.unmount ('body');
+                  B.forget (cresponder);
+                  // We preserve the id for this test to avoid modifying the ids on all the following tests.
+                  B.internal.count = B.internal.count - 2;
                });
 
                Test ('B.view, textareas', function () {

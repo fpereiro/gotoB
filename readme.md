@@ -119,7 +119,7 @@ var todoList = function () {
 B.mount ('body', todoList);
 ```
 
-You can find more examples [here](https://github.com/fpereiro/examples/list.md).
+You can find more examples [here](https://github.com/fpereiro/examples/readme.md).
 
 ## Introduction
 
@@ -455,7 +455,7 @@ B.mount ('body', helloWorld);
 
  `B.mount` will execute the `vfun` passing no parameters to it. This function must return either a lith or a lithbag. If the function doesn't return a valid lith or lithbag, `B.mount` will report an error and return `false`.
 
-The HTML generated will be placed at the *top* of the target. In the example above, the `<body>` will look like this:
+The HTML generated will be placed at the *bottom* of the target. In the example above, the `<body>` will look like this:
 
 ```html
 <body>
@@ -1338,7 +1338,7 @@ We define three variables for drawing the table of events:
 - `columns`, the columns for the table.
 
 ```javascript
-      var index = {}, colors = ['#fe6f6c', '#465775', '#e086c3', '#8332ac', '#462749', '#044389', '#59c9a6', '#ffad05', '#7cafc4', '#5b6c5d'], columns = ['#', 'ms', 'id', 'from', 'verb', 'path', 'args'];
+      var index = {}, colors = ['#fe6f6c', '#465775', '#e086c3', '#8332ac', '#462749', '#044389', '#59c9a6', '#ffad05', '#7cafc4', '#5b6c5d'], columns = ['#', 'ms', 'type', 'id', 'from', 'verb', 'path', 'args'];
 ```
 
 We will add to the body a `<table>` element with `id` `eventlog`.
@@ -1377,7 +1377,7 @@ We set an entry in `index` to associate the event with element `id` with the pos
 We prepare the row on which we'll print the details of either the event or responder. We alternate a background color (with two types of grays).
 
 ```javascript
-            return ['tr', {style: lith.css.style ({'background-color': {0: '#fcfcfc', 1: '#efefef'} [k % 2]})}, dale.go (['#' + (k + 1), entry.t - B.t, entry.id, entry.from, entry.verb, entry.path.join (':'), dale.go (entry.args, B.str).join (', ')], function (value, k2) {
+            return ['tr', {style: lith.css.style ({'background-color': {0: '#fcfcfc', 1: '#efefef'} [k % 2]})}, dale.go (['#' + (k + 1), entry.t - B.t, entry.id.match (/^E\d+$/) ? 'event' : 'responder', entry.id, entry.from, entry.verb, entry.path.join (':'), dale.go (entry.args, B.str).join (', ')], function (value, k2) {
 ```
 
 If we're printing the second column (`ms`), we round the value.
@@ -2027,10 +2027,10 @@ If we're not in production mode, we validate `result` through `B.validateLith`. 
       }
 ```
 
-We generate HTML from `elem` using `lith.g` - note we pass `true` as a second argument to avoid `lith.g` validating its input again. We then place it at the top of the `target`, using `c.place`.
+We generate HTML from `elem` using `lith.g` - note we pass `true` as a second argument to avoid `lith.g` validating its input again. We then place it at the bottom of the `target`, using `c.place`.
 
 ```javascript
-      c.place (target, 'afterBegin', lith.g (elem, true));
+      c.place (target, 'beforeEnd', lith.g (elem, true));
 ```
 
 We close the function.
@@ -2039,7 +2039,7 @@ We close the function.
    }
 ```
 
-We now define `B.mount`, a function that will clear a `target` (presumably already mounted by `B.mount`) and `forget` all the event responders of the reactive views contained within `target`.
+We now define `B.unmount`, a function that will clear a `target` (presumably already mounted by `B.mount`) and `forget` all the event responders of the reactive views contained within `target`.
 
 ```javascript
    B.unmount = function (target) {
@@ -3233,8 +3233,11 @@ We iterate `newAttributes` and ignore those attributes that are neither an empty
 
 We set the attribute on `element` using `setAttribute`. If we're in Internet Explorer 7 and below, we set `className` instead of `class`.
 
+If `k` is `value`, we also set the `value` of the `element`. This is sometimes necessary to update properly an element's value.
+
 ```javascript
             element.setAttribute (B.internal.olderIE && k === 'class' ? 'className' : k, v);
+            if (k === 'value') element.value = v;
 ```
 
 Before closing the iteration of `newAttributes`, we provide workarounds for bugs in old browsers. In the case of Firefox <= 3, we need to set `value` explicitly. In the case of Opera <= 12, we need to set explicitly the `selected` property.

@@ -42,7 +42,7 @@ Please refer to readme.md to read the annotated source.
    B.eventlog = function () {
       if (c ('#eventlog')) document.body.removeChild (c ('#eventlog'));
 
-      var index = {}, colors = ['#fe6f6c', '#465775', '#e086c3', '#8332ac', '#462749', '#044389', '#59c9a6', '#ffad05', '#7cafc4', '#5b6c5d'], columns = ['#', 'ms', 'id', 'from', 'verb', 'path', 'args'];
+      var index = {}, colors = ['#fe6f6c', '#465775', '#e086c3', '#8332ac', '#462749', '#044389', '#59c9a6', '#ffad05', '#7cafc4', '#5b6c5d'], columns = ['#', 'ms', 'type', 'id', 'from', 'verb', 'path', 'args'];
 
       document.body.innerHTML += lith.g (['table', {id: 'eventlog'}, [
          ['style', ['#eventlog', {'border-collapse': 'collapse', 'font-family': 'monospace', 'font-size': 18, position: 'absolute', 'right, top': 4, width: Math.min (window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth, 800), 'z-index': '10000', border: 'solid 4px #4488DD'}, ['th, td', {'padding-left, padding-right': 10, 'border-bottom, border-right': 'solid 1px black'}]]],
@@ -51,7 +51,7 @@ Please refer to readme.md to read the annotated source.
          })],
          dale.go (B.log, function (entry, k) {
             index [(entry.from && entry.from.match (/^E\d+$/)) ? (entry.id + '/' + entry.from) : entry.id] = k;
-            return ['tr', {style: lith.css.style ({'background-color': {0: '#fcfcfc', 1: '#efefef'} [k % 2]})}, dale.go (['#' + (k + 1), entry.t - B.t, entry.id, entry.from, entry.verb, entry.path.join (':'), dale.go (entry.args, B.str).join (', ')], function (value, k2) {
+            return ['tr', {style: lith.css.style ({'background-color': {0: '#fcfcfc', 1: '#efefef'} [k % 2]})}, dale.go (['#' + (k + 1), entry.t - B.t, entry.id.match (/^E\d+$/) ? 'event' : 'responder', entry.id, entry.from, entry.verb, entry.path.join (':'), dale.go (entry.args, B.str).join (', ')], function (value, k2) {
                if (k2 === 1) return ['td', (value / 1000) + (! (value % 1000) ? '.0' : '') + (! (value % 100) ? '0' : '') + (! (value % 10) ? '0' : '') + 's'];
                if (k2 !== 2 && k2 !== 3) return ['td', value];
                var onclick = value === undefined ? '' : ('c ("tr") [' + (index [value] + 1) + '].scrollIntoView ()');
@@ -257,7 +257,7 @@ Please refer to readme.md to read the annotated source.
          if (result !== 'Lith' && result !== 'Lithbag') return B.error ('B.mount', 'function returned invalid lith or lithbag', result);
       }
 
-      c.place (target, 'afterBegin', lith.g (elem, true));
+      c.place (target, 'beforeEnd', lith.g (elem, true));
    }
 
    B.unmount = function (target) {
@@ -546,6 +546,7 @@ Please refer to readme.md to read the annotated source.
          dale.go (newAttributes, function (v, k) {
             if (['', null, false].indexOf (v) !== -1) return;
             element.setAttribute (B.internal.olderIE && k === 'class' ? 'className' : k, v);
+            if (k === 'value') element.value = v;
             if (B.internal.oldFF    && k === 'value')    element.value = v;
             if (B.internal.oldOpera && k === 'selected') element.selected = v;
          });

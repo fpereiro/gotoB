@@ -1,3 +1,5 @@
+// TODO: switcher between steps.
+
 // *** COUNTER ***
 
 var value = 0;
@@ -25,21 +27,6 @@ var counter = B.view ('counter', function (value) {
 });
 
 // B.mount ('body', counter);
-
-// *** TEMPERATURE CONVERTER ***
-
-var celsius = 0, fahrenheit = 32;
-
-var temps = '<input id="celsius" onchange="updateTemps (\'c\')" oninput="updateTemps (\'c\')" value="' + celsius + '">Celsius = <input id="fahrenheit" onchange="updateTemps (\'f\')" oninput="updateTemps (\'f\')" value="' + fahrenheit + '">Fahrenheit';
-
-var updateTemps = function (changedField) {
-   var
-
-
-
-
-
-document.body.innerHTML += temps;
 
 /*
 var paragraph = '<p id="counter">Counter is 0</p>';

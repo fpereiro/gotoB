@@ -119,7 +119,7 @@ var todoList = function () {
 B.mount ('body', todoList);
 ```
 
-You can find more examples [here](https://github.com/fpereiro/examples/readme.md).
+You can find more examples [here](examples).
 
 ## Introduction
 

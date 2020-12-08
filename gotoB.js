@@ -42,7 +42,7 @@ Please refer to readme.md to read the annotated source.
    B.eventlog = function () {
       if (c ('#eventlog')) document.body.removeChild (c ('#eventlog'));
 
-      var index = {}, colors = ['#fe6f6c', '#465775', '#e086c3', '#8332ac', '#462749', '#044389', '#59c9a6', '#ffad05', '#7cafc4', '#5b6c5d'], columns = ['#', 'ms', 'type', 'id', 'from', 'verb', 'path', 'args'];
+      var index = {}, colors = ['#fe6f6c', '#465775', '#e086c3', '#8332ac', '#462749', '#044389', '#59c9a6', '#ffad05', '#7cafc4', '#5b6c5d'], columns = ['#', 'ms', 'type', 'id', 'from', 'verb', 'path', 'args'], shorten = function (s) {return s.length > 1000 ? s.slice (0, 1000) + '... [' + (s.length - 1000) + ' more characters]' : s};
 
       document.body.innerHTML += lith.g (['table', {id: 'eventlog'}, [
          ['style', ['#eventlog', {'border-collapse': 'collapse', 'font-family': 'monospace', 'font-size': 18, position: 'absolute', 'right, top': 4, width: Math.min (window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth, 800), 'z-index': '10000', border: 'solid 4px #4488DD'}, ['th, td', {'padding-left, padding-right': 10, 'border-bottom, border-right': 'solid 1px black'}]]],
@@ -50,11 +50,12 @@ Please refer to readme.md to read the annotated source.
             return ['th', {style: lith.css.style ({'background-color': '#efefef'})}, header];
          })],
          dale.go (B.log, function (entry, k) {
-            index [(entry.from && entry.from.match (/^E\d+$/)) ? (entry.id + '/' + entry.from) : entry.id] = k;
-            return ['tr', {style: lith.css.style ({'background-color': {0: '#fcfcfc', 1: '#efefef'} [k % 2]})}, dale.go (['#' + (k + 1), entry.t - B.t, entry.id.match (/^E\d+$/) ? 'event' : 'responder', entry.id, entry.from, entry.verb, entry.path.join (':'), dale.go (entry.args, B.str).join (', ')], function (value, k2) {
+            var from = entry.from && entry.from.match (/^E\d+$/) ? (entry.id + '/' + entry.from) : undefined;
+            index [from || entry.id] = k;
+            return ['tr', {style: lith.css.style ({'background-color': {0: '#fcfcfc', 1: '#efefef'} [k % 2]})}, dale.go (['#' + (k + 1), entry.t - B.t, entry.id.match (/^E\d+$/) ? 'event' : 'responder', entry.id, entry.from, entry.verb, entry.path.join (':'), shorten (dale.go (entry.args, B.str).join (', '))], function (value, k2) {
                if (k2 === 1) return ['td', (value / 1000) + (! (value % 1000) ? '.0' : '') + (! (value % 100) ? '0' : '') + (! (value % 10) ? '0' : '') + 's'];
-               if (k2 !== 2 && k2 !== 3) return ['td', value];
-               var onclick = value === undefined ? '' : ('c ("tr") [' + (index [value] + 1) + '].scrollIntoView ()');
+               if (k2 !== 3 && k2 !== 4) return ['td', value];
+               var onclick = value === undefined ? '' : ('c ("tr") [' + ((index [value] || index [from]) + 1) + '].scrollIntoView ()');
                return ['td', {onclick: onclick, style: lith.css.style ({cursor: 'pointer', 'font-weight': 'bold', color: colors [parseInt (index [value]) % colors.length]})}, value === undefined ? '' : value];
             })];
          }),

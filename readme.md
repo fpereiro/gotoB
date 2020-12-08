@@ -1332,13 +1332,14 @@ If there's already a DOM element with `id` `eventlog`, we remove it.
       if (c ('#eventlog')) document.body.removeChild (c ('#eventlog'));
 ```
 
-We define three variables for drawing the table of events:
+We define four variables for drawing the table of events:
 - `index`, which will store the ordinal position of each event or responder.
 - `colors`, a list of colors to assign to event & responder ids.
 - `columns`, the columns for the table.
+- `shorten`, a function that takes a string and returns a shortened version if the string is over 1000 characters, also adding the number of characters omitted.
 
 ```javascript
-      var index = {}, colors = ['#fe6f6c', '#465775', '#e086c3', '#8332ac', '#462749', '#044389', '#59c9a6', '#ffad05', '#7cafc4', '#5b6c5d'], columns = ['#', 'ms', 'type', 'id', 'from', 'verb', 'path', 'args'];
+      var index = {}, colors = ['#fe6f6c', '#465775', '#e086c3', '#8332ac', '#462749', '#044389', '#59c9a6', '#ffad05', '#7cafc4', '#5b6c5d'], columns = ['#', 'ms', 'type', 'id', 'from', 'verb', 'path', 'args'], shorten = function (s) {return s.length > 1000 ? s.slice (0, 1000) + '... [' + (s.length - 1000) + ' more characters]' : s};
 ```
 
 We will add to the body a `<table>` element with `id` `eventlog`.
@@ -1368,10 +1369,18 @@ We iterate the entries of `B.log`, an array that contains a list of all the even
          dale.go (B.log, function (entry, k) {
 ```
 
-We set an entry in `index` to associate the event with element `id` with the position of this event or responder on the log. In the case of responders, we associate the entry with the string `responderId/eventId`. This will be accurate only for events, not responders, since responders can appear more than once on the log (since they can be matched multiple times).
+We define a variable `from` that, in the case of a responder that has a `from` attribute, is of the form `ID/FROM` (`ID` being the `id` of the responder and `FROM` being the `id` of the event that matched the responder). If these conditions are not met, `from` is left as `undefined`.
 
 ```javascript
-            index [(entry.from && entry.from.match (/^E\d+$/)) ? (entry.id + '/' + entry.from) : entry.id] = k;
+            var from = entry.from && entry.from.match (/^E\d+$/) ? (entry.id + '/' + entry.from) : undefined;
+```
+
+We set an entry in `index` to associate the event with element `id` with the position of this event or responder on the log. In the case of responders, we associate the entry with the string `responderId/eventId`; for events, we use the `id` itself.
+
+Since a responder can be matched multiple times, using the `from` allows us to reference a particular matching of the responder. Since responders can only be matched by events, and events have unique ids, then an unambigous matching is possible if logging is turned on.
+
+```javascript
+            index [from || entry.id] = k;
 ```
 
 We prepare the row on which we'll print the details of either the event or responder. We alternate a background color (with two types of grays).
@@ -1386,16 +1395,16 @@ If we're printing the second column (`ms`), we round the value.
                if (k2 === 1) return ['td', (value / 1000) + (! (value % 1000) ? '.0' : '') + (! (value % 100) ? '0' : '') + (! (value % 10) ? '0' : '') + 's'];
 ```
 
-For all columns that are not the second, third or fourth, we merely print the corresponding value.
+For all columns that are not the second (`ms`, already covered) or the fourth (`id`) or fifth (`from`), we merely print the corresponding value.
 
 ```javascript
-               if (k2 !== 2 && k2 !== 3) return ['td', value];
+               if (k2 !== 3 && k2 !== 4) return ['td', value];
 ```
 
-For the `entry` and `from` columns (which contain references to events called), we add an `onclick` event to jump to that event on the table. We also apply a color taken from `colors` and based on the position of the event in the list.
+For the `entry` and `from` columns (which contain references to events called), we add an `onclick` event to jump to that event on the table. We also apply a color taken from `colors` and based on the position of the event in the list. Note that for responders, since `index [value]` will be `undefined`, we use `index [from]` as the index.
 
 ```javascript
-               var onclick = value === undefined ? '' : ('c ("tr") [' + (index [value] + 1) + '].scrollIntoView ()');
+               var onclick = value === undefined ? '' : ('c ("tr") [' + ((index [value] || index [from]) + 1) + '].scrollIntoView ()');
                return ['td', {onclick: onclick, style: lith.css.style ({cursor: 'pointer', 'font-weight': 'bold', color: colors [parseInt (index [value]) % colors.length]})}, value === undefined ? '' : value];
             })];
 ```

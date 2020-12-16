@@ -11,6 +11,7 @@ window.State = B.store.State = {};
 
 var Views = {};
 
+// Note: this example could perfectly use an external stylesheet. We choose to write the CSS in litc to illustrate how to use litc to generate CSS.
 Views.style = [
    ['html, body', {'margin, padding': 0}],
    ['button', {

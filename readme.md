@@ -843,6 +843,12 @@ If you pass an object with a `raw` key that contains a string, other keys within
 ['button', {onclick: B.ev ('submit', 'data', {raw: 'this.value', ignored: 'key'})}]
 ```
 
+You can pass multiple events to `B.ev` as multiple arguments wrapped in arrays.
+
+```javascript
+['button', {onclick: B.ev (['submit', 'data'], ['do', ['something', 'else']])}]
+```
+
 If invalid inputs are passed to `B.ev`, the function will report an error and return `false`.
 
 ### Reactive views: `B.view`
@@ -1145,6 +1151,8 @@ common errors:
 
 prod mode performance: speed up drawing. diff and dom applying is the same.
 
+responder -> event -> responder. no responder -> responder or event -> event.
+
 ### Advanced topics
 
 TODO
@@ -1153,9 +1161,13 @@ TODO
    - if literal, just for nbsp, not for inserting tags. otherwise, you need opaque.
    - if opaque within reactive view, redrawn every time.
 - negative priorities & nestedness
-- nested views cannot reference the same DOM element! One view cannot just return another. Use a view with multiple paths instead.
+- nested views cannot reference the same DOM element! One view cannot just return another. Use a view with multiple paths instead. Or wrap in another lith, `['div', B.view]`
 - trample & perflogs
 - FF 3: autocomplete=off on selects.
+
+Within a single thread, everything happens sync (if you have an async, then you break the sync). But if you have two handlers, for example, you already have multiple chains running simultaneously! Redraws are first come first serve.
+
+Can use async as sync chain, but if there are other chains happening, those won't wait.
 
 ## Internals
 
@@ -1166,6 +1178,8 @@ negative priority descending to redraw outermost first. more efficient, more int
 negative priority to do all the changes first, then redraw. More fine-grained control, without an externally imposed cycle.
 
 userland scheduler: events with priorities!
+
+Everything sync.
 
 ### General architecture
 
@@ -1336,10 +1350,10 @@ We define four variables for drawing the table of events:
 - `index`, which will store the ordinal position of each event or responder.
 - `colors`, a list of colors to assign to event & responder ids.
 - `columns`, the columns for the table.
-- `shorten`, a function that takes a string and returns a shortened version if the string is over 1000 characters, also adding the number of characters omitted.
+- `shorten`, a function that takes a string and returns a shortened version if the string is over 500 characters, also adding the number of characters omitted.
 
 ```javascript
-      var index = {}, colors = ['#fe6f6c', '#465775', '#e086c3', '#8332ac', '#462749', '#044389', '#59c9a6', '#ffad05', '#7cafc4', '#5b6c5d'], columns = ['#', 'ms', 'type', 'id', 'from', 'verb', 'path', 'args'], shorten = function (s) {return s.length > 1000 ? s.slice (0, 1000) + '... [' + (s.length - 1000) + ' more characters]' : s};
+      var index = {}, colors = ['#fe6f6c', '#465775', '#e086c3', '#8332ac', '#462749', '#044389', '#59c9a6', '#ffad05', '#7cafc4', '#5b6c5d'], columns = ['#', 'ms', 'type', 'id', 'from', 'verb', 'path', 'args'], shorten = function (s) {return s.length > 500 ? s.slice (0, 500) + '... [' + (s.length - 500) + ' more characters]' : s};
 ```
 
 We will add to the body a `<table>` element with `id` `eventlog`.
@@ -1369,18 +1383,18 @@ We iterate the entries of `B.log`, an array that contains a list of all the even
          dale.go (B.log, function (entry, k) {
 ```
 
-We define a variable `from` that, in the case of a responder that has a `from` attribute, is of the form `ID/FROM` (`ID` being the `id` of the responder and `FROM` being the `id` of the event that matched the responder). If these conditions are not met, `from` is left as `undefined`.
+We define a variable `responderFrom` that, in the case of a responder that has a `from` attribute, is of the form `ID/FROM` (`ID` being the `id` of the responder and `FROM` being the `id` of the event that matched the responder). If these conditions are not met, `from` is left as `undefined`.
 
 ```javascript
-            var from = entry.from && entry.from.match (/^E\d+$/) ? (entry.id + '/' + entry.from) : undefined;
+            var responderIndex = entry.id [0] !== 'E' && entry.from && entry.from.match (/^E\d+$/) ? (entry.id + '/' + entry.from) : undefined;
 ```
 
-We set an entry in `index` to associate the event with element `id` with the position of this event or responder on the log. In the case of responders, we associate the entry with the string `responderId/eventId`; for events, we use the `id` itself.
+We set an entry in `index` to associate the event with element `id` with the position of this event or responder on the log. In the case of responders that have a `responderIndex`, we associate the entry with the string `responderId/eventId`; for all other responders and for events, we use the `id` itself.
 
 Since a responder can be matched multiple times, using the `from` allows us to reference a particular matching of the responder. Since responders can only be matched by events, and events have unique ids, then an unambigous matching is possible if logging is turned on.
 
 ```javascript
-            index [from || entry.id] = k;
+            index [responderIndex || entry.id] = k;
 ```
 
 We prepare the row on which we'll print the details of either the event or responder. We alternate a background color (with two types of grays).
@@ -1403,8 +1417,10 @@ For all columns that are not the second (`ms`, already covered) or the fourth (`
 
 For the `entry` and `from` columns (which contain references to events called), we add an `onclick` event to jump to that event on the table. We also apply a color taken from `colors` and based on the position of the event in the list. Note that for responders, since `index [value]` will be `undefined`, we use `index [from]` as the index.
 
+One more thing to notice about the `onclick` is that it performs a very simple animation when a row is selected, by using timeouts to set different gray backgrounds. This aids the visibility of the selected row and is compatible with all supported browsers.
+
 ```javascript
-               var onclick = value === undefined ? '' : ('c ("tr") [' + ((index [value] || index [from]) + 1) + '].scrollIntoView ()');
+               var onclick = value === undefined ? '' : ('var row = c ({from: c ("#eventlog"), selector: "tr"}) [' + ((index [value] === undefined ? index [responderIndex] : index [value]) + 1) + ']; row.scrollIntoView (); row.style.background = "#8e8e8e"; setTimeout (function () {row.style.background = "#bebebe"}, 500); setTimeout (function () {row.style.background = "white"}, 1000);');
                return ['td', {onclick: onclick, style: lith.css.style ({cursor: 'pointer', 'font-weight': 'bold', color: colors [parseInt (index [value]) % colors.length]})}, value === undefined ? '' : value];
             })];
 ```
@@ -3259,10 +3275,15 @@ Before closing the iteration of `newAttributes`, we provide workarounds for bugs
 
 We iterate the `oldAttributes`. If they are an empty string, `false` or `null`, we ignore them. If there's no corresponding entry for them in `newAttributes`, we remove the attributes from `element`. In the case of Internet Explorer 7 and below, we remove `className` instead of `class`.
 
+In the case where we're removing the `value` from an element, we also have to set the value explicitly to `null` - this seems to be necessary only sometimes.
+
 ```javascript
          dale.go (oldAttributes, function (v, k) {
             if (['', null, false].indexOf (v) !== -1) return;
-            if (['', null, false, undefined].indexOf (newAttributes [k]) !== -1) element.removeAttribute (B.internal.olderIE && k === 'class' ? 'className' : k, v);
+            if (['', null, false, undefined].indexOf (newAttributes [k]) !== -1) {
+               element.removeAttribute (B.internal.olderIE && k === 'class' ? 'className' : k, v);
+               if (k === 'value') element.value = null;
+            }
          });
 ```
 

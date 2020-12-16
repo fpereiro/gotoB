@@ -1,115 +1,149 @@
-(function () {
+// *** STORE ***
 
-   c.place ('head', 'beforeEnd',  lith.g (['link', {rel: 'stylesheet', href: 'https://unpkg.com/purecss@1.0.0/build/pure-min.css', integrity: 'sha384-nn4HPE8lTHyVtfCBi5yW9d20FjT8BJwUXyWZT9InLYax14RDjBj46LmSztkmNP9w',  crossorigin: 'anonymous'}]));
+/*
+Structure of the store:
 
-   var view = function () {
-      return B.view (['Data'], {listen: [
-         ['reload', 'data', function (x) {
-            B.do (x, 'set', ['Data', 'items'], [
-               {title: 'A book on design', price: 5},
-               {title: 'Something useless', price: 8},
-               {title: 'Kittens & sunshine', price: 11},
-               {title: 'Dinner & movie with JSON', price: 200}
-            ]);
-            alert ('Loaded fresh data!');
-         }],
-         ['addto', '*', function (x) {
-            var item = B.get ('Data', 'items') [x.path [0]];
-            var q    = B.get ('Data', 'addto', x.path [0]);
-            if (! item || ! q) return;
-            item = teishi.c (item);
-            if (! q.match (/^\d+$/)) return alert ('Please enter a valid amount.');
-            item.amount = parseInt (q);
+products:   [{id: INTEGER, title: STRING, price: INTEGER|FLOAT}, ...]
+cart:       {productId: INTEGER, ...}
+quantities: {productId: STRING, ...}
+total:      INTEGER
+filter:     STRING
 
-            if (! B.get ('Data', 'cart')) B.do (x, 'set', ['Data', 'cart'], []);
-            var matching = dale.stopNot (B.get ('Data', 'cart'), undefined, function (cartitem, k) {
-               if (cartitem.title === item.title) return k;
-            });
+Note: all keys on the store might be `undefined` before being initialized.
+*/
 
-            B.do (x, 'set', ['Data', 'addto', x.path [0]], '');
-            if (matching === undefined) return B.do (x, 'add', ['Data', 'cart'], item);
-            B.do (x, 'set', ['Data', 'cart', matching, 'amount'], B.get ('Data', 'cart', matching, 'amount') + parseInt (q));
-         }],
-         ['change', ['Data', 'cart'], function (x) {
-            var cart = B.get ('Data', 'cart');
-            var total = 0;
-            dale.do (cart, function (item) {
-               total += item.amount * item.price;
-            });
-            B.do (x, 'set', ['Data', 'total'], total);
-         }],
-         ['checkout', [], function (x) {
-            var cart = B.get ('Data', 'cart');
-            alert ('PROFIT! ' + teishi.s (cart));
-            B.do (x, 'set', ['Data', 'cart'], []);
-         }]
-      ], ondraw: function () {
-         if (! B.get ('Data', 'items')) B.do ({from: {ev: 'initializeData'}}, 'reload', 'data');
-      }}, function (x, Data) {
+// *** RESPONDERS ***
 
-         if (! Data) return;
-
-         var colsleft  = ['title', 'price', 'actions'];
-         var colsright = ['title', 'price', 'subtotal', 'actions'];
-
-         return [
-            ['style', [
-               ['body', {padding: 15}],
-               ['span.action', {color: 'blue', cursor: 'pointer', 'text-decoration': 'underline'}]
-            ]],
-            ['div', {class: 'left pure-u-1-2'}, [
-               ['h3', 'Product list'],
-               ['h4', [dale.fil (Data.items, undefined, function (item) {
-                  if (! Data.filter || item.title.toLowerCase ().match (Data.filter.toLowerCase ())) return item;
-               }).length, ' matching products, ', (Data.items || []).length, ' total.']],
-               ['span', B.ev ({class: 'action'}, ['onclick', 'reload', 'data']), 'Reload'],
-               ['br'],
-               ['br'],
-               ['form', {class: 'pure-form'}, [
-                  ['input', B.ev ({placeholder: 'filter', value: B.get ('Data', 'filter')}, ['onchange, oninput', 'set', ['Data', 'filter']])],
-               ]],
-               ['br'],
-               ['br'],
-               ['table', {class: 'pure-table pure-table-bordered pure-table-striped'}, [
-                  ['thead', ['tr', dale.do (colsleft, function (key) {return ['th', key]})]],
-                  dale.fil (Data.items, undefined, function (item, k) {
-                     if (Data.filter && item.title.toLowerCase ().match (Data.filter.toLowerCase ()) === null) return;
-                     return ['tr', dale.do (colsleft, function (key) {
-                        if (key === 'actions') return ['td', [
-                           ['input', B.ev ({placeholder: 'Please enter a number', value: B.get ('Data', 'addto', k)},
-                              ['onchange, oninput', 'set', ['Data', 'addto', k]]
-                           )],
-                           ['span', B.ev ({class: 'action'}, ['onclick', 'addto', k]), ' Add to cart'],
-                        ]];
-                        return ['td', item [key]];
-                     })];
-                  })
-               ]]
-            ]],
-            ['div', {class: 'right pure-u-1-2'}, [
-               ['h3', 'My cart'],
-               ['h4', [(Data.cart || []).length, ' products in cart, total amount: $', Data.total || 0]],
-               ['table', {class: 'pure-table pure-table-bordered pure-table-striped'}, [
-                  ['thead', ['tr', dale.do (colsright, function (key) {return ['th', key]})]],
-                  dale.fil ((Data.cart || []), undefined, function (item, k) {
-                     return ['tr', dale.do (colsright, function (key) {
-                        if (key === 'subtotal') return ['td', item.amount * item.price];
-                        if (key === 'actions') return ['td', [
-                           ['span', B.ev ({class: 'action'}, ['onclick', 'rem', ['Data', 'cart'], k]), 'Remove from cart'],
-                        ]];
-                        return ['td', item [key]];
-                     })];
-                  })
-               ]],
-               ['br'], ['br'],
-               (Data.cart || []).length === 0 ? [] : ['button', B.ev ({style: 'background: rgb(28, 184, 65)', class: 'pure-button button-success'},
-                  ['onclick', 'checkout', []]
-               ), 'Show me the money!']
-            ]],
-         ];
+B.mrespond ([
+   ['load', 'data', function (x) {
+      // On a real shopping cart, the products would be retrieved from a server through an ajax call.
+      B.call (x, 'set', 'products', [
+         {id: 'p1', title: 'A book on design', price: 5},
+         {id: 'p2', title: 'Something useless', price: 8},
+         {id: 'p3', title: 'Kittens & sunshine', price: 11},
+         {id: 'p4', title: 'Dinner & movie with JSON', price: 200}
+      ]);
+      alert ('Loaded fresh data!');
+   }],
+   ['cart', 'add', function (x, productId, quantity) {
+      var cart = B.get ('cart') || {};
+      quantity = parseInt (quantity);
+      if (isNaN (quantity) || quantity <= 0) return alert ('Please enter a valid quantity.');
+      if (! cart [productId]) B.call (x, 'set', ['cart', productId], quantity);
+      else                    B.call (x, 'set', ['cart', productId], cart [productId] + quantity);
+   }],
+   // cart changes when items are added or removed, so we link its change to a recalculation of the total.
+   ['change', 'cart', {match: B.changeResponder}, function (x) {
+      B.call (x, 'calculate', 'total');
+   }],
+   ['calculate', 'total', function (x) {
+      var products = B.get ('products'), total = 0;
+      dale.go (B.get ('cart'), function (quantity, productId) {
+         var product = dale.stopNot (products, undefined, function (product) {
+            if (product.id === productId) return product;
+         });
+         total += product.price * quantity;
       });
-   }
+      B.call (x, 'set', 'total', total);
+   }],
+   ['checkout', [], function (x) {
+      var cart = B.get ('cart');
+      alert ('PROFIT! ' + JSON.stringify (cart));
+      B.call (x, 'rem', [], 'cart');
+   }]
+]);
 
-   B.mount ('body', view ());
+// *** VIEWS ***
 
-}) ();
+var cart = function () {
+
+   var colsleft  = ['title', 'price', 'actions'];
+   var colsright = ['title', 'price', 'quantity', 'subtotal', 'actions'];
+
+   return [
+      ['style', [
+         ['body', {padding: 15}],
+         ['span.action', {color: 'blue', cursor: 'pointer', 'text-decoration': 'underline'}]
+      ]],
+      B.view ([['products'], ['filter']], function (products, filter) {
+
+         if (products === undefined) products = [];
+
+         var filteredProducts = dale.fil (products, undefined, function (product) {
+            if (filter === undefined || filter === '') return product;
+            if (product.title.toLowerCase ().match (filter.toLowerCase ())) return product;
+         });
+
+         return ['div', {class: 'left pure-u-1-2'}, [
+            ['h3', 'Product list'],
+            ['h4', [filteredProducts.length, ' matching products, ', products.length, ' total.']],
+            ['span', {class: 'action', onclick: B.ev ('load', 'data')}, 'Load data'],
+            ['br'],
+            ['br'],
+            ['form', {class: 'pure-form'}, [
+               ['input', {
+                  placeholder: 'filter',
+                  value: filter,
+                  onchange: B.ev ('set', 'filter'),
+                  oninput:  B.ev ('set', 'filter')
+               }]
+            ]],
+            ['br'], ['br'],
+            ['table', {class: 'pure-table pure-table-bordered pure-table-striped'}, [
+               ['thead', ['tr', dale.go (colsleft, function (key) {return ['th', key]})]],
+               dale.go (filteredProducts, function (product) {
+                  return B.view (['quantities', product.id], function (quantity) {
+                     return ['tr', dale.go (colsleft, function (key) {
+                        if (key === 'actions') return ['td', [
+                           ['input', {
+                              placeholder: 'Please enter a number',
+                              value:       quantity,
+                              onchange:    B.ev ('set', ['quantities', product.id], {raw: 'this.value'}),
+                              oninput:     B.ev ('set', ['quantities', product.id], {raw: 'this.value'})
+                           }],
+                           ['LITERAL', '&nbsp;'],
+                           ['LITERAL', '&nbsp;'],
+                           ['span', {class: 'action', onclick: B.ev (['cart', 'add', product.id, quantity], ['rem', 'quantities', product.id])}, 'Add to cart'],
+                        ]];
+                        return ['td', product [key]];
+                     })];
+                  });
+               })
+            ]]
+         ]];
+      }),
+      B.view ([['products'], ['cart'], ['total']], function (products, cart, total) {
+         if (cart === undefined) cart = {};
+         return ['div', {class: 'right pure-u-1-2'}, [
+            ['h3', 'My cart'],
+            ['h4', [dale.keys (cart).length, ' products in cart, total amount: $', total || 0]],
+            ['table', {class: 'pure-table pure-table-bordered pure-table-striped'}, [
+               ['thead', ['tr', dale.go (colsright, function (key) {return ['th', key]})]],
+               dale.go (cart, function (quantity, productId) {
+                  var product = dale.stopNot (products, undefined, function (product) {
+                     if (product.id === productId) return product;
+                  });
+                  return ['tr', dale.go (colsright, function (key) {
+                     if (key === 'quantity') return ['td', quantity];
+                     if (key === 'subtotal') return ['td', product.price * quantity];
+                     if (key === 'actions') return ['td', [
+                        ['span', {class: 'action', onclick: B.ev ('rem', 'cart', productId)}, 'Remove from cart'],
+                     ]];
+                     return ['td', product [key]];
+                  })];
+               })
+            ]],
+            ['br'], ['br'],
+            dale.keys (cart).length > 0 ? ['button', {
+               style: 'background: rgb(28, 184, 65)',
+               class: 'pure-button button-success',
+               onclick: B.ev ('checkout', [])
+            }, 'Show me the money!'] : []
+         ]];
+      })
+   ];
+}
+
+B.mount ('body', cart);
+
+B.call ('load', 'data');

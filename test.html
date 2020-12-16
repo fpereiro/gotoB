@@ -7,11 +7,11 @@
    </head>
    <body>
       <noscript>Javascript is deactivated in your browser. Please activate it in order to use this page.</noscript>
+      <script src="https://cdn.jsdelivr.net/gh/douglascrockford/JSON-js@aef828bfcd7d5efaa41270f831f8d27d5eef3845/json2.min.js"></script>
       <script>
          var time = Date.now ? function () {return Date.now ()} : function () {return new Date ().getTime ()};
          var Time = {zero: time ()}
       </script>
-      <script src="https://cdn.jsdelivr.net/gh/douglascrockford/JSON-js@aef828bfcd7d5efaa41270f831f8d27d5eef3845/json2.min.js"></script>
       <script src="gotoB.min.js"></script>
       <script>
          Time ['0: load'] = time () - Time.zero;
@@ -1000,6 +1000,8 @@
                      '<div id="в1" path="Data:view" class="foo" style="color: red">content</div>',
                      // Compatibility: IE10-11 changes the order of attributes and adds a semicolon to the style
                      '<div class="foo" id="в1" style="color: red;" path="Data:view">content</div>',
+                     // Compatibility: Edge<=18 changes the order of attributes
+                     '<div class="foo" id="в1" style="color: red" path="Data:view">content</div>',
                      // Compatibility: FF<=48 puts the style first
                      '<div style="color: red" class="foo" id="в1" path="Data:view">content</div>',
                      // Compatibility: FF<=3.6 puts the style first and adds a semicolon to the style
@@ -1020,6 +1022,8 @@
                      '<div id="в1" path="Data:view" class="foo" style="color: red">ABCDE</div>',
                      // Compatibility: IE10-11 changes the order of attributes and adds a semicolon to the style
                      '<div class="foo" id="в1" style="color: red;" path="Data:view">ABCDE</div>',
+                     // Compatibility: Edge<=18 changes the order of attributes
+                     '<div class="foo" id="в1" style="color: red" path="Data:view">ABCDE</div>',
                      // Compatibility: FF<=48 puts the style first
                      '<div style="color: red" class="foo" id="в1" path="Data:view">ABCDE</div>',
                      // Compatibility: FF<=3.6 puts the style first and adds a semicolon to the style
@@ -1593,10 +1597,24 @@
                      c.fire (c ('input') [1], 'change');
                      if (c ('input') [0].value !== '2') return 'Invalid input value #2.';
                   }
+
                   B.unmount ('body');
                   B.forget (cresponder);
+
+                  B.mount ('body', function () {
+                     return B.view (['Data', 'quantity'], function (quantity) {
+                        return ['div', ['input', {value: quantity}]];
+                     });
+                  });
+
+                  B.call (x, 'set', ['Data', 'quantity'], 'abc');
+                  if (c ('input') [0].value !== 'abc') return 'Invalid input value #3.';
+                  B.call (x, 'rem', 'Data', 'quantity');
+                  if (c ('input') [0].value !== '') return 'Invalid input value #4.';
+                  B.unmount ('body');
+
                   // We preserve the id for this test to avoid modifying the ids on all the following tests.
-                  B.internal.count = B.internal.count - 2;
+                  B.internal.count = B.internal.count - 3;
                });
 
                Test ('B.view, textareas', function () {
@@ -2026,6 +2044,29 @@
 
                });
 
+               Test ('B.view, simultaneous redraws', function () {
+
+                  B.unmount ('body');
+                  B.mount ('body', function () {
+                     return ['div', [
+                        B.view (['State', 'list'], function (list) {
+                           return ['table', dale.go (list, function (item) {
+                              return ['tr', ['td', item]];
+                           })];
+                        }),
+                        ['button', {onclick: B.ev (['add', ['State', 'list'], Math.random ()], ['add', ['State', 'list'], Math.random ()])}, 'Hit me']
+                     ]];
+                  });
+
+                  c.fire ('button', 'click');
+
+                  B.unmount ('body');
+
+                  // I haven't yet found a way to trigger a queued redraw. gotoB's redraw mechanism is synchronous. Setting timeouts just before triggering a long redraw only pushes the execution of the timeout further.
+                  // I have however seen a trigger for a redraw happening *before* the end of another redraw in applications where a DOM element (usually an input) has more than one event handler (for example, both "oninput" and "onchange"). In that case, the queuing mechanism of B.redraw kicks in to perform redraws on a first come, first serve basis. I haven't yet found a way to programatically triggering such a situation programatically. Until I do, I leave this stub as a placeholder for a future test.
+
+               });
+
                B.call (x, 'test', 'performance');
 
             });
@@ -2134,11 +2175,13 @@
                if (Errorlist.length === 0) return c.fill ('body', lith.g ([
                   ['b', 'All tests successful!'],
                   ['pre', JSON.stringify (Time, null, '   ')],
+                  ['button', {onclick: 'B.eventlog ()'}, 'Show event log']
                ]));
 
                c.fill ('body', lith.g ([
                   ['h2', 'Errors found!'],
-                  ['pre', teishi.str (Errorlist, null, '   ')]
+                  ['pre', teishi.str (Errorlist, null, '   ')],
+                  ['button', {onclick: 'B.eventlog ()'}, 'Show event log']
                ]));
             });
 

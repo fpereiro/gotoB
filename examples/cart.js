@@ -74,13 +74,13 @@ var cart = function () {
             if (product.title.toLowerCase ().match (filter.toLowerCase ())) return product;
          });
 
-         return ['div', {class: 'left pure-u-1-2'}, [
+         return ['div', {'class': 'left pure-u-1-2'}, [
             ['h3', 'Product list'],
             ['h4', [filteredProducts.length, ' matching products, ', products.length, ' total.']],
-            ['span', {class: 'action', onclick: B.ev ('load', 'data')}, 'Load data'],
+            ['span', {'class': 'action', onclick: B.ev ('load', 'data')}, 'Load data'],
             ['br'],
             ['br'],
-            ['form', {class: 'pure-form'}, [
+            ['form', {'class': 'pure-form'}, [
                ['input', {
                   placeholder: 'filter',
                   value: filter,
@@ -89,7 +89,7 @@ var cart = function () {
                }]
             ]],
             ['br'], ['br'],
-            ['table', {class: 'pure-table pure-table-bordered pure-table-striped'}, [
+            ['table', {'class': 'pure-table pure-table-bordered pure-table-striped'}, [
                ['thead', ['tr', dale.go (colsleft, function (key) {return ['th', key]})]],
                dale.go (filteredProducts, function (product) {
                   return B.view (['quantities', product.id], function (quantity) {
@@ -103,7 +103,7 @@ var cart = function () {
                            }],
                            ['LITERAL', '&nbsp;'],
                            ['LITERAL', '&nbsp;'],
-                           ['span', {class: 'action', onclick: B.ev (['cart', 'add', product.id, quantity], ['rem', 'quantities', product.id])}, 'Add to cart'],
+                           ['span', {'class': 'action', onclick: B.ev (['cart', 'add', product.id, quantity], ['rem', 'quantities', product.id])}, 'Add to cart'],
                         ]];
                         return ['td', product [key]];
                      })];
@@ -114,10 +114,10 @@ var cart = function () {
       }),
       B.view ([['products'], ['cart'], ['total']], function (products, cart, total) {
          if (cart === undefined) cart = {};
-         return ['div', {class: 'right pure-u-1-2'}, [
+         return ['div', {'class': 'right pure-u-1-2'}, [
             ['h3', 'My cart'],
             ['h4', [dale.keys (cart).length, ' products in cart, total amount: $', total || 0]],
-            ['table', {class: 'pure-table pure-table-bordered pure-table-striped'}, [
+            ['table', {'class': 'pure-table pure-table-bordered pure-table-striped'}, [
                ['thead', ['tr', dale.go (colsright, function (key) {return ['th', key]})]],
                dale.go (cart, function (quantity, productId) {
                   var product = dale.stopNot (products, undefined, function (product) {
@@ -127,7 +127,7 @@ var cart = function () {
                      if (key === 'quantity') return ['td', quantity];
                      if (key === 'subtotal') return ['td', product.price * quantity];
                      if (key === 'actions') return ['td', [
-                        ['span', {class: 'action', onclick: B.ev ('rem', 'cart', productId)}, 'Remove from cart'],
+                        ['span', {'class': 'action', onclick: B.ev ('rem', 'cart', productId)}, 'Remove from cart'],
                      ]];
                      return ['td', product [key]];
                   })];
@@ -136,7 +136,7 @@ var cart = function () {
             ['br'], ['br'],
             dale.keys (cart).length > 0 ? ['button', {
                style: 'background: rgb(28, 184, 65)',
-               class: 'pure-button button-success',
+               'class': 'pure-button button-success',
                onclick: B.ev ('checkout', [])
             }, 'Show me the money!'] : []
          ]];

@@ -46,8 +46,6 @@ Browser compatibility has been tested in the following browsers:
 
 The author wishes to thank [Browserstack](https://browserstack.com) for providing tools to test cross-browser compatibility.
 
-<a href="https://www.browserstack.com"><img src="https://bstacksupport.zendesk.com/attachments/token/kkjj6piHDCXiWrYlNXjKbFveo/?name=Logo-01.svg" width="150px" height="33px"></a>
-
 ## Tutorial
 
 An in-depth tutorial is available [here](tutorial/tutorial.md). The tutorial covers the general principles of building a webapp and introduces gotoв as a possible solution to the fundamental problems of building a frontend. It requires only basic knowledge of HTML, javascript and programming, so if you're learning how to build webapps, it might be a good place to start.
@@ -82,6 +80,7 @@ B.mount ('body', helloWorld);
 var counter = function () {
    return B.view ('counter', function (counter) {
       return ['div', [
+         ['h2', 'Counter'],
          ['h3', ['Counter is: ', counter || 0]],
          ['button', {
             onclick: B.ev ('set', 'counter', (counter || 0) + 1)
@@ -106,14 +105,14 @@ var todoList = function () {
       ['style', [
          ['span.action', {color: 'blue', cursor: 'pointer', 'margin-left': 10}],
       ]],
-      ['h3', 'Todos'],
+      ['h2', 'Todos'],
       B.view ('todos', function (todos) {
          return ['ul', dale.go (todos, function (todo, index) {
             return ['li', [todo, ['span', {class: 'action', onclick: B.ev ('rem', 'todos', index)}, 'Remove']]];
          })];
       }),
-      ['input', {onclick: B.ev ('create', 'todo')}, 'Create todo']
-   });
+      ['button', {onclick: B.ev ('create', 'todo')}, 'Create todo']
+   ];
 }
 
 B.mount ('body', todoList);
@@ -389,7 +388,7 @@ And, of course, gotoв must be very useful for building a real webapp.
 
 - **Ease of use**: 90% of the functionality you need is contained in four functions (one for calling an event (`B.call`), one for setting event responders (`B.respond`), one for stringifying an event call into a DOM attribute (`B.ev`) and one for creating dynamic elements which are updated when the store changes (`B.view`)). There's also three more events for performing data changes that you'll use often. But that's pretty much it.
 - **Fast reload**: the edit-reload cycle should take under two seconds. No need to wait until no bundle is completed.
-- **Smallness**: gotoв and its dependencies are < 2k lines of consistent, annotated javascript. In other words, it is less than 2048 lines on top of [vanilla.js](http://vanilla-js.com/).
+- **Smallness**: gotoв and its dependencies are < 2048 lines of consistent, annotated javascript. In other words, it is less than 2048 lines on top of [vanilla.js](http://vanilla-js.com/).
 - **Batteries included**: the core functionality for building a webapp is all provided. Whatever libraries you add on top will probably be for specific things (nice CSS, a calendar widget, etc.)
 - **Trivial to set up**: add `<script src="https://cdn.jsdelivr.net/gh/fpereiro/gotob@/gotoB.min.js"></script>` at the top of the `<body>`.
 - **Everything in plain sight**: all properties and state are directly accessible from the javascript console of the browser. DOM elements have stringified event handlers that can be inspected with any modern browser.
@@ -1181,6 +1180,8 @@ userland scheduler: events with priorities!
 
 Everything sync.
 
+Can write reactive view within an opaque? You could. It wouldn't dangle, but if you touch it directly, it would blow up.
+
 ### General architecture
 
 - comparison to other libraries:
@@ -1202,7 +1203,7 @@ deterministic diff, deterministic id assignation.
 
 ## Source code
 
-The complete source code is contained in `gotoB.js`. gotoв itself is about 650 lines long; its dependencies are about 1380 lines; the whole thing is about 2030 lines.
+The complete source code is contained in `gotoB.js`. gotoв itself is about 670 lines long; its dependencies are about 1380 lines; the whole thing is about 2050 lines.
 
 Below is the annotated source.
 
@@ -3070,10 +3071,10 @@ There's nothing else to do, so we close the function.
       }
 ```
 
-We now define `place`, which is in charge of placing a DOM element into a certain position in the DOM. It takes three arguments: `operation` (which can be either `'add'` or `'keep'`), `position` (which is an array of integers with positions and matches the `position` computed for each diff item that is added or kept) and `element` (the DOM element itself).
+We now define `place`, which is in charge of placing a DOM element into a certain position in the DOM. It takes two arguments: `position` (which is an array of integers with positions and matches the `position` computed for each diff item that is added or kept) and `element` (the DOM element itself).
 
 ```javascript
-      var place = function (operation, position, element) {
+      var place = function (position, element) {
 ```
 
 We define a variable `Parent` to determine the parent node of `element`. If `position` has length 0, `element` must be the outermost DOM element from this view, therefore `rootElementParent` should be its parent.
@@ -3084,23 +3085,50 @@ For all the other cases, we must find the parent, we remove one element from `po
          var Parent = position.length === 0 ? rootElementParent : elements [references [position.slice (0, -1).join (',')]];
 ```
 
-If we're keeping this element (rather than adding it), it may well be the case that it is already where it should be. If `element` is already the k-th child of `Parent` (where `k` is the last element of `position`), then `element` is already a child of its parent and its placed in the right position. In this case, there's nothing else to do, so we return.
+We define a variable `children` to reference the children of `Parent`.
 
 In case we're in Firefox 3, we use `Parent.childNodes` instead of `Parent.children`, since the latter is not supported.
 
 ```javascript
-         if (operation === 'keep' && (Parent.children || Parent.childNodes) [position [position.length - 1]] === element) return;
+         var children = Parent.children || Parent.childNodes;
 ```
+
+We now check whether `element` is already where it should be; this can happen when elements are recycled.
+
+If `position` has length 0, `element` is the outermost element of the view being redrawn.
+
+```javascript
+         if (position.length === 0) {
+```
+
+If there's a `rootElementSibling` and `element` is already its `previousSibling`, `element` is already where it should be, so we `return`.
+
+```javascript
+            if (rootElementSibling && rootElementSibling.previousSibling === element) return;
+```
+
+If there's no `rootElementSibling`, it means that `Parent` must be the last element of `Parent`. If that's the case, then `element` is already where it should be, so we `return`.
+
+```javascript
+            if (! rootElementSibling && children [children.length - 1] === element) return;
+         }
+```
+
+If `position` has length, `element` is not the outermost element of the view being redrawn. In this case, if its desired position (the last element of `position` is the actual position of `element` within `Parent`, then `element` is where it should be, so we `return`.
+
+```javascript
+         if (position.length > 0 && children [position [position.length - 1]] === element) return;
+```
+
+If we're here, we need to place `element` in the correct position inside `Parent`.
 
 We determine whether there is a DOM element inside `Parent` that will go after `element`. We store it in `nextSibling`. If there's no element that will go after `element`, we set `nextSibling` to `null`. In the case where we're positioning the `rootElement`, we use `rootElementSibling` as our `nextSibling`.
 
-In case we're in Firefox 3, we use `Parent.childNodes` instead of `Parent.children`, since the latter is not supported.
-
 ```javascript
-         var nextSibling = Parent === rootElementParent ? rootElementSibling : (Parent.children || Parent.childNodes) [position [position.length - 1]] || null;
+         var nextSibling = position.length === 0 ? rootElementSibling : children [position [position.length - 1]] || null;
 ```
 
-We invoke `insertBefore` on `Parent`, ppassing `element` and `nextSibling`; this will insert `element` just before `nextSibling`, inside `Parent`. If `nextSibling` is `null`, `element` will be placed as the last child of `Parent`.
+We invoke `insertBefore` on `Parent`, passing `element` and `nextSibling`; this will insert `element` just before `nextSibling`, inside `Parent`. If `nextSibling` is `null`, `element` will be placed as the last child of `Parent`.
 
 Note that in case `element` is an element that is somewhere else in the DOM, there's no need to remove it before placing it somewhere else, since `insertBefore` takes care of removing it from its current position in the DOM before inserting it where it should go.
 
@@ -3233,6 +3261,8 @@ We return `element` and close the function.
 
 We define the fifth and last helper function, `recycle`, which updates the attributes of a DOM element that has been recycled. This function takes three arguments: `element`, `old` and `New`; the last two are `elementStrings` for elements that are not opaque and have the same tag.
 
+The function will return the recycled `element`, unless it decides it cannot recycle the `element`, in which case it will return `undefined`.
+
 ```javascript
       var recycle = function (element, old, New) {
 ```
@@ -3243,17 +3273,17 @@ We extract the `oldAttributes` and `newAttributes` using `extract`.
          var oldAttributes = extract (old, 'attributes'), newAttributes = extract (New, 'attributes');
 ```
 
-If we're in Internet Explorer 8 and below and either the old or new version of the element has an attribute `type`, we skip recycling the element, since these browsers don't allow changing it. We instead make a new element through `make` and return that instead.
+If we're in Internet Explorer 8 and below and either the old or new version of the element has an attribute `type` that needs to be changed, we skip recycling the element, since these browsers don't allow changing it. In this case, we return `undefined` to signify that the recycling couldn't be done.
 
 ```javascript
-         if (B.internal.oldIE && (oldAttributes.type || newAttributes.type)) return make (New);
+         if (B.internal.oldIE && oldAttributes.type !== newAttributes.type) return;
 ```
 
-We iterate `newAttributes` and ignore those attributes that are neither an empty string nor `false` nor `null`.
+We iterate `newAttributes` and ignore those attributes that are neither an empty string nor `false` nor `null`. We also ignore attributes for which their values are the same in `oldAttributes` and `newAttributes`.
 
 ```javascript
          dale.go (newAttributes, function (v, k) {
-            if (['', null, false].indexOf (v) !== -1) return;
+            if (v === oldAttributes [k] || ['', null, false].indexOf (v) !== -1) return;
 ```
 
 We set the attribute on `element` using `setAttribute`. If we're in Internet Explorer 7 and below, we set `className` instead of `class`.
@@ -3294,10 +3324,10 @@ We return `element` and close the function.
       }
 ```
 
-We create an object `recyclables`, which will hold DOM elements that we have removed and we might recycle into new elements.
+We create an object `recyclables`, which will hold DOM elements that we have removed and we might recycle into new elements. We also create an object `toRemove`, which will hold DOM elements that need to be removed from the DOM.
 
 ```javascript
-      var recyclables = {};
+      var recyclables = {}, toRemove = {};
 ```
 
 We now perform the second pass on the diff, to apply the changes to the DOM. As on the first pass, we iterate all the elements of the diff.
@@ -3330,10 +3360,10 @@ If we're in Internet Explorer 7 and below and we're dealing with a normal elemen
             if (B.internal.olderIE && elementType === 'O' && extract (v [1], 'attributes').checked) elements [k].setAttribute ('checked', true);
 ```
 
-If we're keeping an item that is not an opaque element (either a literal or a normal element), we will invoke the `place` function defined above with three arguments: the operation (in this case, `'keep'`), the desired position of the item, and the corresponding DOM element. There's nothing else to do in this case, so we return.
+If we're keeping an item that is not an opaque element (either a literal or a normal element), we will invoke the `place` function defined above with the desired position of the item and the corresponding DOM element. There's nothing else to do in this case, so we return.
 
 ```javascript
-            if (elementType !== 'P') return place ('keep', positions [k], elements [k]);
+            if (elementType !== 'P') return place (positions [k], elements [k]);
 ```
 
 If we're keeping an opaque element, we will remove it from the DOM. The reason is that opaque elements could have been modified directly, so gotoв cannot know whether its contents are still those specified by the view functions. The only safe course here is to re-make the element from scratch and remove the old version. While the element (and not its contents) could be recycled, I don't think it's necessary.
@@ -3355,11 +3385,16 @@ If the item is a DOM element, we mark the diff index (`k`) and store it into the
 
 This implementation of recycling is quite simplistic, but it seems to cover many cases. A more sophisticated implementation would implement a stack of elements per tag, or a queue (first-in first-out). This might be changed in the future, but for now seems to suffice.
 
+We also set `toRemove [k]` to `true`, to indicate that we might have to remove this element if it's not recycled. Also note we `return` and do nothing in the case that the element might be recycled.
+
 ```javascript
-            if (elementType === 'O') recyclables [extract (v [1], 'tag')] = k;
+            if (elementType === 'O') {
+               recyclables [extract (v [1], 'tag')] = k;
+               return toRemove [k] = true;
+            }
 ```
 
-We remove the element from the DOM. There's nothing to do in the case of removing an item, so we return and close the conditional.
+Unless the element is of type `O`, we remove the element from the DOM. There's nothing to do in the case of removing an item, so we return and close the conditional.
 
 ```javascript
             return elements [k].parentNode.removeChild (elements [k]);
@@ -3368,10 +3403,10 @@ We remove the element from the DOM. There's nothing to do in the case of removin
 
 If we're here, we're either adding a new item of any kind or keeping an opaque item.
 
-If the item is a literal/text element, we invoke `place`, passing three arguments: the operation (`'add'`), the desired position and the actual element. The actual element is built through the `make` function defined above. This also covers the case when an opaque element is kept - we previously removed the old version and now we add the new version.
+If the item is a literal/text element, we invoke `place`, passing to it the desired position and the actual element. The actual element is built through the `make` function defined above. This also covers the case when an opaque element is kept - we previously removed the old version and now we add the new version.
 
 ```javascript
-         if (elementType === 'L') return place ('add', positions [k], make (v [1]));
+         if (elementType === 'L') return place (positions [k], make (v [1]));
 ```
 
 If we're here, we're going to add a normal DOM element or add/keep an opaque element. We note the `tag` of the element and the index of a recyclable element of the same tag, if any. We also set up a variable to hold the DOM element that we'll either create or recycle.
@@ -3393,10 +3428,16 @@ Otherwise, we use `elements [recycleIndex]` as our DOM element. We pass it to `r
             element = recycle (elements [recycleIndex], diff [recycleIndex] [1], v [1]);
 ```
 
-We clear out `recyclables [tag]`, since we've already used this element here.
+If `recycle` didn't return an element, it must be that the element cannot be recycled. In this case, we make a new one invoking `make`.
 
 ```javascript
-            recyclables [tag] = undefined;
+            if (! element) element = make (v [1]);
+```
+
+Otherwise, we were able to recycle the element. We clear out `recyclables [tag]` (since we've already used this element here) and `toRemove [recycleIndex]` (to avoid removing the recycled element from the DOM).
+
+```javascript
+            else recyclables [tag] = toRemove [recycleIndex] = undefined;
          }
 ```
 
@@ -3406,12 +3447,12 @@ Now that we have a DOM element (either new or recycled) that matches with this d
          elements [k] = element;
 ```
 
-We invoke `place`, passing the operation (`'add'`), the desired position and the actual DOM element.
+We invoke `place`, passing the desired position and the actual DOM element.
 
 This is a good moment to ask: why do we remake a kept opaque element from scratch? The answer is that because opaque elements can change because of direct DOM manipulation, the only way to ensure that they contain whatever the view function initially determines is to remake them from scratch (and apply the DOM manipulations again, wherever needed). This means that opaque elements not only are never recycled; they always are remade from scratch in the case of a redraw.
 
 ```javascript
-         place ('add', positions [k], element);
+         place (positions [k], element);
 ```
 
 We define a variable `olderIEAttributes` that will contain the attributes if we're in Internet Explorer 7 or lower. We extract the attributes with the `extract` function defined above.
@@ -3440,24 +3481,33 @@ We close the loop of the second pass over the diff.
       });
 ```
 
-If there's an `active` element and it is still in the body, we set it as active through `focus` or `setActive`.
+We iterate the elements of `toRemove`; if the values are `true`, the element was not recycled and hence it needs to be removed from the DOM.
+
+```javascript
+      dale.go (toRemove, function (v, k) {
+         if (v === true) elements [k].parentNode.removeChild (elements [k]);
+      });
+```
+
+If there's an `active` element that is still in the body and is not the `activeElement` of the document, we set it as active through `focus`.
+
+```javascript
+      if (active && document.body.contains (active) && active !== document.activeElement) {
+         active.focus ();
+```
+
+Internet Explorer 8 and below need an extra nudge, so we invoke `focus` again on the `active` element.
+
+```javascript
+         if (B.internal.oldIE) active.focus ();
+      }
+```
 
 After this, there's nothing else to do, so we close the function.
 
 ```javascript
-      if (active && document.body.contains (active)) active.focus ? active.focus () : active.setActive ();
    }
 ```
-
-
-
-
-
-
-
-
-
-
 
 We define `B.diff`, the last function of gotoв. This function takes two arrays of strings and performs the [Myers' diff algorithm](http://www.xmailserver.org/diff2.pdf) on them, producing a shortest edit script. In essence, this algorithm gives us a minimal amount of changes that we need to perform to go from the first array of strings to the second.
 

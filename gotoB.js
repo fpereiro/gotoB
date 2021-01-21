@@ -508,10 +508,15 @@ Please refer to readme.md to read the annotated source.
          else                return elementString.match ('{') ? JSON.parse (elementString.replace (/[^{]+/, '')) : {};
       }
 
-      var place = function (operation, position, element) {
+      var place = function (position, element) {
          var Parent = position.length === 0 ? rootElementParent : elements [references [position.slice (0, -1).join (',')]];
-         if (operation === 'keep' && (Parent.children || Parent.childNodes) [position [position.length - 1]] === element) return;
-         var nextSibling = Parent === rootElementParent ? rootElementSibling : (Parent.children || Parent.childNodes) [position [position.length - 1]] || null;
+         var children = Parent.children || Parent.childNodes;
+         if (position.length === 0) {
+            if (rootElementSibling && rootElementSibling.previousSibling === element) return;
+            if (! rootElementSibling && children [children.length - 1] === element) return;
+         }
+         if (position.length > 0 && children [position [position.length - 1]] === element) return;
+         var nextSibling = position.length === 0 ? rootElementSibling : children [position [position.length - 1]] || null;
          Parent.insertBefore (element, nextSibling);
       }
 
@@ -543,9 +548,9 @@ Please refer to readme.md to read the annotated source.
 
       var recycle = function (element, old, New) {
          var oldAttributes = extract (old, 'attributes'), newAttributes = extract (New, 'attributes');
-         if (B.internal.oldIE && (oldAttributes.type || newAttributes.type)) return make (New);
+         if (B.internal.oldIE && oldAttributes.type !== newAttributes.type) return;
          dale.go (newAttributes, function (v, k) {
-            if (['', null, false].indexOf (v) !== -1) return;
+            if (v === oldAttributes [k] || ['', null, false].indexOf (v) !== -1) return;
             element.setAttribute (B.internal.olderIE && k === 'class' ? 'className' : k, v);
             if (k === 'value') element.value = v;
             if (B.internal.oldFF    && k === 'value')    element.value = v;
@@ -561,37 +566,48 @@ Please refer to readme.md to read the annotated source.
          return element;
       }
 
-      var recyclables = {};
+      var recyclables = {}, toRemove = {};
 
       dale.go (diff, function (v, k) {
          var elementType = v [1].substr (0, 1);
          if (elementType === 'C') return;
          if (v [0] === 'keep') {
             if (B.internal.olderIE && elementType === 'O' && extract (v [1], 'attributes').checked) elements [k].setAttribute ('checked', true);
-            if (elementType !== 'P') return place ('keep', positions [k], elements [k]);
+            if (elementType !== 'P') return place (positions [k], elements [k]);
             elements [k].parentNode.removeChild (elements [k]);
          }
          if (v [0] === 'rem')  {
-            if (elementType === 'O') recyclables [extract (v [1], 'tag')] = k;
+            if (elementType === 'O') {
+               recyclables [extract (v [1], 'tag')] = k;
+               return toRemove [k] = true;
+            }
             return elements [k].parentNode.removeChild (elements [k]);
          }
 
-         if (elementType === 'L') return place ('add', positions [k], make (v [1]));
+         if (elementType === 'L') return place (positions [k], make (v [1]));
          var tag = extract (v [1], 'tag'), recycleIndex = recyclables [tag], element;
 
          if (elementType === 'P' || recycleIndex === undefined) element = make (v [1]);
          else {
             element = recycle (elements [recycleIndex], diff [recycleIndex] [1], v [1]);
-            recyclables [tag] = undefined;
+            if (! element) element = make (v [1]);
+            else recyclables [tag] = toRemove [recycleIndex] = undefined;
          }
          elements [k] = element;
-         place ('add', positions [k], element);
+         place (positions [k], element);
          var olderIEAttributes = B.internal.olderIE ? extract (elementType === 'O' ? v [1] : processOpaque (v [1]).element, 'attributes') : {};
          if (olderIEAttributes.checked)   element.setAttribute ('checked', true);
          if (olderIEAttributes ['class']) element.className = olderIEAttributes ['class'];
       });
 
-      if (active && document.body.contains (active)) active.focus ? active.focus () : active.setActive ();
+      dale.go (toRemove, function (v, k) {
+         if (v === true) elements [k].parentNode.removeChild (elements [k]);
+      });
+
+      if (active && document.body.contains (active) && active !== document.activeElement) {
+         active.focus ();
+         if (B.internal.oldIE) active.focus ();
+      }
    }
 
    B.diff = function (s1, s2) {

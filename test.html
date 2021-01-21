@@ -1727,9 +1727,11 @@
 
                   if ([
                      '<div id="в19" path="State:select"><select><option>1</option><option>2</option><option>3</option></select><select><option>1</option><option selected="true">2</option><option>3</option></select></div>',
-                     // Compatibility: IE<=8 uppercases the tag, removes the quotes around id, changes the selected attribute and selects the first option of a select without a selected option
-                     '<DIV id=в19 path="State:select"><SELECT><OPTION selected>1</OPTION><OPTION>2</OPTION><OPTION>3</OPTION></SELECT><SELECT><OPTION>1</OPTION><OPTION selected>2</OPTION><OPTION>3</OPTION></SELECT></DIV>'
-                  ].indexOf (document.body.innerHTML) === -1) return 'Checkboxes #2: ' + document.body.innerHTML;
+                     // Compatibility: IE<=8 uppercases the tag and removes the quotes around id
+                     '<DIV id=в19 path="State:select"><SELECT><OPTION>1</OPTION><OPTION>2</OPTION><OPTION>3</OPTION></SELECT><SELECT><OPTION>1</OPTION><OPTION selected>2</OPTION><OPTION>3</OPTION></SELECT></DIV>'
+                  ].indexOf (document.body.innerHTML) === -1) {
+                     return 'Checkboxes #2: ' + document.body.innerHTML;
+                  }
                   if (c ('option') [4].selected !== true) return 'Option values not set #2.';
 
                });
@@ -1813,7 +1815,8 @@
                            ['br'],
                            // Compatibility: Firefox<=3 requires autocomplete=off to update the values of select elements.
                            // https://stackoverflow.com/questions/1479233/why-doesnt-firefox-show-the-correct-default-select-option#comment42017501_1505693
-                           ['select', {autocomplete: B.internal.oldFF ? 'off' : undefined, onchange: B.ev ('set', ['Data', 'i6'])}, dale.go (['select one', 'leisure', 'ok computer', 'second coming'], function (v) {
+                           // Compatibility: Chrome<=28 and Safari<=8 sometimes require to set the value of the select so that the correct option is selected, otherwise the first option is marked as selected even though there's another option that's selected.
+                           ['select', {autocomplete: B.internal.oldFF ? 'off' : undefined, value: B.get ('Data', 'i6'), onchange: B.ev ('set', ['Data', 'i6'])}, dale.go (['select one', 'leisure', 'ok computer', 'second coming'], function (v) {
                               return ['option', {selected: B.get ('Data', 'i6') === v ? true : false, value: v}, v];
                            })]
                         ]];
@@ -1866,6 +1869,7 @@
                   B.call (x, 'set', ['Data', 'i6'], 'ok computer');
 
                   if (c ('option') [2].selected !== true)       return 'select wasn\'t updated after data change 1.';
+
                   if (c ('select') [0].value !== 'ok computer') return 'select wasn\'t updated after data change 2.';
 
                   c ('#i7').focus ();
@@ -2063,7 +2067,7 @@
                   B.unmount ('body');
 
                   // I haven't yet found a way to trigger a queued redraw. gotoB's redraw mechanism is synchronous. Setting timeouts just before triggering a long redraw only pushes the execution of the timeout further.
-                  // I have however seen a trigger for a redraw happening *before* the end of another redraw in applications where a DOM element (usually an input) has more than one event handler (for example, both "oninput" and "onchange"). In that case, the queuing mechanism of B.redraw kicks in to perform redraws on a first come, first serve basis. I haven't yet found a way to programatically triggering such a situation programatically. Until I do, I leave this stub as a placeholder for a future test.
+                  // I have however seen a trigger for a redraw happening *before* the end of another redraw in applications where a DOM element (usually an input) has more than one event handler (for example, both "oninput" and "onchange"). In that case, the queuing mechanism of B.redraw kicks in to perform redraws on a first come, first serve basis. I haven't yet found a way to trigger such a situation programatically. Until I do, I leave this stub as a placeholder for a future test.
 
                });
 

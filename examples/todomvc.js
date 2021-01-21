@@ -44,7 +44,7 @@ Views.style = [
       position: 'relative',
       'box-shadow': '0 2px 4px 0 rgba(0, 0, 0, 0.2), 0 25px 50px 0 rgba(0, 0, 0, 0.1)'
    }, [
-      dale.do (['-webkit-input', '-moz', 'input'], function (v) {
+      dale.go (['-webkit-input', '-moz', 'input'], function (v) {
          return ['input::' + v + '-placeholder', {
             'font-style': 'italic',
             'font-weight': '300',
@@ -249,8 +249,17 @@ Views.style = [
    ])
 ];
 
+B.mount ('body', function () {
+   return ['div', [
+      ['h2', ['TodoMVC (under construction)']],
+   ]];
+});
+
+// TODO: re-implement
+
 // *** STORAGE ***
 
+/*
 B.listen ('load', '*', function (x) {
    if (! localStorage ['todos-gotoB']) {
       localStorage.setItem ('todos-gotoB', '{"todos": []}');
@@ -436,6 +445,7 @@ if (! Storage) {
 B.mount ('body', Views.main ());
 
 B.do ({from: {ev: 'initializeLoad'}}, 'load', ['data', 'calc']);
+*/
 
 /*
 XXX ADD AUTOMATIC TESTS

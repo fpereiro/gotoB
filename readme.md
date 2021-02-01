@@ -2517,10 +2517,10 @@ As a central design decision, gotoв only updates one view at a time. This helps
 
 Despite both the event system and the redraws being fully synchronous (performing no calls to `setTimeout` or `setInterval`), we still need to add queuing logic to prevent overlapping redraws. This can happen when (for example) a user interacts with a DOM element and an event is called that triggers a redraw, all while another view is being redrawn.
 
-We use the `B.internal.redrawing` variable to determine whether a redraw is taking place already. If it does, and `fromQueue` is not `true` (which means that the function was called from a responder function), we wrap the arguments into an array and push them on `B.internal.queue`, to queue this redraw for later. We also `return` to stop the execution flow. The return value of this function, by the way, is meaningless, since this function operates fully through side-effects.
+We use the `B.internal.redrawing` variable to determine whether a redraw is taking place already. If it does, and `fromQueue` is not `true` (which means that the function was called from a responder function), we wrap the arguments into an array and push them on `B.internal.queue`, to queue this redraw for later. We also `return` to stop the execution flow. The return value of `B.redraw`, by the way, is meaningless, since this function operates exclusively through side-effects.
 
 ```javascript
-      if (B.internal.redrawing && ! fromQueue) return B.internal.queue.push ([x, id, oldElement, oldChildren]);
+      if (B.internal.redrawing && ! fromQueue) return B.internal.queue.push ([x, id, oldElement, oldChildren, msCreate]);
 ```
 
 If we're here, there was either no redraw taking place, or this redraw was triggered by the queuing logic. In case its the former, we set `B.internal.redrawing` to `true`, to denote that a redraw is taking place.

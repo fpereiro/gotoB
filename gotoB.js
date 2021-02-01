@@ -378,7 +378,7 @@ Please refer to readme.md to read the annotated source.
 
    B.redraw = function (x, id, oldElement, oldChildren, msCreate, fromQueue) {
 
-      if (B.internal.redrawing && ! fromQueue) return B.internal.queue.push ([x, id, oldElement, oldChildren]);
+      if (B.internal.redrawing && ! fromQueue) return B.internal.queue.push ([x, id, oldElement, oldChildren, msCreate]);
 
       B.internal.redrawing = true;
 

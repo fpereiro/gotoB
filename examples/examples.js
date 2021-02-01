@@ -43,7 +43,7 @@ var todoList = function () {
       ['h2', 'Todos'],
       B.view ('todos', function (todos) {
          return ['ul', dale.go (todos, function (todo, index) {
-            return ['li', [todo, ['span', {class: 'action', onclick: B.ev ('rem', 'todos', index)}, 'Remove']]];
+            return ['li', ['', todo, ['span', {'class': 'action', onclick: B.ev ('rem', 'todos', index)}, 'Remove']]];
          })];
       }),
       ['button', {onclick: B.ev ('create', 'todo')}, 'Create todo']

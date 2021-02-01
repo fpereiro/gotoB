@@ -1719,7 +1719,7 @@
                      '<div id="в19" path="State:select"><select><option>1</option><option selected="true">2</option><option>3</option></select></div>',
                      // Compatibility: IE<=8 uppercases the tag, removes the quotes around id and changes the selected attribute
                      '<DIV id=в19 path="State:select"><SELECT><OPTION>1</OPTION><OPTION selected>2</OPTION><OPTION>3</OPTION></SELECT></DIV>'
-                  ].indexOf (document.body.innerHTML) === -1) return 'Checkboxes #1: ' + document.body.innerHTML;
+                  ].indexOf (document.body.innerHTML) === -1) return 'Selects #1: ' + document.body.innerHTML;
 
                   if (c ('option') [1].selected !== true) return 'Option values not set #1.';
 
@@ -1730,7 +1730,7 @@
                      // Compatibility: IE<=8 uppercases the tag and removes the quotes around id
                      '<DIV id=в19 path="State:select"><SELECT><OPTION>1</OPTION><OPTION>2</OPTION><OPTION>3</OPTION></SELECT><SELECT><OPTION>1</OPTION><OPTION selected>2</OPTION><OPTION>3</OPTION></SELECT></DIV>'
                   ].indexOf (document.body.innerHTML) === -1) {
-                     return 'Checkboxes #2: ' + document.body.innerHTML;
+                     return 'Selects #2: ' + document.body.innerHTML;
                   }
                   if (c ('option') [4].selected !== true) return 'Option values not set #2.';
 
@@ -1782,6 +1782,33 @@
 
                   // Compatibility: firing the change event doesn't work on IE<=7, so we skip the check.
                   if (c ('input') [0].checked !== true && ! B.internal.olderIE) return 'checkbox not checked after event.';
+
+                  B.unmount ('body');
+                  B.mount ('body', function () {
+                     return B.view (['Data', 'checkboxes'], function (checkboxes) {
+                        return ['div', dale.go (checkboxes, function (v, k) {
+                           return ['input', {type: 'checkbox', checked: v, onclick: B.ev ('set', ['Data', 'checkboxes', k], ! v)}];
+                        })];
+                     });
+                  });
+                  B.call (x, 'set', ['Data', 'checkboxes'], [false, false]);
+                  if (c ('input') [0].checked !== false) return 'checkbox test #2 - checkbox #1 should not be checked';
+                  if (c ('input') [1].checked !== false) return 'checkbox test #2 - checkbox #2 should not be checked';
+
+                  c ('input') [0].click ();
+
+                  // Compatibility: in IE<=7, clicking on the input doesn't seem to trigger the onclick handler.
+                  if (B.internal.olderIE) B.call (x, 'set', ['Data', 'checkboxes', 0], true);
+
+                  if (c ('input') [0].checked !== true) return 'checkbox test #2 - checkbox #1 should be checked after click';
+                  if (B.get ('Data', 'checkboxes', 0) !== true) return 'checkbox test #2 - clicking on checkbox did not update store values';
+                  B.call (x, 'set', ['Data', 'checkboxes'], [false, true]);
+                  if (c ('input') [0].checked !== false) return 'checkbox #1 should not be checked after change in data';
+                  B.call (x, 'set', ['Data', 'checkboxes'], [true, true]);
+                  if (c ('input') [0].checked !== true) return 'checkbox #1 should not be checked after second change in data';
+
+                  // We preserve the id for this test to avoid modifying the ids on all the following tests.
+                  B.internal.count = B.internal.count - 1;
                });
 
                Test ('B.view, events', function () {

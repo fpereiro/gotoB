@@ -552,15 +552,16 @@ Please refer to readme.md to read the annotated source.
          dale.go (newAttributes, function (v, k) {
             if (v === oldAttributes [k] || ['', null, false].indexOf (v) !== -1) return;
             element.setAttribute (B.internal.olderIE && k === 'class' ? 'className' : k, v);
-            if (k === 'value') element.value = v;
-            if (B.internal.oldFF    && k === 'value')    element.value = v;
+            if (k === 'value')   element.value = v;
+            if (k === 'checked') element.checked = true;
             if (B.internal.oldOpera && k === 'selected') element.selected = v;
          });
          dale.go (oldAttributes, function (v, k) {
-            if (['', null, false].indexOf (v) !== -1) return;
+            if (v === newAttributes [k] || ['', null, false].indexOf (v) !== -1) return;
             if (['', null, false, undefined].indexOf (newAttributes [k]) !== -1) {
                element.removeAttribute (B.internal.olderIE && k === 'class' ? 'className' : k, v);
-               if (k === 'value') element.value = '';
+               if (k === 'value')   element.value = '';
+               if (k === 'checked') element.checked = false;
             }
          });
          return element;

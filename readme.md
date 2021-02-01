@@ -108,7 +108,7 @@ var todoList = function () {
       ['h2', 'Todos'],
       B.view ('todos', function (todos) {
          return ['ul', dale.go (todos, function (todo, index) {
-            return ['li', [todo, ['span', {class: 'action', onclick: B.ev ('rem', 'todos', index)}, 'Remove']]];
+            return ['li', ['', todo, ['span', {'class': 'action', onclick: B.ev ('rem', 'todos', index)}, 'Remove']]];
          })];
       }),
       ['button', {onclick: B.ev ('create', 'todo')}, 'Create todo']
@@ -3292,27 +3292,33 @@ If `k` is `value`, we also set the `value` of the `element`. This is sometimes n
 
 ```javascript
             element.setAttribute (B.internal.olderIE && k === 'class' ? 'className' : k, v);
-            if (k === 'value') element.value = v;
+            if (k === 'value')   element.value = v;
 ```
 
-Before closing the iteration of `newAttributes`, we provide workarounds for bugs in old browsers. In the case of Firefox <= 3, we need to set `value` explicitly. In the case of Opera <= 12, we need to set explicitly the `selected` property.
+If `k` is `checked`, we also set the `checked` property of the `element` to `true`. This is sometimes necessary when recycling checkboxes.
 
 ```javascript
-            if (B.internal.oldFF    && k === 'value')    element.value = v;
+            if (k === 'checked') element.checked = true;
+```
+
+Before closing the iteration of `newAttributes`, we provide workarounds for a bug in Opera <= 12, where we need to set explicitly the `selected` property.
+
+```javascript
             if (B.internal.oldOpera && k === 'selected') element.selected = v;
          });
 ```
 
-We iterate the `oldAttributes`. If they are an empty string, `false` or `null`, we ignore them. If there's no corresponding entry for them in `newAttributes`, we remove the attributes from `element`. In the case of Internet Explorer 7 and below, we remove `className` instead of `class`.
+We iterate the `oldAttributes`. If they are different to the corresponding entry from `newAttributes` or an empty string, `false` or `null`, we ignore them. If there's no corresponding entry for them in `newAttributes`, we remove the attributes from `element` (since otherwise they would have been overwritten already). In the case of Internet Explorer 7 and below, we remove `className` instead of `class`.
 
-In the case where we're removing the `value` from an element, we also have to set the value explicitly to `null` - this seems to be necessary only sometimes.
+In the case where we're removing the `value` from an element, we also have to set the value explicitly to an empty string - this seems to be necessary only sometimes. We also set `checked` to false if `k` is `checked`.
 
 ```javascript
          dale.go (oldAttributes, function (v, k) {
-            if (['', null, false].indexOf (v) !== -1) return;
+            if (v === newAttributes [k] || ['', null, false].indexOf (v) !== -1) return;
             if (['', null, false, undefined].indexOf (newAttributes [k]) !== -1) {
                element.removeAttribute (B.internal.olderIE && k === 'class' ? 'className' : k, v);
-               if (k === 'value') element.value = null;
+               if (k === 'value')   element.value = '';
+               if (k === 'checked') element.checked = false;
             }
          });
 ```

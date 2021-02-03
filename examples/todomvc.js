@@ -362,7 +362,8 @@ var todoMVC = function () {
                               onclick: B.ev ('set', ['todos', index, 'completed'], ! todo.completed)
                            }],
                            ['label', {ondblclick: B.ev ('start', 'edit', index)}, todo.title],
-                           ['button', {'class': 'destroy', onclick: B.ev ('rem', 'todos', index)}]
+                           // We need to add type: button, otherwise IE10 will consider an enter keydown to be a click
+                           ['button', {type: 'button', 'class': 'destroy', onclick: B.ev ('rem', 'todos', index)}]
                         ]],
                         ['input', {
                            'class':   'edit',
@@ -392,7 +393,8 @@ var todoMVC = function () {
                      }, filter]];
                   })];
                }),
-               all === incomplete ? [] : ['button', {'class': 'clear-completed', onclick: B.ev ('clear', 'completed')}, 'Clear completed']
+               // We need to add type: button, otherwise IE10 will consider an enter keydown to be a click
+               all === incomplete ? [] : ['button', {type: 'button', 'class': 'clear-completed', onclick: B.ev ('clear', 'completed')}, 'Clear completed']
             ]];
          })
       ]],

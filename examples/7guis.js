@@ -104,18 +104,19 @@ views.booker = function () {
    ]];
 }
 
-B.respond ('change', ['flight', /departure|return/, 'input'], function (x, value) {
-   var date = value.split ('.');
-   date = new Date (date [2] + '-' + date [1] + '-' + date [0]).getTime ();
-   if (isNaN (date)) return B.call (x, 'rem', ['flight', x.path [1]], 'date');
-   B.call (x, 'set', ['flight', x.path [1], 'date'], date);
-});
-
-B.respond ('flight', 'book', function (x) {
-   var message = 'You have booked a ' + (B.get ('flight', 'type') || 'one-way') + ' flight on ' + B.get ('flight', 'departure', 'input');
-   if (B.get ('flight', 'type') === 'return') message += ' returning on ' + B.get ('flight', 'return', 'input');
-   alert (message);
-});
+B.mrespond ([
+   ['change', ['flight', /departure|return/, 'input'], function (x, value) {
+      var date = value.split ('.');
+      date = new Date (date [2] + '-' + date [1] + '-' + date [0]).getTime ();
+      if (isNaN (date)) return B.call (x, 'rem', ['flight', x.path [1]], 'date');
+      B.call (x, 'set', ['flight', x.path [1], 'date'], date);
+   }],
+   ['flight', 'book', function (x) {
+      var message = 'You have booked a ' + (B.get ('flight', 'type') || 'one-way') + ' flight on ' + B.get ('flight', 'departure', 'input');
+      if (B.get ('flight', 'type') === 'return') message += ' returning on ' + B.get ('flight', 'return', 'input');
+      alert (message);
+   }],
+]);
 
 B.call ('set', ['flight', 'departure', 'input'], '01.01.2020');
 B.call ('set', ['flight', 'return',    'input'], '01.01.2020');
@@ -158,15 +159,16 @@ views.timer = function () {
    ]];
 }
 
-B.respond ('update', 'timer', function (x, value) {
-   B.call (x, 'set', ['timer', 'total'], value);
-});
-
-B.respond ('timer', 'tick', function (x) {
-   var time = B.get ('timer', 'elapsed') || 0;
-   if (time > B.get ('timer', 'total')) return;
-   B.call (x, 'set', ['timer', 'elapsed'], (Math.round (time * 10) + 1) / 10);
-});
+B.mrespond ([
+   ['update', 'timer', function (x, value) {
+      B.call (x, 'set', ['timer', 'total'], value);
+   }],
+   ['timer', 'tick', function (x) {
+      var time = B.get ('timer', 'elapsed') || 0;
+      if (time > B.get ('timer', 'total')) return;
+      B.call (x, 'set', ['timer', 'elapsed'], (Math.round (time * 10) + 1) / 10);
+   }]
+]);
 
 setInterval (function () {
    B.call ('timer', 'tick');
@@ -237,38 +239,113 @@ B.mount ('body', views.crud);
 views.drawer = function () {
    return ['div', [
       ['style', [
+         ['div.circles', {'width, height': 300, border: 'solid 1px black', margin: 10}, ['svg', {'width, height': 1}]]
       ]],
       ['h2', ['Circle drawer (under construction)']],
       ['div', [
-         ['button', 'Undo'],
-         ['button', 'Redo'],
+         ['button', {onclick: B.ev ('undo', 'history')}, 'Undo'],
+         ['button', {onclick: B.ev ('redo', 'history')}, 'Redo']
       ]],
-      B.view (['drawer', 'circles'], function (circles) {
-         return ['div', ['LITERAL', '<svg width="300" height="200">' + dale.go (circles, function (circle) {
-            return '<circle cx="' + circle.x + '" cy="' + circle.y + '" r="' + circle.r + '" stroke="black" stroke-width="1" fill="gray" />';
+      B.view ([['drawer', 'position'], ['drawer', 'history'], ['drawer', 'selected']], function (position, history, selected) {
+         var circles = resolveCircles (position, history);
+         return ['div', {
+            'class': 'circles',
+            onmousemove: B.ev ('move',   'mouse',  {raw: 'event'}),
+            onclick:     B.ev ('create', 'circle', {raw: 'event'})
+         }, ['LITERAL', '<svg>' + dale.go (circles, function (circle) {
+            var fill = circle.id === selected ? 'purple' : 'none';
+            // We stop propagation of the click to not draw another circle if we're selecting a circle to edit it.
+            return '<circle id="c' + circle.id + '" cx="' + circle.x + '" cy="' + circle.y + '" r="' + circle.radius + '" stroke="black" stroke-width="1" fill="' + fill + '" onclick="event.stopPropagation (); ' + B.ev ('set', ['drawer', 'edit'], {id: circle.id, radius: circle.radius}).replace (/"/g, '\'') + '"/>';
          }).join ('\n')]];
       }),
-      ['input', {
-         type: 'range',
-         min: 0,
-         max: 60,
-         value: 20,
-         oninput: B.ev ('set', ['drawer', 'circles', 0, 'r'], {raw: 'this.value'})
-      }]
+      B.view (['drawer', 'edit'], function (edit) {
+         // TODO: disable rest of the app, on close set resize, add style
+         if (! edit) return ['p'];
+         return ['input', {
+            type: 'range',
+            min: 0,
+            max: 150,
+            value: edit.radius,
+            oninput: B.ev ('resizeTemp', 'circle', edit.id, {raw: 'parseInt (this.value)'})
+         }];
+      })
    ]];
 }
 
-// 'drawer', 'circles'
-// 'drawer', 'history'
+var resolveCircles = function (position, history) {
+   var circles = {};
+   dale.go (position === undefined ? history : history.slice (0, position), function (change) {
+      if (change.op === 'create') circles [change.id]        = change;
+      if (change.op === 'resize') circles [change.id].radius = change.radius;
+   });
+   return dale.go (circles, function (circle) {return circle});
+}
 
-B.respond ('circle', 'create', function (x, xcoord, ycoord, size) {
-   B.call (x, 'add', ['drawer', 'circles'], context);
-});
+var distance = function (p1, p2) {
+   return Math.pow (Math.pow (p1.x - p2.x, 2) + Math.pow (p1.y - p2.y, 2), 0.5);
+}
+
+B.mrespond ([
+   ['append', 'history', function (x, change) {
+      var position = B.get ('drawer', 'position') || 0, history = B.get ('drawer', 'history') || [];
+      // We remove the history after the current position, if any.
+      history = history.slice (0, position);
+      history.push (change);
+      B.call (x, 'set', ['drawer', 'history'], history);
+      B.call (x, 'set', ['drawer', 'position'], position + 1);
+   }],
+   ['create', 'circle', function (x, ev) {
+      B.call (x, 'append', 'history', {op: 'create', id: teishi.time (), radius: 20, x: ev.offsetX, y: ev.offsetY});
+   }],
+   ['resize', 'circle', function (x, id, radius) {
+      B.call (x, 'append', 'history', {op: 'resize', id: id, radius: radius});
+   }],
+   ['resizeTemp', 'circle', function (x, id, radius) {
+      c ('#c' + id).setAttribute ('r', radius);
+   }],
+   ['move', 'mouse', function (x, ev) {
+      // We slice circles to copy it, so we can sort it without affecting the original.
+      var circles = resolveCircles (B.get ('drawer', 'position'), B.get ('drawer', 'history')).slice ();
+      if (circles.length === 1) circles [0].d = distance ({x: ev.offsetX, y: ev.offsetY}, circles [0]);
+      else {
+         // We sort circles so that the closest one to the mouse is at the beginning of the array.
+         circles.sort (function (c1, c2) {
+            // We put the distances on the circles to already have them.
+            c1.d = distance ({x: ev.offsetX, y: ev.offsetY}, c1);
+            c2.d = distance ({x: ev.offsetX, y: ev.offsetY}, c2);
+            // If distances are the same, prefer the newest circle (largest id)
+            if (c1.d === c2.d) return c1.id - c2.id;
+            return c1.d - c2.d;
+         });
+      }
+      var selected = dale.stopNot (circles, undefined, function (circle) {
+         if (circle.d < circle.radius) return circle.id;
+      });
+      B.call (x, 'set', ['drawer', 'selected'], selected);
+   }],
+   ['undo', 'history', function (x) {
+      var position = B.get ('drawer', 'position'), history = B.get ('drawer', 'history') || [];
+      if (history.length === 0) return;
+      B.call (x, 'set', ['drawer', 'position'], Math.max (0, position - 1));
+   }],
+   ['redo', 'history', function (x) {
+      var position = B.get ('drawer', 'position'), history = B.get ('drawer', 'history') || [];
+      if (history.length === 0) return;
+      B.call (x, 'set', ['drawer', 'position'], Math.min (history.length, position + 1));
+   }]
+]);
+
+/*
+- left click in empty area creates unfilled circle with fixed size and center in the click
+- circle with center closest to the mouse and that has a radius larger than that distance will be grayed
+- right click makes a popup appear to adjust diameter of circle at X Y, slider adjusts immediately
+- closing popup frame is a change on undo/redo
+- undo either removes circle or a change of size
+- redo is the opposite
+- if a change is made with some redos, redos are eliminated
+*/
 
 B.mount ('body', views.drawer);
-
-B.call ('add', ['drawer', 'circles'], {x: 50, y: 50, r: 20});
-B.call ('add', ['drawer', 'circles'], {x: 20, y: 20, r: 3});
 
 // *** CELLS ***
 

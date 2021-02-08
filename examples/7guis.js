@@ -241,33 +241,38 @@ views.drawer = function () {
       ['style', [
          ['div.circles', {'width, height': 300, border: 'solid 1px black', margin: 10}, ['svg', {'width, height': 1}]]
       ]],
-      ['h2', ['Circle drawer (under construction)']],
+      ['h2', ['Circle drawer']],
       ['div', [
          ['button', {onclick: B.ev ('undo', 'history')}, 'Undo'],
          ['button', {onclick: B.ev ('redo', 'history')}, 'Redo']
       ]],
-      B.view ([['drawer', 'position'], ['drawer', 'history'], ['drawer', 'selected']], function (position, history, selected) {
+      B.view ([['drawer', 'position'], ['drawer', 'history'], ['drawer', 'selected'], ['drawer', 'edit']], function (position, history, selected, edit) {
          var circles = resolveCircles (position, history);
          return ['div', {
             'class': 'circles',
-            onmousemove: B.ev ('move',   'mouse',  {raw: 'event'}),
-            onclick:     B.ev ('create', 'circle', {raw: 'event'})
+            style:       edit ? 'opacity: 0.5' : '',
+            onmousemove: edit ? undefined : B.ev ('move',   'mouse',  {raw: 'event'}),
+            onclick:     edit ? undefined : B.ev ('create', 'circle', {raw: 'event'})
          }, ['LITERAL', '<svg>' + dale.go (circles, function (circle) {
-            var fill = circle.id === selected ? 'purple' : 'none';
-            // We stop propagation of the click to not draw another circle if we're selecting a circle to edit it.
-            return '<circle id="c' + circle.id + '" cx="' + circle.x + '" cy="' + circle.y + '" r="' + circle.radius + '" stroke="black" stroke-width="1" fill="' + fill + '" onclick="event.stopPropagation (); ' + B.ev ('set', ['drawer', 'edit'], {id: circle.id, radius: circle.radius}).replace (/"/g, '\'') + '"/>';
+            var fill    = circle.id === selected ? 'purple' : 'none';
+            // We stop propagation of the click to not draw another circle if we're selecting a circle to edit it. We return false to avoid the context menu from appearing.
+            var oncontextmenu = edit ? '' : 'event.stopPropagation (); ' + B.ev ('set', ['drawer', 'edit'], {id: circle.id, radius: circle.radius, x: circle.x, y: circle.y}).replace (/"/g, '\'') + ' return false';
+            return '<circle id="c' + circle.id + '" cx="' + circle.x + '" cy="' + circle.y + '" r="' + circle.radius + '" stroke="black" stroke-width="1" fill="' + fill + '" oncontextmenu="' + oncontextmenu + '"/>';
          }).join ('\n')]];
       }),
       B.view (['drawer', 'edit'], function (edit) {
-         // TODO: disable rest of the app, on close set resize, add style
-         if (! edit) return ['p'];
-         return ['input', {
-            type: 'range',
-            min: 0,
-            max: 150,
-            value: edit.radius,
-            oninput: B.ev ('resizeTemp', 'circle', edit.id, {raw: 'parseInt (this.value)'})
-         }];
+         if (! edit) return ['span'];
+         return ['div', {'class': 'modal'}, [
+            ['p', 'Adjust diameter of circle at (' + edit.x + ', ' + edit.y + ')'],
+            ['input', {
+               type: 'range',
+               min: 0,
+               max: 150,
+               value: edit.radius,
+               oninput: B.ev (['resizeTemp', 'circle', edit.id, {raw: 'parseInt (this.value)'}], ['set', ['drawer', 'edit', 'radius'], {raw: 'parseInt (this.value)'}])
+            }],
+            ['button', {onclick: B.ev ('resize', 'circle', edit.id, edit.radius)}, 'Done']
+         ]];
       })
    ]];
 }
@@ -275,7 +280,7 @@ views.drawer = function () {
 var resolveCircles = function (position, history) {
    var circles = {};
    dale.go (position === undefined ? history : history.slice (0, position), function (change) {
-      if (change.op === 'create') circles [change.id]        = change;
+      if (change.op === 'create') circles [change.id]        = teishi.copy (change);
       if (change.op === 'resize') circles [change.id].radius = change.radius;
    });
    return dale.go (circles, function (circle) {return circle});
@@ -298,6 +303,7 @@ B.mrespond ([
       B.call (x, 'append', 'history', {op: 'create', id: teishi.time (), radius: 20, x: ev.offsetX, y: ev.offsetY});
    }],
    ['resize', 'circle', function (x, id, radius) {
+      B.call (x, 'rem', 'drawer', 'edit');
       B.call (x, 'append', 'history', {op: 'resize', id: id, radius: radius});
    }],
    ['resizeTemp', 'circle', function (x, id, radius) {

@@ -8,6 +8,8 @@ This will be most useful for those just dipping their feet into developing webap
 
 This is the resource I wanted to find back when I started writing webapps back in 2009; ten years later, I'm writing it for those of you who are today starting out.
 
+**Warning: this tutorial is currently being written and several sections are still drafts or altogether missing.**
+
 ## Part 1: basic concepts
 
 ### Why develop webapps?

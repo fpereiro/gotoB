@@ -57,7 +57,7 @@ An in-depth tutorial is available [here](tutorial/tutorial.md). The tutorial cov
 - [Frequently Asked Questions](#faq)
 - [API reference](#api-reference)
 - [Internals](#internals)
-- [Annotated source code](#source-code)
+- [Annotated source code](#annotated-source-code)
 - [License](#license)
 - [Appendix: A brief history of the frontend](#a-brief-history-of-the-frontend)
 - [Appendix: Lessons from the quest for IE6 compatibility](#lessons-from-the-quest-for-ie6-compatibility)
@@ -371,7 +371,7 @@ And, of course, gotoв must be very useful for building a real webapp.
 
 - You have freedom to decide the technology you use.
 - Complexity is a massive turn-off for you.
-- You like ES5 javascript.
+- You like old (ES5) javascript.
 - You miss not having to compile your javascript.
 - You enjoy understanding the internals of a tool, so that you can then use it with precision and confidence.
 - You like technology that's a bit strange.
@@ -390,7 +390,7 @@ And, of course, gotoв must be very useful for building a real webapp.
 - **Fast reload**: the edit-reload cycle should take under two seconds. No need to wait until no bundle is completed.
 - **Smallness**: gotoв and its dependencies are < 2048 lines of consistent, annotated javascript. In other words, it is less than 2048 lines on top of [vanilla.js](http://vanilla-js.com/).
 - **Batteries included**: the core functionality for building a webapp is all provided. Whatever libraries you add on top will probably be for specific things (nice CSS, a calendar widget, etc.)
-- **Trivial to set up**: add `<script src="https://cdn.jsdelivr.net/gh/fpereiro/gotob@/gotoB.min.js"></script>` at the top of the `<body>`.
+- **Trivial to set up**: add `<script src="https://cdn.jsdelivr.net/gh/fpereiro/gotob...@/gotoB.min.js"></script>` at the top of the `<body>`.
 - **Everything in plain sight**: all properties and state are directly accessible from the javascript console of the browser. DOM elements have stringified event handlers that can be inspected with any modern browser.
 - **Performance**: gotoв itself is small (~14kb when minified and gzipped, including all dependencies) so it is loaded and parsed quickly. Its view redrawing mechanism is reasonably fast.
 - **Cross-browser compatibility**: gotoв is intended to work on virtually all the browsers you may encounter. See browser current compatibility above in the *Installation* section.
@@ -473,7 +473,7 @@ B.mount ('#container', function () {
 });
 ```
 
-`B.unmount` is a function to undo what was done by `B.mount`. It receives a `target` which is just like the `target` passed to `B.mount`. It will remove **all of the HTML** contained inside `target`. If an invalid or non-existing `target` is passed to `B.unmount`, the function will report an error and return `false`.
+`B.unmount` is a function to undo what was done by `B.mount`. It receives a `target` which is just like the `target` passed to `B.mount`. It will remove **all of the HTML** contained inside `target` - not just the HTML added there by `B.mount`. If an invalid or non-existing `target` is passed to `B.unmount`, the function will report an error and return `false`.
 
 ```javascript
 B.unmount ('#container');
@@ -571,7 +571,10 @@ Notice that in the example above we called `B.respond` before `B.call`; if we ha
 
 Wildcards (`'*'`) and regexes can be used in the `verbs` and `path` elements of responders, but not of events.
 
-Regarding the optional `options` object passed to `B.respond`, please check [recalc's documentation](https://github.com/fpereiro/recalc#rrespond) for a full specification; the most useful ones are: 10 `id` (a string or integer), to determine the responder's `id`; 2) `priority`, an integer value and determines the order of execution if multiple responders are matched by an event call; by default, `priority` is 0, but you can specify a number that's larger or smaller than that (the higher the priority, the earlier the responder will be executed). If two responders are matched and have the same priority, the oldest one takes precedence; 3) `match`, a function to let the responder decide whether it should be matched by any incoming event; this function supersedes the default `verb` and `path` matching logic with your own custom logic; the function receives two rguments, an object with the `verb` and `path` of the event being called, plus the responder itself.
+Regarding the optional `options` object passed to `B.respond`, please check [recalc's documentation](https://github.com/fpereiro/recalc#rrespond) for a full specification; the most useful ones are:
+- `id` (a string or integer), to determine the responder's `id`
+- `priority`, an integer value and determines the order of execution if multiple responders are matched by an event call; by default, `priority` is 0, but you can specify a number that's larger or smaller than that (the higher the priority, the earlier the responder will be executed). If two responders are matched and have the same priority, the oldest one takes precedence
+- `match`, a function to let the responder decide whether it should be matched by any incoming event; this function supersedes the default `verb` and `path` matching logic with your own custom logic; the provided function receives two arguments, an object with the `verb` and `path` of the event being called, plus the responder itself.
 
 Responders are stored in `B.responders`. To remove a responder, invoke `B.forget`, passing the `id` of the responder. The `id` of the responder will be that provided by you when creating it (if you passed it as an option), or the automatically generated `id` which will be returned if the invocation to `B.respond` was successful.
 
@@ -584,7 +587,7 @@ Rather than modifying the `store` directly, gotoв requires you to do it through
 1. Update the store.
 2. Call a `change` event.
 
-`change` events are very important, because these are the ones that update the page! In fact, `B.view`, the function for creating reactive elements, creates event responders that are matched when `change` events are called.
+`change` events are very important, because these are the ones that update the page! In fact, `B.view`, the function for creating reactive elements (which will cover below), creates event responders that are matched when `change` events are called.
 
 Let's see now each of these responders:
 
@@ -768,7 +771,7 @@ B.call ('rem', [], ['Data', 'State']);
 
 ### Event calls from the DOM: `B.ev`
 
-Since gotoв applications are structured around events and responders, user interactions must call events. This means that certain DOM elements need to call events. For this purpose, you can use the function `B.ev`, which creates stringified event handlers that we can pass to DOM elements, in order to trigger events from them. Let's see an example:
+Since gotoв applications are structured around events and responders, user interactions must call events. This means that certain DOM elements need to call gotoв events from from their native event handlers (for example, `onclick`). For this purpose, you can use the function `B.ev`, which creates stringified event handlers that we can pass to DOM elements, in order to trigger events from them. Let's see an example:
 
 ```javascript
 var button = function () {
@@ -1201,7 +1204,7 @@ Apply diff but give up
 
 deterministic diff, deterministic id assignation.
 
-## Source code
+## Annotated source code
 
 The complete source code is contained in `gotoB.js`. gotoв itself is about 670 lines long; its dependencies are about 1380 lines; the whole thing is about 2050 lines.
 

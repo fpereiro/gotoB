@@ -341,16 +341,6 @@ B.mrespond ([
    }]
 ]);
 
-/*
-- left click in empty area creates unfilled circle with fixed size and center in the click
-- circle with center closest to the mouse and that has a radius larger than that distance will be grayed
-- right click makes a popup appear to adjust diameter of circle at X Y, slider adjusts immediately
-- closing popup frame is a change on undo/redo
-- undo either removes circle or a change of size
-- redo is the opposite
-- if a change is made with some redos, redos are eliminated
-*/
-
 B.mount ('body', views.drawer);
 
 // *** CELLS ***

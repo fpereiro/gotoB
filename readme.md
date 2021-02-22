@@ -16,6 +16,8 @@ gotoв is a framework optimized for understanding. Its purpose is to allow you t
 
 In my experience, understanding leads to short and beautiful code that can last for years in a production setting. It is my sincere hope that you'll be able to use gotoв to create reliable webapps and have a lot of fun while at it.
 
+Because gotoв is optimized for understanding, if anything on this readme strikes you as unclear or confusing, please [let me know](https://github.com/fpereiro/gotoB/issues). I'll be glad to improve the explanation and make it better for you and everyone else.
+
 ## Installation
 
 gotoв is written in Javascript. You can use it in the browser by loading the pre-built file, `gotoB.min.js`, in a `<script>` tag at the top of the `<body>`:
@@ -481,7 +483,7 @@ B.unmount ('#container');
 // `document.body.innerHTML` will now be an empty string.
 ```
 
-`B.mount` nor `B.unmount` will both return `undefined` if the operation is successful.
+Both `B.mount` and `B.unmount` will return `undefined` if the operation is successful.
 
 ### Introduction to the event system: `B.call`, `B.respond`, `B.responders`, `B.forget`
 
@@ -578,7 +580,7 @@ Regarding the optional `options` object passed to `B.respond`, please check [rec
 
 Responders are stored in `B.responders`. To remove a responder, invoke `B.forget`, passing the `id` of the responder. The `id` of the responder will be that provided by you when creating it (if you passed it as an option), or the automatically generated `id` which will be returned if the invocation to `B.respond` was successful.
 
-### Data: `B.store` and the data responders (`'set'`, `'add'` and `'rem'`)
+### Data: `B.store` and the built-in data responders (`'set'`, `'add'` and `'rem'`)
 
 As we saw in the introduction, all the state and data that is relevant to the frontend should be stored inside `B.store`, which is a plain object where all the data is contained.
 
@@ -699,6 +701,8 @@ B.call ('add', ['Data', 'items']);
 // B.store is now {Data: {items: []}}
 ```
 
+If `path` points to a location that is neither `undefined` nor an array, an error will be reported and no change will happen to `B.store`.
+
 #### `rem`
 
 The third and final data responder is `rem`. This responder removes keys from either an array or an object within the store. Like the other data responders, it receives a `path`, plus zero or more keys that will be removed.
@@ -741,7 +745,7 @@ B.call ('rem', ['Data', 'items', 0], 'foo');
 // The last invocation will also report an error and make no change on B.store
 ```
 
-If `path` points to `undefined`, `rem` will not produce any effect but no error will be printed.
+An exception to the above rule is that if `path` points to `undefined`, `rem` will not produce any effect but no error will be printed.
 
 ```javascript
 B.call ('rem', ['Data', 'foo'], 'bar');
@@ -771,7 +775,7 @@ B.call ('rem', [], ['Data', 'State']);
 
 ### Event calls from the DOM: `B.ev`
 
-Since gotoв applications are structured around events and responders, user interactions must call events. This means that certain DOM elements need to call gotoв events from from their native event handlers (for example, `onclick`). For this purpose, you can use the function `B.ev`, which creates stringified event handlers that we can pass to DOM elements, in order to trigger events from them. Let's see an example:
+Since gotoв applications are structured around events and responders, user interactions must call events. This means that certain DOM elements need to call gotoв events from from their native event handlers (for example, the `onclick` should invoke `B.call`). For this purpose, you can use the function `B.ev`, which creates stringified event handlers that we can pass to DOM elements, in order to trigger events from them. Let's see an example:
 
 ```javascript
 var button = function () {
@@ -831,7 +835,7 @@ You can pass multiple raw arguments. For example, if you want to pass both `this
 ['button', {onclick: B.ev ('submit', 'data', {raw: 'this.value'}, {raw: 'event'})}]
 ```
 
-If an object has a key `raw` but its value is not a string, it will be considered as a literal argument instead:
+If an object has a key `raw` but its value is not a string, it will be considered as a normal argument instead:
 
 ```javascript
 ['button', {onclick: B.ev ('submit', 'data', {raw: 0})}]
@@ -850,6 +854,8 @@ You can pass multiple events to `B.ev` as multiple arguments wrapped in arrays.
 ```javascript
 ['button', {onclick: B.ev (['submit', 'data'], ['do', ['something', 'else']])}]
 ```
+
+If the `onclick` handler for the button above is called, `B.call` will be called twice, first with `'submit', 'data'` as arguments and then with `'do', ['something', 'else']` as arguments.
 
 If invalid inputs are passed to `B.ev`, the function will report an error and return `false`.
 
@@ -877,7 +883,7 @@ B.mount ('body', counter);
 As you can see above, `B.view` takes two arguments:
 
 - A `path`.
-- A `vfun` (view function). Recall that `vfuns` are functions that return liths. This function receives as argument the value of the relevant part of the store. This function must always return a lith.
+- A `vfun` (view function). Recall that `vfuns` are functions that return liths. This function receives as an argument the value of the store at `path`. This function must always return a lith.
 
 When `B.store.counter` is updated, the `vfun` will be executed again and the view updated.
 
@@ -950,13 +956,21 @@ var invalidVfun2 = function () {
 }
 ```
 
-By requiring every view to return a lith, there's a 1:1 relationship between a view and a DOM element. This makes both debugging and the implementation of the library simpler. (Why is the simplicity of the implementation important? Because gotoв is also meant to be understood, not just used. Simple implementations are easier to understand).
+By requiring every view to return a lith, there's a 1:1 relationship between a view and a DOM element. This makes both debugging and the implementation of the library simpler. (Why is the simplicity of the implementation important? Because gotoв is also meant to be understood, not just used. Simpler implementations are easier to understand).
 
 If its inputs are valid, `B.view` returns the lith produced by the `vfun` passed as its second argument. Besides that, it sets up a responder that will be matched when a `change` event is fired with a `path` that was passed to `B.view`.
 
 If it receives invalid inputs, or the `vfun` doesn't return a lith, `B.view` will report an error and return `false`.
 
-If you want to encapsulate a view in a variable for later reuse in multiple places, do it as a function that returns an invocation to `B.view`, instead of storing the invocation to `B.view`:
+Each invocation to `B.view` creates a responder with a verb `change`. gotoв uses the event system itself to redraw views, so that everything (even redraws) are part of the same event system.
+
+Once gotoв sets a responder for a reactive view, gotoв expects the outermost DOM element of the view to 1) be placed in the DOM; 2) to be in the DOM exactly once, without being repeated. In this way, each view has a 1:1 relationship with a DOM element.
+
+When the view has no corresponding DOM element, gotoв decides it is a "dangling view", which it considers to be an error. If you place the output of `B.view` in the DOM through `B.mount`, and you do this before calling any `change` events which might redraw the view, this should not happen.
+
+A gotoв view can only be placed in the DOM once because its corresponding outermost element has an id and as such can only exist once in the DOM.
+
+If you want to encapsulate a view in a variable for later reuse in multiple places (even simultaneously), do it as a function that returns an invocation to `B.view`, instead of storing a direct invocation to `B.view`:
 
 ```javascript
 
@@ -986,13 +1000,13 @@ var app = function () {
 B.mount ('body', app);
 ```
 
-The reason for this restriction is explained in the [internals](#internals) section. It is particularly important to be aware of this, since using an invocation to `B.view` in multiple places or multiple times can trigger errors that are not immediate and that cannot be detected by gotoв.
+It is particularly important to be aware of this, since using an invocation to `B.view` in multiple places or multiple times can trigger errors that are not immediate and that cannot be detected by gotoв.
 
 It is perfectly possible to nest reactive views:
 
 ```javascript
 var app = function () {
-   B.view ('username', function (username) {
+   return B.view ('username', function (username) {
       return [
          ['h1', username],
          B.view ('counter', function (counter) {
@@ -1007,13 +1021,68 @@ B.mount ('body', app);
 
 If you pass an `id` to the lith returned by a `vfun`, it will be overwritten. `B.view` uses specific ids to track which DOM elements are reactive. `B.view` adds also a `paths` attribute to the DOM elements, simply to help debugging; the `paths` attribute will contain a stringified list of the `paths` passed to the reactive view.
 
+```javascript
+var app = function () {
+   return B.view (['Data', 'counter'], function (counter) {
+      return ['h1', {id: 'my-counter'}];
+   });
+}
+
+B.mount ('body', app);
+
+// The HTML for the <h1> will be something like <h1 id="в1" path="Data:counter"></h1>
+```
+
 It is highly discouraged to call events from inside a `vfun`, unless you really know what you're doing. `vfuns` make much more sense as pure functions. Events should be called from `rfuns` rather than `vfuns`.
 
-### Writing your own responders & tracking execution chains: `x`, `B.log`, `B.eventlog`, `B.get`, `B.mrespond`
+```javascript
+var app = function () {
+   return B.view (['Data', 'counter'], function (counter) {
+      // Don't invoke B.call from inside a vfun, unless you have a great reason to!
+      B.call ('side', ['effects', 'rule']);
+      return ['h1', {id: 'my-counter'}];
+   });
+}
 
-Most of the logic of a gotoв application will be contained in responders that you yourself write; while you'll still be using the built-in responders (those with verbs `set`, `add` and `rem`), your app will require custom responders. In fact, many events will be called from inside responders (with the rest of the events being called directly by user interactions with the DOM).
+B.mount ('body', app);
+```
 
-As we noted above, responders are created with `B.respond` and are *matched* when an event with a matching `verb` and `path` is called. The logic for a responder goes in the `rfun` (*responder function*). This function receives `x` (a *context object*) as its first argument; it optionally receives further arguments if the matching event was called with extra arguments. `x` is always passed to each `rfun` and contains the following:
+One final point: gotoв requires you to not manipulate the DOM elements of a reactive view. By default, gotoв expects full control over the outermost DOM element of a view and its children - if you modify it directly, gotoв won't be aware of the changes and so errors could happen if those elements are recycled after a redraw. In some situations, however, it is necessary to include an element that you (or more often, a library) will modify. For these cases, you can use the `opaque` property (please refer to the [advanced topics section](#advanced-topics)).
+
+### Writing your own responders & tracking execution chains: `x`, `B.log`, `B.eventlog`, `B.get`, `B.mrespond`, advanced matching
+
+Most of the logic of a gotoв application will be contained in responders that you write yourself; while you'll still be using the built-in responders (those with verbs `set`, `add` and `rem`), your app will require you to define responders. In fact, many events will be called from inside responders (with the rest of the events being called directly by user interactions with the DOM).
+
+As we noted above, responders are created with `B.respond` and are *matched* when an event with a matching `verb` and `path` is called. The logic for a responder goes in the `rfun` (*responder function*). This function receives `x` (a *context object*) as its first argument; it optionally receives further arguments if the matching event was called with extra arguments.
+
+Responders (or more precisely, rfuns) is where most of the logic of a gotoВ app lives.
+
+Going back to the todo example defined above:
+
+```javascript
+B.respond ('create', 'todo', function (x) {
+   var todo = prompt ('What\'s one to do?');
+   if (todo) B.call (x, 'add', 'todos', todo);
+});
+```
+
+This responder is defined to match events with a verb `create` and a path `todo`. The rfun only receives a context object as argument.
+
+Quite often you might need to pass extra arguments to responders. This can be done as follows:
+
+```javascript
+B.respond ('create', 'todo', function (x, important) {
+   var todo = prompt ('What\'s one to do?');
+   if (todo) B.call (x, 'add', 'todos', todo);
+   if (important) alert ('Important todo added.');
+});
+
+B.call ('create', 'todo', true);
+```
+
+The `true` passed to the event call after the `path` gets passed as the second argument to the rfun. If the event were to be called without extra arguments, `important` would be `undefined`.
+
+In any case, the rfun receives always the context object as its first argument. This object contains the following:
 
 - `verb`, the verb of the event that matched the responder.
 - `path`, the path of the event that matched the responder.
@@ -1022,9 +1091,9 @@ As we noted above, responders are created with `B.respond` and are *matched* whe
 - `cb`, a callback function which you only need to use if your responder function is asynchronous.
 - `responder`, the matched responder.
 
-Most of these keys are there for completeness sake and are not really necessary most of the time; in fact, `args` actually redundant, since they are also passed as extra arguments directly to `rfun`. A full description of the context object is available [here](https://github.com/fpereiro/recalc#responder-functions).
+Most of these keys are there for completeness sake and are not really necessary most of the time; in fact, `args` is actually redundant, since the extra arguments are also passed directly to `rfun`. A full description of the context object is available [here](https://github.com/fpereiro/recalc#responder-functions).
 
-The most useful key of `x` is `from`. It will contain the id of the event that was called and that in turned matched the responder. This allows to track *event chains*, namely: event X matches responder Y, then responder Y calls event Z.
+The most useful key of `x` is `from`. It will contain the id of the event that was called and that in turned matched the responder. This allows to track *event chains*. For example: event X matches responder Y, then responder Y calls event Z.
 
 To track event chains, *pass `x` as the first argument to calls to `B.call` that you do from inside the `rfun`*. For example:
 
@@ -1034,7 +1103,7 @@ B.respond ('foo', 'bar', function (x) {
 });
 ```
 
-The event call `do something` will contain the id of the listener and in this way it will be possible to track where the call came from.
+The event call `do something` will contain the id of the listener and in this way it will be possible to track where the call came from. More information is available [here](https://github.com/fpereiro/recalc#tracking-event--responder-chains).
 
 gotoв stores a list of all the events called and all responders matched into `B.log`. Since gotoв applications are built around events, This can be extremely useful for debugging an app. Instead of inspecting `B.log` with the browser console, you can invoke `B.eventlog`, a function which will add an HTML table to the page where you can see all the information about the events.
 
@@ -1044,11 +1113,38 @@ A function you will probably use quite a bit inside responders is `B.get`, which
 
 If, instead, you write `var username = B.get ('user', 'username')`, if `B.store.user` is not present yet then `username` will be `undefined`.
 
+```javascript
+// B.store is {}
+
+// This will throw an error!
+var username = B.store.user.username;
+
+// This will be either `undefined` or bring you the `username` if it's already defined.
+var username = B.get ('user', 'username');
+```
+
 `B.get` takes either a list of integers and strings or a single array containing integers and strings. These integers and strings represent the *path* to the part of the store you're trying to access. This `path` is the same `path` that `B.call` (the event calling function) takes as an argument.
 
 If you pass invalid arguments to `B.get`, it will return `undefined` and report an error to the console.
 
 If you pass an empty `path` to `B.get` (by passing either an empty array or no arguments), you'll get back `B.store` in its entirety.
+
+It is important to notice that B.get doesn't return copies of the referenced objects, but the actual object themselves. If `B.get` returns an array or object and you modify it, you'll also be modifying the corresponding object in the store. Most often, you don't want to do this since it can generate an inconsistency between the store and the views. To avoid this problem, you can copy the returned object or array before modifying it using `teishi.copy`.
+
+```javascript
+// B.store is {user: {username: 'foo', type: 'admin'}}
+
+var user = B.get ('user');
+
+// If you do this, you'll modify B.user.username!
+user.seen = true;
+
+// Better to do this
+var user = teishi.copy (B.get ('user'));
+user.seen = true;
+```
+
+Note that this is not necessary if 1) you don't need to modify the object or array; or 2) you bring a value that's neither an array nor an object, in which case javascript returns you a copy of the value, not a reference to the value itself.
 
 Responders are active from the moment you create them (with `B.respond`) until you remove them with `B.forget` (with the exceptions of responders created with the `burn` flag, which will be forgotten after being matched once). There's no concept of lifecycle, and most responders will be active for the entire lifetime of you app.
 
@@ -1084,11 +1180,11 @@ B.respond (/^get|post$/, [], {match: function (ev, responder) {
 
 The responder above will be matched by any event with verb `get` or `post`. The `match` parameter effectively supersedes the `verb` and `path` of the responder. If `match` function returns `true`, the responder will match the called event.
 
-### The `change` event and the data functions: `B.set`, `B.add`, `B.rem`
+### The `change` event, the data functions (`B.set`, `B.add`, `B.rem`) and `B.changeResponder`
 
 As we saw before, when you call an event with any of the built-in data verbs (`set`, `add` and `rem`), a `change` event with the same `path` will be called. More precisely, a `change` event will be called whenever you call a data verb with 1) valid arguments; and 2) when your invocation actually modifies the store. If the event is called with incorrect arguments or it doesn't modify the store, no `change` event will be triggered.
 
-gotoв's function for creating reactive elements (`B.view`), relies on the `change` event to know when it should redraw a view. `B.view` essentially creates a responder function on the `change` event on a given path. This means that views are redrawn when a `change` event is emitted.
+gotoв's function for creating reactive elements (`B.view`), relies on the `change` event to know when it should redraw a view. More precisely, every invocation to `B.view` creates a responder with `verb` `change` on a given path. This means that views are redrawn when a `change` event is emitted.
 
 This is the reason for which you need to use events to modify the store. If you modified the store directly, the views depending on a part of the store would not be updated when the store changes!
 
@@ -1116,56 +1212,188 @@ var updateItems = function (items) {
 
 Most of the time, this will not be necessary (the example above, in fact, is a bit artificial: you could perfectly create a new `items` array and then `set` it as one operation). A good approach is to not update the store directly unless a particular situation calls for it on the grounds of performance.
 
-TODO
+In the example above, you could also modify the elements without invoking `B.set`; the result will be the same.
 
-change with B.view: change only when data changes, path logic.
+```javascript
+var updateItems = function (items) {
+   items.map (function (item, index) {
+      var updatedItem = ...;
+      // We modify the items on the store directly.
+      B.store.items [index] = updatedItem;
+   });
+   // When we're done updating the store, we call a `change` event
+   B.call ('change', 'items');
+}
+```
 
-change responders
-   - receive new & old value
-   - changeresponder (used internally by B.view)
-   - If you need `afterdraw`, see advanced.
+When calling an event with verb `change` on a given path, you always trigger a redraw on views that depend on that given path. The logic for detecting whether there was a change on the relevant part of the store (and preventing the firing of a `change` event if that part of the store didn't change) is in the data responders.
 
-### Debugging & production mode: `B.error`, `B.prod`
+`B.view` uses a special match function `B.changeResponder` to redraw views not only when a `change` event is fired on its path, but also when a `change` event is fired with a path that could affect that path. It's best to explain this through an example:
 
-TODO
+```javascript
+B.view ('todos', function (todos) {
+   return ['ul', dale.go (todos, function (todo) {
+      return ['li', todo];
+   })];
+});
 
-Instead of logging to the console, call events! Very useful also for environments where there's no console, like mobile browsers.
+// At the beginning, B.store.todos is `undefined`, so no todos are listed.
 
-Two things in error reporting: visibility, and once you see it, identifiability, which means to track it quickly and certainly to which part of the code is making it. For the second, we put valuable info (including the `from` in some cases), but not more than necessary.
+// We add a todo.
+B.call ('add', 'todos', 'write readme');
 
+// The event above will trigger another event with verb `change` and path `todos`. This redraws the view, which has also the path `todos`.
 
-If you set `B.prod` to `true`, you'll turn on *production mode*. When production mode is on, gotoв's functions will stop validating inputs. This will make your application faster, but if any of these functions is invoked with invalid arguments, you will either experience silent errors or your application will throw an exception. It is recommended that you only set this variable on a production environment once your application has been mostly debugged.
+// We modify a todo.
+B.call ('set', ['todos', 0], 'Write readme and add examples.');
 
-If one of gotoв's functions is invoked with invalid arguments, an `error` event will be emitted. There's an `error` event responder that will report an error message, plus an invocation to `B.eventlog`. The end result is that you'll see the error as the last row of the `eventlog` immediately after the error happens. Note that this won't happen if `B.prod` is enabled. If you wish to turn off this behavior, run this command at the top of your application: `B.forget ('error')`.
+// The event above will trigger another event with verb `change` and path `['todos', 0]`. This will *also* redraw the view, because it affects the path `todos`.
 
-If you wish to turn off logging of events, (what happens if error?)
-B.r.log, turn off if needed.
+// We completely remove the `todos` from the store.
+B.call ('rem' [], 'todos');
 
-redraw error: 1) modified something not-opaque; or 2) invalid markup. Or 3) actual gotoв bug.
+// The event above will trigger another event with verb `change` and path `[]`. This will *also* redraw the view, because it affects the path `todos`.
+```
 
-if you put values on inputs without gotoв, then you should clear them out if you don't want them popping up elsewhere.
+In general, if a view has a path with n elements, it will be redrawn by any event with verb `change` that either:
+1. Has the same path.
+2. Has a longer path of which the first n elements match those of the view's path.
+3. Has a shorter path of length m, and each of these elements match the corresponding elements of the view's path.
 
-common errors:
-- not returning lith from vfun
-- using the same result of B.view twice
-- Creating a B.view that is not placed in the DOM (dangling)
-- Modifying the DOM of a B.view without using opaque
+Tricky? Quite. It took me a couple of years to get this right. This logic is necessary because operations that are either more nested (longer paths) or less nested (shorter paths) can still modify data on a given path. In the examples above, you can see how an operation on a longer path `['todos', 0]` or a shorter one `[]` had an impact on `'todos'`. However, an operation on a path that didn't share elements with `'todos'` would not be relevant.
 
-prod mode performance: speed up drawing. diff and dom applying is the same.
+If you want to create a responder with verb `change` that behaves exactly like those set up by `B.view`, you can do so by using `B.changeResponder` as the `match` function:
 
-responder -> event -> responder. no responder -> responder or event -> event.
+```javascript
+B.respond ('change', 'counter', {match: B.changeResponder}, function (x, counter, previousCounterValue) {
+   // Your logic goes here. This rfun will only be executed if `'counter'` changes or if you fire a `'change'` event yourself.
+});
+```
+
+Note that the `rfun` above receives two arguments, one with the current value of `counter` and one with the previous value. This convenience is provided by the in-built data events of gotoв, which pass the current and the old value of the part of the store that changed. gotoв's internals don't rely on this, so you don't need to do it if you fire a change event yourself:
+
+```javascript
+// No need to pass extra arguments!
+B.call ('change', 'counter');
+```
+
+However, if you fire a change event and your responders rely on receiving the current value of the changed part of the store, you can pass them as such:
+
+```javascript
+B.call ('change', 'counter', B.get ('counter'));
+
+// If oldCounter was the old value of counter, you can also do this:
+B.call ('change', 'counter', B.get ('counter'), oldCounter);
+```
+
+### Debugging & production mode: `B.error`, `B.prod`, redrawing performance, trampling, logging and common errors
+
+If one of gotoв's functions is invoked with invalid arguments, gotoв will call a function `B.error` instead of logging the error to the console or throwing an exception. `B.error` calls an event with verb `error`; an in-built responder with verb `error` will get matched and, by default, show you a list of all the events fired and responders matched, so you can track what happened and fix the error faster. This list is generated by `B.eventlog`, which we described in a previous section.
+
+Not using the console to show errors has some advantages: errors are more visible if they're shown in the main view rather than in the console; the table shown gives you quite more info than the immedaite error; and this also works on mobile browsers, where you don't have access to a development console.
+
+If you set `B.prod` to `true`, you'll turn on *production mode*. When production mode is on, gotoв's functions will stop validating inputs and `B.error` will never be invoked. This will make your application faster, but if any of these functions is invoked with invalid arguments, you will either experience silent errors or your application will throw an exception. It is recommended that you only set this variable on a production environment only once your application has been thoroughly debugged.
+
+With `B.prod` enabled, gotoв will be faster to create liths (since it will stop validating them) but the functions for diffing views and applying changes to the DOM will run at the same speed. By default, after 200ms gotoв gives up on performing diffs between the old and the new version of a view. To override this, you can set `B.internal.timeout` to another value. If gotoв spends more than that amount of time applying the diff algorithm, it gives up and instead creates a new set of DOM elements to replace the old ones. This is called *trampling*.
+
+If you wish to turn off logging of events, you can set `B.r.log` to `false`.
+
+Every gotoв redraw calls an event with verb `redraw` and a `path` that is the same of that of the redrawn view. These events contain performance information, namely: how much time it took to `create` the lith, how much time it took to `prediff` it (an intermediate processing step), how much the actual `diff` computation took, how much time it took to apply the changes to the `DOM`, and a `total` amount of time.
+
+Most gotoв errors are quite straightforward: an invalid input is passed to one of the functions. The trickiest errors to understand are those related to the drawing (or redrawing) of views. Here's a list of common errors and what can be done about it:
+
+- `View function must return a lith element but instead returned...`: this error is thrown by `B.view`; the error message will contain the `path` to help you locate the offending invocation to `B.view`. Make sure that your vfun returns a lith, instead of a lithbag or `undefined`. A typical problem is that you might have forgotten to add a comma between two arrays and so a part of the lith is considered as `undefined` - unfortunately, this is a javascript syntax issue that gotoв can do nothing about.
+- `Attempt to redraw dangling element`: this error is thrown by a view that is redrawn before being placed in the DOM. gotoв expects the outermost element of each invocation to `B.view` to be already placed in the DOM (usually through `B.mount`). Make sure that the outputs of `B.view` are not "floating around", but rather contained in an element that has been mounted.
+- `Redraw error: DOM element missing.`: this error means that, during a redraw, gotoв was expecting to find a certain DOM element somewhere and couldn't find it. This could happen for a number of reasons:
+   - Your code (or another library) have performed DOM manipulations on the DOM element of a reactive view. The solution is to use an `opaque` attribute (see the next section for the details).
+   - One of the views specifies markup that, while valid lith, is invalid HTML and is heavily modified by the browser. gotoв is oblivious to this manipulation and so it fails to find the DOM elements where it expects them to be. A typical case happens with tables, by putting elements that are not `<td>` directly into a `<tr>`.
+   - There's a browser bug (or interesting feature) that gotoв hasn't accounted for. In this case, please report the issue!
+
+If gotoв throws an exception (and you haven't enabled `B.prod`), it's almost certainly a bug in the library. Please report it!
+
+Other types of errors will be unexpected behaviors, particularly after redraws. It is important to note that if you put values on inputs controlled by gotoв without using gotoв (that is, without specifying the `value` property in the vfun), then you should clear them out if you don't want those values popping up elsewhere if they're reused by gotoв after a redraw.
 
 ### Advanced topics
 
+gotoв expects the outermost DOM element of a reactive view, as well as its children, to not be modified directly by your code or that of another library. The reason is that if there's a 1:1 relationship between the output of a vfun and a DOM element, gotoв can rely on that information to recycle those elements in case of a view redraw.
+
+It is possible to create `opaque` elements, by passing the property `opaque: true` to an element within the vfun. gotoв will treat `opaque` elements differently in case of a redraw: 1) it will always recreate them instead of updating them; 2) it won't recycle them to draw other parts of the view.
+
+In my experience, `opaque` elements are mostly useful for 1) elements that need to be controlled by other libraries (for example, a date picker); and 2) non-HTML extensions to HTML, such as `<svg>`.
+
+If, for example, you have a library that performs DOM manipulations on a given `<div>`, you could write your vfun as such:
+
+```javascript
+var calendar = function () {
+   return B.view ('date', function (date) {
+      // This element will be used by the date picker and can be arbitrarily manipulated.
+      // Note that `date` will be placed as its value every time that the view is redrawn.
+      return ['div', {opaque: true, value: date, class: 'datePicker'}];
+   });
+}
+```
+
+Because opaque elements are completely remade every time that the reactive view is updated, you need to initialize the date picker every time there is a redraw. But gotoв doesn't provide hooks such as `afterRedraw` or the like. The way to do this is - you might have guessed it - through a responder with verb `change` and a path that's the same as that of the vfun:
+
+```javascript
+B.respond ('change', 'date', {priority: -1000}, function (x) {
+   var datePicker = c ('.datepicker');
+   // Here you initialize the date picker library passing `datePicker` to it.
+});
+```
+
+Why the `priority: -1000` option? The details are explained in the [internals](#internals) section. But, in a word, the reason is that you want the initialization to happen *after* the DOM of the view is redrawn, not *before*. The lower the priority of a responder, the later it gets executed. By using a priority with a very low number, you make sure that the responder gets matched after all DOM changes are performed by gotoв.
+
+vfuns (through lith) support a `LITERAL` pseudo-tag, which lets you insert raw HTML into a view. If you use an HTML string to create DOM elements, you need to do it within an `opaque` element, otherwise you'd be changing the DOM tree of the view without gotoв knowing about it.
+
+```javascript
+// Don't do this!
+var invalidOpaque = function () {
+   return B.view ('foo', function (foo) {
+      return ['div', ['LITERAL', '<a>Hello</a>']];
+   });
+}
+
+// Rather, do this.
+var validOpaque = function () {
+   return B.view ('foo', function (foo) {
+      return ['div', {opaque: true}, ['LITERAL', '<a>Hello</a>']];
+   });
+}
+```
+
+The example above is quite useless, but not quite so if you need to add SVG:
+
+```javascript
+// Rather, do this.
+var svg = function () {
+   return B.view ('foo', function (foo) {
+      return ['div', {opaque: true}, ['LITERAL', '<svg><circle cx="60" cy="60" r="50"/></svg>']];
+   });
+}
+```
+
+However, if you want to add some unescaped characters, you don't need to use `opaque` together with `LITERAL`:
+
+```javascript
+// This is fine
+var text = function () {
+   return B.view ('foo', function (foo) {
+      return ['p', ['Hello', ['LITERAL', '&nbsp;'], 'Handsome']];
+   });
+}
+```
+
+Please be aware that putting unfiltered user input into a `LITERAL` can easily expose your application to [Cross Site Scripting](https://en.wikipedia.org/wiki/Cross-site_scripting).
+
 TODO
 
-- opaque & literal
-   - if literal, just for nbsp, not for inserting tags. otherwise, you need opaque.
-   - if opaque within reactive view, redrawn every time.
-- negative priorities & nestedness
-- nested views cannot reference the same DOM element! One view cannot just return another. Use a view with multiple paths instead. Or wrap in another lith, `['div', B.view]`
-- trample & perflogs
-- FF 3: autocomplete=off on selects.
+Browser quirks
+   - FF 3: autocomplete=off on selects.
+   - Chrome<=28 and Safari<=8 sometimes require to set the value of the select so that the correct option is selected, otherwise the first option is marked as selected even though there's another option that's selected.
+   - While gotoв itself works in IE<=8, it doesn't fix all its broken edges. You'll have to do significant work to make your app work there. See appendix.
+
+- negative priorities & nestedness: nested views get redrawn later if both are matched.
 
 Within a single thread, everything happens sync (if you have an async, then you break the sync). But if you have two handlers, for example, you already have multiple chains running simultaneously! Redraws are first come first serve.
 

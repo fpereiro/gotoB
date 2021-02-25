@@ -405,9 +405,9 @@
                Test ('B.str', function () {
                   if ([
                      '[undefined, null, function () {return true}, false, /a/, "a", 3, {"a": "\'b", "c": ["d\\"", NaN, Infinity], "e-f": null}]',
-                     // Safari <= 8
+                     // Compatibility: Safari <= 8
                      '[undefined, null, function () {return true;}, false, /a/, "a", 3, {"a": "\'b", "c": ["d\\"", NaN, Infinity], "e-f": null}]',
-                     // FF <= 16
+                     // Compatibility: FF <= 16
                      '[undefined, null, function () {\n    return true;\n}, false, /a/, "a", 3, {"a": "\'b", "c": ["d\\"", NaN, Infinity], "e-f": null}]'
                   ].indexOf (B.str ([undefined, null, function () {return true}, false, /a/, 'a', 3, {a: '\'b', c: ['d"', NaN, Infinity], 'e-f': null}])) === -1) return 'Warning: B.str setting list of values in a different way: ' + B.str ([undefined, null, function () {return true}, false, /a/, 'a', 3, {a: '\'b', c: ['d"', NaN, Infinity], 'e-f': null}]);
                   var test = eval (B.str ([undefined, null, function () {return true}, false, /a/, 'a', 3, {a: '\'b', c: ['d"', NaN, Infinity], 'e-f': null}]));

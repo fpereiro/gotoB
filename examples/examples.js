@@ -53,3 +53,42 @@ var todoList = function () {
 B.mount ('body', todoList);
 
 // TODO: add remaining examples
+
+var opaque = function () {
+   return B.view ([], function (store) {
+      return ['pre', {opaque: true}, JSON.stringify (store)];
+   });
+}
+
+B.mount ('body', opaque);
+
+var validOpaque = function () {
+   return B.view ('foo', function (foo) {
+      return ['div', {opaque: true}, ['LITERAL', '<a>Hello</a>']];
+   });
+}
+
+B.mount ('body', validOpaque);
+
+var svg = function () {
+   return B.view ('foo', function (foo) {
+      return ['div', {opaque: true}, ['LITERAL', '<svg><circle cx="60" cy="60" r="50"/></svg>']];
+   });
+}
+
+B.mount ('body', svg);
+
+var text = function () {
+   return B.view ('foo', function (foo) {
+      return ['p', ['Hello', ['LITERAL', '&nbsp;'], 'Handsome']];
+   });
+}
+
+B.mount ('body', text);
+
+var userdata = "['script', {src: 'https://evil.me/script.js'}]";
+
+B.mount ('body', function () {
+   // not pwned
+   return ['div', userdata];
+});

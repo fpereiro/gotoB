@@ -1381,7 +1381,7 @@ var calendar = function () {
 }
 ```
 
-Because opaque elements are completely remade every time that the reactive view is updated, you need to initialize the date picker every time there is a redraw. But gotoв doesn't provide hooks such as `afterRedraw` or the like. The way to do this is - you might have guessed it - through a responder with verb `change` and a path that's the same as that of the vfun:
+Because opaque elements are completely remade every time that the reactive view is redrawn, you need to initialize the date picker every time there is a redraw. But gotoв doesn't provide hooks such as `afterRedraw` or the like. The way to do this is - you might have guessed it - through a responder with verb `change` and a path that's the same as that of the vfun:
 
 ```javascript
 B.respond ('change', 'date', {priority: -1000}, function (x) {
@@ -1410,7 +1410,7 @@ var validOpaque = function () {
 }
 ```
 
-The example above is quite useless, but not quite so if you need to add SVG:
+The example above is quite useless, but not so if you need to add SVG:
 
 ```javascript
 // Rather, do this.
@@ -1467,15 +1467,43 @@ var view = function () {
 }
 ```
 
+Now for an interesting (if unlikely) corner case: can you write a normal reactive view within an opaque element? You could, and as long as you didn't modify its DOM element directly, it would be OK. It also has to be placed in the document, otherwise it would be considered a dangling element. Performance-wise, the nested reactive view will be completely redrawn if the outermost opaque element is redrawn.
+
+```javascript
+var corner = function () {
+   return B.view ('date', function (date) {
+      return ['div', {opaque: true}, [
+         ['div', {class: 'calendar'}],
+         B.view ('username', function (username) {
+            return ['p', username];
+         });
+      ]];
+   });
+}
+```
+
 #### Redraw sequence and asynchronicity
 
-TODO
+As we described above, gotoв uses the event system to decide when to redraw reactive views. More precisely, when a `change` event is fired, those views with a path that match that of the event are redrawn. Views are implemented as responders.
 
-- negative priorities & nestedness: nested views get redrawn later if both are matched.
+The responders belonging to each view have negative priorities. This ensures that they are executed *after* responders with no priority defined (a responder with no priority define is assumed to have a priority of `0`). In this way, if a responder calls an event, your custom responders will be invoked before those that redraw the page. The purpose of this is to reduce the number of redraws.
 
-Within a single thread, everything happens sync (if you have an async, then you break the sync). But if you have two handlers, for example, you already have multiple chains running simultaneously! Redraws are first come first serve.
+The more nested a view is, the lower its priority is. This ensures that, if a view A contains a view B and both are affected by the same `change` event, only A will be redrawn. Since A contains B, B will be redrawn anyway, but just once, as part of the redrawing of A. Again, the purpose of this is to reduce the number of redraws.
 
-Can use async as sync chain, but if there are other chains happening, those won't wait.
+gotoв performs all redraws synchronously. At any given time, there's at most one redraw being done. If further redraws are required while a redraw is taking place, they are queued and then executed in [First In First Out](https://en.wikipedia.org/wiki/FIFO_(computing_and_electronics)).
+
+Responder functions are also executed sequentially, one at a time, in a deterministic order. If your rfuns have asynchronous logic *and* you want the following responders to be matched *after* your asynchronous function finishes, you need to do two things: 1) return a `function`, so that the event system knows to wait until the asynchronous operation is complete; and 2) invoke `x.cb` when the rfun is done:
+
+```javascript
+B.respond ('wait', ['for', 'me'], function (x) {
+   asyncOperation ('foo', 'bar', function () {
+      x.cb ();
+   });
+   return x.cb;
+});
+```
+
+Most often, this is not necessary, but it is good to be able to do it if needed. In particular, tightly controlling the asynchronous flow of execution can help optimize the number of requests done to the server.
 
 #### Browser quirks (for old browsers)
 
@@ -1494,42 +1522,55 @@ var select = function () {
 }
 ```
 
-While gotoв itself works in Internet Explorer 8 and below (barely), it doesn't fix all its broken edges. You'll have to do significant work to make your app work in those browsers. [This appendix](#lessons-from-the-quest-for-ie6-compatibility) might be of help.
+While gotoв itself (barely) works in Internet Explorer 8 and below, it doesn't come close to fixing all its broken edges. You'll have to do significant work to make your app work in those browsers. [This appendix](#lessons-from-the-quest-for-ie6-compatibility) might be of help.
 
 ## Internals
+
+Most of gotoв's functions are pretty transparent and have already been described in extensive detail. gotoв does rely heavily on the event system, but that's described in detail in [recalc's readme](https://github.com/fpereiro/recalc). The intrincate parts of gotoв are those that have to do with the reactive views created by `B.view` - that's what we'll cover in this section.
+
+Reactive views are implemented as responders. There's a 1:1:1 relationship between a vfun, a DOM element and a responder with verb `change`. In effect, the vfun is called by the rfun of the view's respective responder.
 
 TODO
 
 negative priority descending to redraw outermost first. more efficient, more intuitive. when one is redrawn, its priority stays the same; nested are deleted and recreated, with priority downgraded.
 
-negative priority to do all the changes first, then redraw. More fine-grained control, without an externally imposed cycle.
-
 userland scheduler: events with priorities!
 
-Everything sync.
+first time flow with mount
 
-Can write reactive view within an opaque? You could. It wouldn't dangle, but if you touch it directly, it would blow up.
+second time and onwards with redraw
 
-### General architecture
+Common parts:
+- Unless `B.prod` is set to `true`, the output of a vfun is validated.
+- Nestedness: internal calls to `B.view` happen while the outermost call happens; it's all sync. The counter advances.
+- `B.view` determines which reactive views (if any) are children of a view. Children's `parent` keys are set. The `children` are stored inside the responder. Priorities are decreased. This can happen n times for n nested views. The math will add up.
+- The `elem` (lith) is also stored in the responder to have it somewhere.
+
+returns lith, either mounted (generated & placed) or given to B.redraw.
+
+B.redraw:
+- Redraws block the app. So they have to be fast.
+- queue
+   If a previous redraw renders a queued redraw unnecessary (because it eliminated the corresponding DOM element), gotoв will ignore that element.
+- prediff: flatten, reference nested (they could've changed) and perform some expansions.
+- diff
+- either trample (by giving up: remove, generate & place) or applyDiff
+
+applyDiff: two passes, one to map diff elements to DOM, another one to apply changes. Ops are keep, add, rem. keep requires place. add requires make (or recycle) and place. rem can be recycled.
+
+deterministic diff, deterministic id assignation.
+
+### Comparison to other libraries
 
 TODO
 
-- comparison to other libraries:
-   - no compilation
-   - all global
-   - no automatic lifecycle of responders
-   - no components and no classes; instead, namespace in events/responders & store
-   - very see through, DOM & global object
-   - self-contained
-
-- debugging: `node build dev`
-Change event
-Elem stashing things and redraw, use shallow of the stashed only
-Flatten and reference
-Diff
-Apply diff but give up
-
-deterministic diff, deterministic id assignation.
+- no compilation
+- all global
+- sync redraws
+- no automatic lifecycle of responders
+- no components and no classes; instead, namespace in events/responders & store
+- very see through, DOM & global object
+- self-contained
 
 ## Annotated source code
 

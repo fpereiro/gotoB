@@ -1087,7 +1087,7 @@ B.respond ('create', 'todo', function (x) {
 });
 ```
 
-This responder is defined to match events with a verb `create` and a path `todo`. The rfun only receives a context object as argument.
+This responder is defined to match events with a verb `create` and a path `todo`. The `rfun` only receives a context object as argument.
 
 Quite often you might need to pass extra arguments to responders. This can be done as follows:
 
@@ -1101,9 +1101,9 @@ B.respond ('create', 'todo', function (x, important) {
 B.call ('create', 'todo', true);
 ```
 
-The `true` passed to the event call after the `path` gets passed as the second argument to the rfun. If the event were to be called without extra arguments, `important` would be `undefined`.
+The `true` passed to the event call after the `path` gets passed as the second argument to the `rfun`. If the event were to be called without extra arguments, `important` would be `undefined`.
 
-In any case, the rfun receives always the context object as its first argument. This object contains the following:
+In any case, the `rfun` receives always the context object as its first argument. This object contains the following:
 
 - `verb`, the verb of the event that matched the responder.
 - `path`, the path of the event that matched the responder.
@@ -1348,7 +1348,7 @@ Every gotoв redraw calls an event with verb `redraw` and a `path` that is the s
 
 Most gotoв errors are quite straightforward: an invalid input is passed to one of the functions. The trickiest errors to understand are those related to the drawing (or redrawing) of views. Here's a list of common errors and what can be done about it:
 
-- `View function must return a lith element but instead returned...`: this error is thrown by `B.view`; the error message will contain the `path` to help you locate the offending invocation to `B.view`. Make sure that your vfun returns a lith, instead of a lithbag or `undefined`. A typical problem is that you might have forgotten to add a comma between two arrays and so a part of the lith is considered as `undefined` - unfortunately, this is a javascript syntax issue that gotoв can do nothing about.
+- `View function must return a lith element but instead returned...`: this error is thrown by `B.view`; the error message will contain the `path` to help you locate the offending invocation to `B.view`. Make sure that your `vfun` returns a lith, instead of a lithbag or `undefined`. A typical problem is that you might have forgotten to add a comma between two arrays and so a part of the lith is considered as `undefined` - unfortunately, this is a javascript syntax issue that gotoв can do nothing about.
 - `Attempt to redraw dangling element`: this error is thrown by a view that is redrawn before being placed in the DOM. gotoв expects the outermost element of each invocation to `B.view` to be already placed in the DOM (usually through `B.mount`). Make sure that the outputs of `B.view` are not "floating around", but rather contained in an element that has been mounted.
 - `Redraw error: DOM element missing.`: this error means that, during a redraw, gotoв was expecting to find a certain DOM element somewhere and couldn't find it. This could happen for a number of reasons:
    - Your code (or another library) have performed DOM manipulations on the DOM element of a reactive view. The solution is to use an `opaque` attribute (see the next section for the details).
@@ -1357,19 +1357,19 @@ Most gotoв errors are quite straightforward: an invalid input is passed to one 
 
 If gotoв throws an exception (and you haven't enabled `B.prod`), it's almost certainly a bug in the library. Please report it!
 
-Other types of errors will be unexpected behaviors, particularly after redraws. It is important to note that if you put values on inputs controlled by gotoв without using gotoв (that is, without specifying the `value` property in the vfun), then you should clear them out if you don't want those values popping up elsewhere if they're reused by gotoв after a redraw.
+Other types of errors will be unexpected behaviors, particularly after redraws. It is important to note that if you put values on inputs controlled by gotoв without using gotoв (that is, without specifying the `value` property in the `vfun`), then you should clear them out if you don't want those values popping up elsewhere if they're reused by gotoв after a redraw.
 
 ### Advanced topics
 
 #### Opaque elements
 
-gotoв expects the outermost DOM element of a reactive view, as well as its children, to not be modified directly by your code or that of another library. The reason is that if there's a 1:1 relationship between the output of a vfun and a DOM element, gotoв can rely on that information to recycle those elements in case of a view redraw.
+gotoв expects the outermost DOM element of a reactive view, as well as its children, to not be modified directly by your code or that of another library. The reason is that if there's a 1:1 relationship between the output of a `vfun` and a DOM element, gotoв can rely on that information to recycle those elements in case of a view redraw.
 
-It is possible to create `opaque` elements, by passing the property `opaque: true` to an element within the vfun. gotoв will treat `opaque` elements differently in case of a redraw: 1) it will always recreate them instead of updating them; 2) it won't recycle them to draw other parts of the view.
+It is possible to create `opaque` elements, by passing the property `opaque: true` to an element within the `vfun`. gotoв will treat `opaque` elements differently in case of a redraw: 1) it will always recreate them instead of updating them; 2) it won't recycle them to draw other parts of the view.
 
 In my experience, `opaque` elements are mostly useful for 1) elements that need to be controlled by other libraries (for example, a date picker); and 2) non-HTML extensions to HTML, such as `<svg>`.
 
-If, for example, you have a library that performs DOM manipulations on a given `<div>`, you could write your vfun as such:
+If, for example, you have a library that performs DOM manipulations on a given `<div>`, you could write your `vfun` as such:
 
 ```javascript
 var calendar = function () {
@@ -1381,7 +1381,7 @@ var calendar = function () {
 }
 ```
 
-Because opaque elements are completely remade every time that the reactive view is redrawn, you need to initialize the date picker every time there is a redraw. But gotoв doesn't provide hooks such as `afterRedraw` or the like. The way to do this is - you might have guessed it - through a responder with verb `change` and a path that's the same as that of the vfun:
+Because opaque elements are completely remade every time that the reactive view is redrawn, you need to initialize the date picker every time there is a redraw. But gotoв doesn't provide hooks such as `afterRedraw` or the like. The way to do this is - you might have guessed it - through a responder with verb `change` and a path that's the same as that of the `vfun`:
 
 ```javascript
 B.respond ('change', 'date', {priority: -1000}, function (x) {
@@ -1392,7 +1392,7 @@ B.respond ('change', 'date', {priority: -1000}, function (x) {
 
 Why the `priority: -1000` option? The details are explained in the [internals](#internals) section. But, in a word, the reason is that you want the initialization to happen *after* the DOM of the view is redrawn, not *before*. The lower the priority of a responder, the later it gets executed. By using a priority with a very low number, you make sure that the responder gets matched after all DOM changes are performed by gotoв.
 
-vfuns (through lith) support a `LITERAL` pseudo-tag, which lets you insert raw HTML into a view. If you use an HTML string to create DOM elements, you need to do it within an `opaque` element, otherwise you'd be changing the DOM tree of the view without gotoв knowing about it.
+`vfuns` (through lith) support a `LITERAL` pseudo-tag, which lets you insert raw HTML into a view. If you use an HTML string to create DOM elements, you need to do it within an `opaque` element, otherwise you'd be changing the DOM tree of the view without gotoв knowing about it.
 
 ```javascript
 // Don't do this!
@@ -1492,7 +1492,7 @@ The more nested a view is, the lower its priority is. This ensures that, if a vi
 
 gotoв performs all redraws synchronously. At any given time, there's at most one redraw being done. If further redraws are required while a redraw is taking place, they are queued and then executed in [First In First Out](https://en.wikipedia.org/wiki/FIFO_(computing_and_electronics)).
 
-Responder functions are also executed sequentially, one at a time, in a deterministic order. If your rfuns have asynchronous logic *and* you want the following responders to be matched *after* your asynchronous function finishes, you need to do two things: 1) return a `function`, so that the event system knows to wait until the asynchronous operation is complete; and 2) invoke `x.cb` when the rfun is done:
+Responder functions are also executed sequentially, one at a time, in a deterministic order. If your `rfuns` have asynchronous logic *and* you want the following responders to be matched *after* your asynchronous function finishes, you need to do two things: 1) return a `function`, so that the event system knows to wait until the asynchronous operation is complete; and 2) invoke `x.cb` when the `rfun` is done:
 
 ```javascript
 B.respond ('wait', ['for', 'me'], function (x) {
@@ -1526,39 +1526,53 @@ While gotoв itself (barely) works in Internet Explorer 8 and below, it doesn't 
 
 ## Internals
 
-Most of gotoв's functions are pretty transparent and have already been described in extensive detail. gotoв does rely heavily on the event system, but that's described in detail in [recalc's readme](https://github.com/fpereiro/recalc). The intrincate parts of gotoв are those that have to do with the reactive views created by `B.view` - that's what we'll cover in this section.
+Most of gotoв's functions are quite transparent and have already been described in extensive detail. gotoв does rely heavily on the event system, but that's described in detail in [recalc's readme](https://github.com/fpereiro/recalc). The intrincate parts of gotoв are those that have to do with the reactive views created by `B.view` - that's what we'll cover in this section.
 
-Reactive views are implemented as responders. There's a 1:1:1 relationship between a vfun, a DOM element and a responder with verb `change`. In effect, the vfun is called by the rfun of the view's respective responder.
+Reactive views are implemented as responders. There's a 1:1:1 relationship between a `vfun`, a DOM element and a responder with verb `change`. When an event with verb `change` matches the responder of a view, it's `rfun` executes the `vfun` and uses its output to either generate or update the DOM element.
+
+Assuming that its input is valid, an invocation to `B.view` will do two things:
+- Return a lith that represents a single DOM element.
+- Set up a responder for redrawing the view.
+
+The first time that the view is drawn, the lith returned by `B.view` is taken by `B.mount` as an input, transformed into HTML and placed in the DOM. This is the *draw* flow.
+
+When the view needs to be redrawn, the responder will be matched. The responder (or rather, the `rfun`) will invoke the same `vfun` (but passing new data to it) and pass the old version of the view plus the new version of the view to the function `B.redraw`. This is the *redraw* flow.
+
+To make things more interesting, reactive views can be nested - actually, almost any non-trivial application needs nested reactive views. `B.view` uses a few tricks to manage this complexity:
+- If a reactive view has reactive views as children, it links both the parent and the children with some extra fields in the responder.
+- Children reactive views have a responder with a lower priority than that of their reactive parent. In case that both need to be redrawn at the same time, the parent's redrawing takes priority, since that will also require a redraw of the children. So `B.view` also takes care to reduce the priority of all nested reactive views. The outermost reactive views will have a priority of -1, their immediate children a priority of -2, and so forth.
+
+When a redraw happens, we need to do two things:
+- Update the DOM.
+- Eliminate the responders of the old nested reactive views, if any are present. This is necessary because nested reactive views are nested invocations to `B.view`; the nested invocations don't know anything about their surrounding context and they set up a new responder for themselves, so it's the parent's job to eliminate the responders of its old children.
+
+Both jobs land on `B.redraw`. This function orchestates redraws and is invoked by the `rfun` of a reactive view. Before jumping into a redraw, however, `B.redraw` makes sure no other redraws are taking place simultaneously. For this, it implements a queue where the first redraws are done first and the other ones wait until the first ones conclude.
+
+Once `B.redraw` goes forth with a particular redraw required by a `rfun`, it does the following:
+- Delete the responders of the old children of the view being redrawn, through `B.forget`.
+- Invoke `B.prediff` on the old and the new lith of the view. We'll cover this function shortly.
+- Pass the prediffed liths to `B.diff` to obtain a minimal list of DOM operations to carry out.
+- Pass the minimal list of DOM changes to `B.applyDiff`.
+- If there are further redraws in the queue, invoke itself recursively, but making sure that the queued redraw hasn't been rendered irrelevant by the redraw that just happened (which may happen if the queued view was an old child of a just redrawn view).
+
+`B.prediff` takes a lith and does the following:
+- Flattens the lith structure (which is a tree) into a flat sequence of items, by using special notation to indicate the opening of a DOM element, the closing of a DOM element, opaque elements and literal elements.
+- Takes any references to reactive views and updates them. This is necessary because parents might carry an out of date lith representation of their nested reactive views.
+- In case there's a `<table>` in the diff, it makes sure that it contains a `<thead>` and a `<tbody>`, since these are automatically added by most browsers. In this way, the 1:1 relationship between the lith tree and the DOM is preserved.
+
+`B.diff` is an implementation of the [Myers' diff algorithm](http://www.xmailserver.org/diff2.pdf) that takes the flattened liths outputted by `B.prediff` and produces a shortest edit script. The function gives us a minimal amount of changes that we need to perform on the DOM to go from the first array of strings to the second.
+
+`B.diff` runs synchronously and blocks any other redraws (or any other js code running, really). Most of the time it runs quite quickly, but if the liths are very large, or they are very dissimilar to each other, the function will take too long to run. For this reason, after a certain amount of time, if the diff is not done, `B.diff` bails and declares that it cannot finish the diff. In this case, `B.redraw` will *trample* the old DOM element and create a new one from scratch that completely replaces it. By default, this happens after 200ms of running `B.diff`. *Tramples* are undesirable and can usually be eliminated by either reducing the sizes of liths by paginating long lists of items.
+
+Most times, `B.diff` will produce a diff in time that can be then applied to the DOM. This task is picked up by `B.applyDiff`. For each element in the diff, it either `keeps` it, `adds` it or `removes` it. The types of elements are normal DOM elements, opaque elements (DOM elements that are treated as opaque entities) and literal elements (text). `B.applyDiff` performs the following operations:
+- Do an entire pass on the diff to figure out the positions of the current DOM elements on the *old* lith.
+- Perform a second pass to apply the diff:
+   - Removed elements are sometimes recycled to transform them into added (new) elements.
+   - Both kept and added elements are placed in the right parent element in the right position.
 
 TODO
-
-negative priority descending to redraw outermost first. more efficient, more intuitive. when one is redrawn, its priority stays the same; nested are deleted and recreated, with priority downgraded.
-
-userland scheduler: events with priorities!
-
-first time flow with mount
-
-second time and onwards with redraw
-
-Common parts:
-- Unless `B.prod` is set to `true`, the output of a vfun is validated.
-- Nestedness: internal calls to `B.view` happen while the outermost call happens; it's all sync. The counter advances.
-- `B.view` determines which reactive views (if any) are children of a view. Children's `parent` keys are set. The `children` are stored inside the responder. Priorities are decreased. This can happen n times for n nested views. The math will add up.
-- The `elem` (lith) is also stored in the responder to have it somewhere.
-
-returns lith, either mounted (generated & placed) or given to B.redraw.
-
-B.redraw:
-- Redraws block the app. So they have to be fast.
-- queue
-   If a previous redraw renders a queued redraw unnecessary (because it eliminated the corresponding DOM element), gotoв will ignore that element.
-- prediff: flatten, reference nested (they could've changed) and perform some expansions.
-- diff
-- either trample (by giving up: remove, generate & place) or applyDiff
-
-applyDiff: two passes, one to map diff elements to DOM, another one to apply changes. Ops are keep, add, rem. keep requires place. add requires make (or recycle) and place. rem can be recycled.
-
-deterministic diff, deterministic id assignation.
+properties:
+deterministic diff, deterministic id assignation. synchronous, same order.
 
 ### Comparison to other libraries
 
@@ -2559,7 +2573,7 @@ If we're not in production mode, we validate `elem` with `B.validateLith` (which
          if (! B.prod && B.validateLith (elem) !== 'Lith') return B.error ('B.view', 'View function must return a lith element but instead returned:', elem, 'Arguments:', {path: path});
 ```
 
-If we're not in production mode, we check that `elem` doesn't contain an `id` attribute, since that attribute must be set by `B.view`. This also prevents a vfun returning the direct output of another vfun, which would break the 1:1 correspondence between a responder and a reactive DOM element.
+If we're not in production mode, we check that `elem` doesn't contain an `id` attribute, since that attribute must be set by `B.view`. This also prevents a `vfun` returning the direct output of another `vfun`, which would break the 1:1 correspondence between a responder and a reactive DOM element.
 
 ```javascript
          if (! B.prod && type (elem [1]) === 'object' && elem [1].id !== undefined) return B.error ('B.view', 'View function must return a lith element without an id attribute but instead returned:', elem, 'Arguments:', {path: path});

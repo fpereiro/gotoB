@@ -615,7 +615,7 @@ Please refer to readme.md to read the annotated source.
 
       var V = [], sol, d = 0, vl, vc, k, out, y, point, diff, v, last, t = time ();
 
-      while (d < s1.length + s2.length + 1) {
+      while (d <= s1.length + s2.length) {
 
          if (B.internal.timeout && (time () - t > B.internal.timeout)) return false;
 

@@ -81,11 +81,12 @@ B.mount ('body', helloWorld);
 ```javascript
 var counter = function () {
    return B.view ('counter', function (counter) {
+      counter = counter || 0;
       return ['div', [
          ['h2', 'Counter'],
-         ['h3', ['Counter is: ', counter || 0]],
+         ['h3', ['Counter is: ', counter]],
          ['button', {
-            onclick: B.ev ('set', 'counter', (counter || 0) + 1)
+            onclick: B.ev ('set', 'counter', counter + 1)
          }, 'Increment counter']
       ]];
    });
@@ -282,6 +283,7 @@ Let's see an example:
 ```javascript
 var counter = function () {
    return B.view ('counter', function (counter) {
+      counter = counter || 0;
       return ['h2', 'The counter is ' + counter];
    });
 }
@@ -308,6 +310,7 @@ You might be wondering: how can we trigger events from the DOM itself? The examp
 ```javascript
 var counter = function () {
    return B.view ('counter', function (counter) {
+      counter = counter || 0;
       return ['div', [
          ['h2', 'The counter is ' + counter],
          ['button', {
@@ -325,6 +328,7 @@ But it is much better to use `B.ev`, which will create a stringified call to `B.
 ```javascript
 var counter = function () {
    return B.view ('counter', function (counter) {
+      counter = counter || 0;
       return ['div', [
          ['h2', 'The counter is ' + counter],
          ['button', {
@@ -782,8 +786,8 @@ Since gotoв applications are structured around events and responders, user inte
 ```javascript
 var button = function () {
    return ['button', {
-      onclick: B.ev ('do', 'it');
-   }, 'Do it!'],
+      onclick: B.ev ('do', 'it')
+   }, 'Do it!'];
 }
 
 B.mount ('body', button);
@@ -870,6 +874,7 @@ Let's go back to the `counter` example we saw earlier:
 ```javascript
 var counter = function () {
    return B.view ('counter', function (counter) {
+      counter = counter || 0;
       return ['div', [
          ['h3', ['Counter is: ', counter || 0]],
          ['button', {
@@ -978,12 +983,14 @@ If you want to encapsulate a view in a variable for later reuse in multiple plac
 
 // Please don't do this
 var counter = B.view ('counter', function (counter) {
+   counter = counter || 0;
    return ['h1', 'Counter is ' + counter];
 });
 
 // Instead, do this
 var counter = function () {
    return B.view ('counter', function (counter) {
+      counter = counter || 0;
       return ['h1', 'Counter is ' + counter];
    });
 }
@@ -995,7 +1002,7 @@ B.mount ('body', counter);
 var app = function () {
    return [
       ['h1', 'App'],
-      counter ();
+      counter ()
    ];
 }
 
@@ -1009,6 +1016,7 @@ By encapsulating the view into a function, you could have two counters simultane
 ```javascript
 var counter = function () {
    return B.view ('counter', function (counter) {
+      counter = counter || 0;
       return ['h1', 'Counter is ' + counter];
    });
 }
@@ -1028,9 +1036,10 @@ It is perfectly possible to nest reactive views:
 ```javascript
 var app = function () {
    return B.view ('username', function (username) {
-      return [
+      return ['div', [
          ['h1', username],
          B.view ('counter', function (counter) {
+            counter = counter || 0;
             return ['h2', ['Counter is ', counter]];
          })
       ];
@@ -1040,11 +1049,13 @@ var app = function () {
 B.mount ('body', app);
 ```
 
-If you pass an `id` to the lith returned by a `vfun`, it will be overwritten. `B.view` uses specific ids to track which DOM elements are reactive. `B.view` adds also a `paths` attribute to the DOM elements, simply to help debugging; the `paths` attribute will contain a stringified list of the `paths` passed to the reactive view.
+If you pass an `id` to the lith returned by a `vfun`, an error will be reported. `B.view` uses specific ids to track which DOM elements are reactive. `B.view` adds also a `paths` attribute to the DOM elements, simply to help debugging; the `paths` attribute will contain a stringified list of the `paths` passed to the reactive view.
 
 ```javascript
 var app = function () {
    return B.view (['Data', 'counter'], function (counter) {
+      counter = counter || 0;
+      // This will generate an error. Don't pass ids to the outermost element of a reactive view.
       return ['h1', {id: 'my-counter'}];
    });
 }
@@ -1059,9 +1070,10 @@ It is highly discouraged to call events from inside a `vfun`, unless you have a 
 ```javascript
 var app = function () {
    return B.view (['Data', 'counter'], function (counter) {
+      counter = counter || 0;
       // Don't invoke B.call from inside a vfun, unless you have a great reason to!
       B.call ('side', ['effects', 'rule']);
-      return ['h1', {id: 'my-counter'}];
+      return ['h1', counter];
    });
 }
 
@@ -1151,6 +1163,7 @@ If you pass an empty `path` to `B.get` (by passing either an empty array or no a
 It is important to notice that B.get doesn't return copies of the referenced objects, but the actual object themselves. If `B.get` returns an array or object and you modify it, you'll also be modifying the corresponding object in the store. Most often, you don't want to do this since it can generate an inconsistency between the store and the views. To avoid this problem, you can copy the returned object or array before modifying it using `teishi.copy`.
 
 ```javascript
+B.call ('set', [], {user: {username: 'foo', type: 'admin'}});
 // B.store is {user: {username: 'foo', type: 'admin'}}
 
 var user = B.get ('user');
@@ -1194,7 +1207,7 @@ To make a responder match *all* events with verbs `get` or `post`, you need to u
 ```javascript
 B.respond (/^get|post$/, [], {match: function (ev, responder) {
    if (ev.verb === 'get' || ev.verb === 'post') return true;
-});
+}}, function (x) {...});
 ```
 
 The responder above will be matched by any event with verb `get` or `post`. The `match` parameter effectively supersedes the `verb` and `path` of the responder. If `match` function returns `true`, the responder will match the called event.
@@ -1530,6 +1543,8 @@ Most of gotoв's functions are quite transparent and have already been described
 
 Reactive views are implemented as responders. There's a 1:1:1 relationship between a `vfun`, a DOM element and a responder with verb `change`. When an event with verb `change` matches the responder of a view, it's `rfun` executes the `vfun` and uses its output to either generate or update the DOM element.
 
+Dangling views are not allowed by gotoв because if they were allowed, gotoв would not know when to delete their responders, if at all. This is particularly important with nested views: when an outermost view is redrawn, the responders of its nested reactive views are deleted. If a user wanted to repurpose some of these views, they would have to let gotoв know somehow. This complication can be completely eliminated by requiring this 1:1:1 relationship between `vfun`, responder and DOM element. `vfuns` can be reused, but not views. The performance hit of recreating views is minimal and the simplification of both the interface and implementation greatly benefits from this decision.
+
 Assuming that its input is valid, an invocation to `B.view` will do two things:
 - Return a lith that represents a single DOM element.
 - Set up a responder for redrawing the view.
@@ -1539,8 +1554,8 @@ The first time that the view is drawn, the lith returned by `B.view` is taken by
 When the view needs to be redrawn, the responder will be matched. The responder (or rather, the `rfun`) will invoke the same `vfun` (but passing new data to it) and pass the old version of the view plus the new version of the view to the function `B.redraw`. This is the *redraw* flow.
 
 To make things more interesting, reactive views can be nested - actually, almost any non-trivial application needs nested reactive views. `B.view` uses a few tricks to manage this complexity:
-- If a reactive view has reactive views as children, it links both the parent and the children with some extra fields in the responder.
-- Children reactive views have a responder with a lower priority than that of their reactive parent. In case that both need to be redrawn at the same time, the parent's redrawing takes priority, since that will also require a redraw of the children. So `B.view` also takes care to reduce the priority of all nested reactive views. The outermost reactive views will have a priority of -1, their immediate children a priority of -2, and so forth.
+- If a reactive view has reactive views as children, it links both the parent and the children together through some extra fields in the respective responders.
+- Children reactive views have a responder with a lower priority than that of their reactive parent. In case that both the parent and the child need to be redrawn at the same time, the parent's redrawing takes priority, since that will also require a redraw of the children. So `B.view` also takes care to reduce the priority of all nested reactive views. The outermost reactive views will have a priority of -1, their immediate children a priority of -2, and so forth.
 
 When a redraw happens, we need to do two things:
 - Update the DOM.
@@ -1557,7 +1572,7 @@ Once `B.redraw` goes forth with a particular redraw required by a `rfun`, it doe
 
 `B.prediff` takes a lith and does the following:
 - Flattens the lith structure (which is a tree) into a flat sequence of items, by using special notation to indicate the opening of a DOM element, the closing of a DOM element, opaque elements and literal elements.
-- Takes any references to reactive views and updates them. This is necessary because parents might carry an out of date lith representation of their nested reactive views.
+- Takes any references to reactive views and updates them. This is necessary because parents might carry an out of date lith representation of their nested reactive views. For example, if view `x` contains view `y` and `y` is updated after `x`, `x`'s representation of `y` will be stale; by directly referecing `y`'s latest lith, this problem is avoided.
 - In case there's a `<table>` in the diff, it makes sure that it contains a `<thead>` and a `<tbody>`, since these are automatically added by most browsers. In this way, the 1:1 relationship between the lith tree and the DOM is preserved.
 
 `B.diff` is an implementation of the [Myers' diff algorithm](http://www.xmailserver.org/diff2.pdf) that takes the flattened liths outputted by `B.prediff` and produces a shortest edit script. The function gives us a minimal amount of changes that we need to perform on the DOM to go from the first array of strings to the second.
@@ -1570,21 +1585,36 @@ Most times, `B.diff` will produce a diff in time that can be then applied to the
    - Removed elements are sometimes recycled to transform them into added (new) elements.
    - Both kept and added elements are placed in the right parent element in the right position.
 
-TODO
-properties:
-deterministic diff, deterministic id assignation. synchronous, same order.
+gotoв is fully deterministic:
 
-### Comparison to other libraries
+- The ids of responders and reactive views are generated with a counter, so that if the app code is also deterministic, the same responders and views will have the same ids when re-running the app. This is very helpful for debugging.
+- The entire redraw flow (including the diff) is deterministic as well and will generate the same result, through the same operations, when re-running the app.
 
-TODO
+To quickly detect which DOM elements belong to reactive views, gotoв marks their id with the letter `в` followed by a number. This allows `B.unmount` to eliminate the responders of deleted views and `B.prediff` to know when to reference the lith of a nested reactive view.
 
-- no compilation
-- all global
-- sync redraws
-- no automatic lifecycle of responders
-- no components and no classes; instead, namespace in events/responders & store
-- very see through, DOM & global object
-- self-contained
+```
+Simplified execution diagram:
+
+B.mount -> B.view -> B.listen
+
+add|set|rem event -> change event -> responder set by B.view -> B.redraw
+
+         -> B.prediff
+B.redraw -> B.diff
+         -> B.applyDiff
+```
+
+### Comparison to other frameworks
+
+Although it provides the same functionalities than other frontend frameworks, gotoв's design is quite different to that of many frontend frameworks. Here's some things that are unusual (but not unique) about it:
+
+- No compilation: gotoв expresses HTML & CSS with js object literals, so there's no need to take non-js markup and convert it into either HTML or js.
+- A global event system: the store, the events and the responders all live in the same global space. Any scoping must be done through using a specific part of the store or by passing a specific prefix to event and responder paths.
+- Redraws are synchronous and block the rest of the js.
+- No lifecycle hooks for views: everything is expressed as either an event or a responder (including the redraw of views themselves). Everything is in [userland](https://en.wikipedia.org/wiki/User_space).
+- No components: every view, responder and event lives in the same global space.
+- Use of a textual diff algorithm to update views.
+- Very see-through: the entire event system (including store, responders and events) can be inspected through the js console - all objects are exposed. They can also be directly modified.
 
 ## Annotated source code
 
@@ -3910,7 +3940,16 @@ This function takes two arrays of strings, `s1` and `s2`. `s1` represents the ol
    B.diff = function (s1, s2) {
 ```
 
-The algorithm, as implemented here, is the first version of the algorithm presented on the paper, which takes linear space but uses quadratic space.
+The algorithm, as implemented here, is the first version of the algorithm presented on the paper, which takes linear time but uses quadratic space.
+
+```javascript
+      var V = [], sol, d = 0, vl, vc, k, out, y, point, diff, v, last, t = time ();
+```
+
+- d: number of moves made (diagonal free; if two equal strings, 0; if two completely dissimilar, d can be the sum of the length of both)
+- k = x - y
+- for each d starting at 0, fill in each move for k from -d to d in steps of 2. move down or right?  If k is −d then the move must be downward, likewise if k is +d then we must move rightward. For all other values of k, we pick the position with the highest x from the two adjacent k values in the previous column, and determine where that move leads us.
+- Instead of storing farthermost point, keep list of points for each position, hence the array.
 
 TODO
 
@@ -4022,46 +4061,38 @@ The SPA approach became dominant - despite the fact that its merits are debatabl
 
 ### Lessons from the quest for IE6 compatibility
 
-TODO
+Here's a list of things I learned from making gotoв and its dependencies compatible with very old browsers, including Internet Explorer 6.
 
-What I learned from making tools to be IE6 compatible
+This would have been impossible without [Browserstack](https://browserstack.com) - thanks to them, I could extensively test cross-browser compatibility.
 
-Leave the why for last.
+It is *remarkable* how many elements of the modern web are already present in IE6 (2001), no matter how crude or buggy its implementation. Most importantly, AJAX is already supported, which enables apps that can retrieve data from the server without a page refresh.
 
-ES3, 2001. IE6 covers it almost all up, but still some quirks. Browserstack, thank you!
+With that said, the leap from [ES5 js](https://en.wikipedia.org/wiki/ECMAScript#5th_Edition) (published in 2009) to ES3 js (published in 1999) is large. ES3 lacks the following basic niceties:
+- Native JSON support. But if you include json as a [script](https://cdn.jsdelivr.net/gh/douglascrockford/JSON-js@aef828bfcd7d5efaa41270f831f8d27d5eef3845/json2.min.js) before loading other scripts, that solves the problem.
+- If you use a reserved word as the key of an object, you need to put it between quotes: `{'class': ...}`.
+- Trailing commas are not allowed in object literals. Something like `[1, 2, 3,]` or `{a: 1,}` will throw an error.
+- No `querySelectorAll`.
 
-Don’t count on HTTPS.
+Before ES3, however, there be dragons: no AJAX support, and not even regular expressions! I haven't even dared to try to make gotoв work there.
 
-No console!
+Some particular quirks of ES3 browsers:
+- To access the `n`th character of a string `s`, don't use `s [n]` because that won't work - rather, use `s.substr (n, n + 1)`. (IE6/IE7)
+- IE8 seems to escapes unicode characters on the output of `JSON.stringify`.
+- No `Date.now`; use `new Date ().getTime` instead.
+- The developer console was something that emerged over time. Old browsers didn't have it, or had a very limited version of it! This was an inspiration for `B.eventlog`, which turns out to be useful even in modern browsers.
 
-Trailing commas.
+gotoв and its dependencies implement the following three [polyfills](https://en.wikipedia.org/wiki/Polyfill_(programming)):
+- `indexOf` for arrays.
+- `insertAdjacentHTML`.
+- `contains`.
 
-To access the nth element of a string `s`, don't use `s [n]` - rather, use substr. (IE6/IE7)
+No other polyfills were required. The rest of the functionality needed to make gotoв work has been provided by helper functions that sometimes extensively check for browser quirks, such as [teishi.type](https://github.com/fpereiro/teishi#teishitype).
 
-ie8 (but not ie6/7) escapes unicode characters in JSON.parse/JSON.stringify
+Why even bother with making gotoв compatible on old browsers that nobody uses anymore? I'm not entirely sure, but I can offer the following reasons:
 
-Put in quotes special words if they are method names, or rename!
+- **Minimalism**: demanding little from js or the browser has already worked well for other libraries of the [ustack](https://github.com/fpereiro/ustack). The ustack was originally built for ES5 js and it purposefully avoided modern (>= ES6) features. This decision encouraged minimalism in the language constructs used, which stimulated the simplicity of the implementation.
+- **Reliability**: implementing gotoв in the unforgiving terrain of older browsers spurred me to think deeper about the fundamentals of its implementation. Making it run in old browsers was a stress test, a way to raise the bar and test both the concepts and the solidity of how they are implemented. Despite the artificiality of the challenge, useful changes emerged in the process.
+- **Fun**: It was fun to do! gotoв v1 was already ES5 compatible. When rewriting gotoв (from v1 to v2), I decided to see how far I could take this. I couldn't help but see how far I could take it back and understand which quirks were possible to overcome and which ones would render the project impossible. And when things got frustrating, the sheer amount of progress already done kept me going. The project started with [dale](https://github.com/fpereiro/dale), the most basic dependency, and grew gradually from there. By the time all the dependencies were ES3 compatible, I was still doubtful that gotoв could be ES3 compatible. But it ended up being possible!
+- **Trying something different**: most js frameworks and libraries are constantly moving in the direction of dropping support for older browsers. I figured it would be interesting to do the opposite - and indeed it was!
 
-Type detection, including null, arguments.
-
-Undefined elements in arrays.
-
-Safari quirks with type.
-
-Show type function before and after.
-
-No Date.time, but use new Date ().getTime ()
-
-parentChild.removeElement
-
-Event firing, prepend the on
-
-No CSS selectors! Here’s how I implemented a subset:
-
-No indexOf, I touched the prototype. Incidentally, only prototype I modified. That and the insertBefore/insertAfter.
-
-What did I learn? Event logs, minimalism. How few things change behind the surface. Love for old browsers, which can still run great abstractions and show them. Mor ecommitment to simplicity of toolchain by having no toolchain.
-
-Json library
-
-Ajax changes
+To restate the first point: it is remarkable that a modern web framework can be at all implemented in browsers that are (as of 2021) 20 years old. This is not a testament to gotoв's prowess, but rather to the prowess of js as a language, and that of the browser as an application platform. Even if their ES3 implementations have aged badly, their fundamentals have aged extremely well.

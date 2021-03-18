@@ -441,20 +441,112 @@ B.respond (/^get|post$/, [], {match: function (ev, responder) {
 
 // *** THE CHANGE EVENT ***
 
-// TODO: add remaining examples
-
-
-
-
-
-var opaque = function () {
-   return B.view ([], function (store) {
-      return ['pre', {opaque: true}, JSON.stringify (store)];
+var items = function () {
+   return B.view ('items', function (items) {
+      return ['ul', dale.go (items, function (item) {
+         return ['li', ['Item is', item]];
+      })];
    });
 }
 
-B.mount ('body', opaque);
+B.mount ('body', items);
 
+var updateItems = function (items) {
+   items.map (function (item, index) {
+      var updatedItem = item + 'foo';
+      // We modify the items on the store directly.
+      B.set (['items', index], updatedItem);
+   });
+   // When we're done updating the store, we call a `change` event
+   B.call ('change', 'items');
+}
+
+var updateItems = function (items) {
+   items.map (function (item, index) {
+      var updatedItem = item + 'foo';
+      // We modify the items on the store directly.
+      B.store.items [index] = updatedItem;
+   });
+   // When we're done updating the store, we call a `change` event
+   B.call ('change', 'items');
+}
+
+var todos = function () {
+   return B.view ('todos', function (todos) {
+      return ['ul', dale.go (todos, function (todo) {
+         return ['li', todo];
+      })];
+   });
+}
+
+B.mount ('body', todos);
+
+// At the beginning, B.store.todos is `undefined`, so no todos are listed.
+
+// We add a todo.
+B.call ('add', 'todos', 'write readme');
+
+// The event above will trigger another event with verb `change` and path `todos`. This redraws the view, which has also the path `todos`.
+
+// We modify a todo.
+B.call ('set', ['todos', 0], 'Write readme and add examples.');
+
+// The event above will trigger another event with verb `change` and path `['todos', 0]`. This will *also* redraw the view, because it affects the path `todos`.
+
+// We completely remove the `todos` from the store.
+B.call ('rem', [], 'todos');
+
+// No need to pass extra arguments!
+B.call ('change', 'counter');
+
+B.call ('change', 'counter', B.get ('counter'));
+
+// If oldCounter was the old value of counter, you can also do this:
+var oldCounter = 0;
+B.call ('change', 'counter', B.get ('counter'), oldCounter);
+
+// *** LOGGING ***
+
+B.r.addLog = function (log) {
+   if (B.log.length > 1000) B.log.shift ();
+   B.log.push (log);
+}
+
+// In this example, the password is passed inside an object as the first argument to a responder.
+B.r.addLog = function (log) {
+   if (log.args && log.args [0] && log.args [0].password) {
+      // If you modify the log, you need to copy it first, otherwise you'll modify it for the responder as well.
+      log.args [0] = teishi.copy (log.args [0]);
+      log.args [0].password = 'REDACTED';
+   }
+   B.log.push (log);
+}
+
+// *** OPAQUE ELEMENTS ***
+
+var calendar = function () {
+   return B.view ('date', function (date) {
+      // This element will be used by the date picker and can be arbitrarily manipulated.
+      // Note that `date` will be placed as its value every time that the view is redrawn.
+      return ['div', {opaque: true, value: date, class: 'datePicker'}];
+   });
+}
+
+B.mount ('body', calendar);
+
+B.respond ('change', 'date', {priority: -1000}, function (x) {
+   var datePicker = c ('.datepicker');
+   // Here you initialize the date picker library passing `datePicker` to it.
+});
+
+// Don't do this!
+var invalidOpaque = function () {
+   return B.view ('foo', function (foo) {
+      return ['div', ['LITERAL', '<a>Hello</a>']];
+   });
+}
+
+// Rather, do this.
 var validOpaque = function () {
    return B.view ('foo', function (foo) {
       return ['div', {opaque: true}, ['LITERAL', '<a>Hello</a>']];
@@ -471,6 +563,7 @@ var svg = function () {
 
 B.mount ('body', svg);
 
+// This is fine and you don't need to make the element opaque
 var text = function () {
    return B.view ('foo', function (foo) {
       return ['p', ['Hello', ['LITERAL', '&nbsp;'], 'Handsome']];
@@ -479,10 +572,66 @@ var text = function () {
 
 B.mount ('body', text);
 
-var userdata = "['script', {src: 'https://evil.me/script.js'}]";
+// *** SECURITY AND ESCAPING ***
 
-B.mount ('body', function () {
-   // not pwned
+var username = '<script src="https://evil.domain.indeed/script.js">';
+
+// pwned
+var view = function () {
+   return ['p', ['LITERAL', username]];
+}
+
+B.mount ('body', view);
+
+var userdata = ['script', {src: 'https://evil.domain.indeed/script.js'}];
+
+// pwned again
+var view = function () {
    return ['div', userdata];
+}
+
+B.mount ('body', view);
+
+var userdata = "['script', {src: 'https://evil.domain.indeed/script.js'}]";
+
+// not pwned
+var view = function () {
+   return ['div', userdata];
+}
+
+B.mount ('body', view);
+
+var corner = function () {
+   return B.view ('date', function (date) {
+      return ['div', {opaque: true}, [
+         ['div', {class: 'calendar'}],
+         B.view ('username', function (username) {
+            return ['p', username];
+         })
+      ]];
+   });
+}
+
+B.mount ('body', corner);
+
+// *** ASYNC SEQUENCE ***
+
+B.respond ('wait', ['for', 'me'], function (x) {
+   asyncOperation ('foo', 'bar', function () {
+      x.cb ();
+   });
+   return x.cb;
 });
 
+// *** OLD BROWSERS QUIRKS ***
+
+var select = function () {
+   return B.view ('data', function (data) {
+      // Note how we pass `value: data` on the <select> ; this is not needed on other browsers.
+      return ['select', {value: data, onchange: B.ev ('set', 'data')}, dale.go (['a', 'b', 'c'], function (v) {
+         return ['option', {selected: v === data, value: v}, v];
+      })];
+   });
+}
+
+B.mount ('body', select);

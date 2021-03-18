@@ -1225,15 +1225,19 @@ The three data events internally call three respective data functions: `B.set`, 
 If you want to modify the store but avoid redrawing the views that depend on that part of the store, you can invoke these functions directly. This might be useful when you have multiple updates on a very short amount of time. Once the updates happen, you can then trigger the view redraw by firing a `change` event on the desired `path`. Let's see an example:
 
 ```javascript
-B.view ('items', function (items) {
-   return ['ul', items.map (function (item) {
-      return ['li', ['Item is', item]];
-   })];
-});
+var items = function () {
+   return B.view ('items', function (items) {
+      return ['ul', dale.go (items, function (item) {
+         return ['li', ['Item is', item]];
+      })];
+   });
+}
+
+B.mount ('body', items);
 
 var updateItems = function (items) {
    items.map (function (item, index) {
-      var updatedItem = ...;
+      var updatedItem = item + 'foo';
       // We modify the items on the store directly.
       B.set (['items', index], updatedItem);
    });
@@ -1249,7 +1253,7 @@ In the example above, you could also modify the elements without invoking `B.set
 ```javascript
 var updateItems = function (items) {
    items.map (function (item, index) {
-      var updatedItem = ...;
+      var updatedItem = item + 'foo';
       // We modify the items on the store directly.
       B.store.items [index] = updatedItem;
    });
@@ -1263,11 +1267,15 @@ When calling an event with verb `change` on a given path, you always trigger a r
 `B.view` uses a special match function `B.changeResponder` to redraw views not only when a `change` event is fired on its path, but also when a `change` event is fired with a path that could affect that path. It's best to explain this through an example:
 
 ```javascript
-B.view ('todos', function (todos) {
-   return ['ul', dale.go (todos, function (todo) {
-      return ['li', todo];
-   })];
-});
+var todos = function () {
+   return B.view ('todos', function (todos) {
+      return ['ul', dale.go (todos, function (todo) {
+         return ['li', todo];
+      })];
+   });
+}
+
+B.mount ('body', todos);
 
 // At the beginning, B.store.todos is `undefined`, so no todos are listed.
 
@@ -1282,7 +1290,7 @@ B.call ('set', ['todos', 0], 'Write readme and add examples.');
 // The event above will trigger another event with verb `change` and path `['todos', 0]`. This will *also* redraw the view, because it affects the path `todos`.
 
 // We completely remove the `todos` from the store.
-B.call ('rem' [], 'todos');
+B.call ('rem', [], 'todos');
 
 // The event above will trigger another event with verb `change` and path `[]`. This will *also* redraw the view, because it affects the path `todos`.
 ```
@@ -1330,7 +1338,7 @@ Logging is turned on by default and all events calls and responder matches are r
 - If you want to keep the last (say) 1000 log entries and delete the old ones:
 ```javascript
 B.r.addLog = function (log) {
-   B.log.shift ();
+   if (B.log.length > 1000) B.log.shift ();
    B.log.push (log);
 }
 ```
@@ -1392,6 +1400,8 @@ var calendar = function () {
       return ['div', {opaque: true, value: date, class: 'datePicker'}];
    });
 }
+
+B.mount ('body', calendar);
 ```
 
 Because opaque elements are completely remade every time that the reactive view is redrawn, you need to initialize the date picker every time there is a redraw. But gotoв doesn't provide hooks such as `afterRedraw` or the like. The way to do this is - you might have guessed it - through a responder with verb `change` and a path that's the same as that of the `vfun`:
@@ -1426,7 +1436,6 @@ var validOpaque = function () {
 The example above is quite useless, but not so if you need to add SVG:
 
 ```javascript
-// Rather, do this.
 var svg = function () {
    return B.view ('foo', function (foo) {
       return ['div', {opaque: true}, ['LITERAL', '<svg><circle cx="60" cy="60" r="50"/></svg>']];
@@ -1450,7 +1459,7 @@ var text = function () {
 Please be aware that placing unfiltered user input into a `LITERAL` can easily expose your application to [Cross Site Scripting](https://en.wikipedia.org/wiki/Cross-site_scripting).
 
 ```javascript
-var username = '<script src="https://evil.me/script.js">';
+var username = '<script src="https://evil.domain.indeed/script.js">';
 
 // pwned
 var view = function () {
@@ -1461,7 +1470,7 @@ var view = function () {
 The same goes for receiving JSON inputs from users and inserting them into views without doing some filtering. For example, if a user gives you an array  and you place it in a view, the evil script will be loaded!
 
 ```javascript
-var userdata = ['script', {src: 'https://evil.me/script.js'}];
+var userdata = ['script', {src: 'https://evil.domain.indeed/script.js'}];
 
 // pwned again
 var view = function () {
@@ -1472,7 +1481,7 @@ var view = function () {
 The following, however, is safe. The critical difference is that the array is not parsed, so it's interpreted as a string and properly escaped.
 
 ```javascript
-var userdata = "['script', {src: 'https://evil.me/script.js'}]";
+var userdata = "['script', {src: 'https://evil.domain.indeed/script.js'}]";
 
 // not pwned
 var view = function () {
@@ -1489,7 +1498,7 @@ var corner = function () {
          ['div', {class: 'calendar'}],
          B.view ('username', function (username) {
             return ['p', username];
-         });
+         })
       ]];
    });
 }
@@ -1533,6 +1542,8 @@ var select = function () {
       })];
    });
 }
+
+B.mount ('body', select);
 ```
 
 While gotoв itself (barely) works in Internet Explorer 8 and below, it doesn't come close to fixing all its broken edges. You'll have to do significant work to make your app work in those browsers. [This appendix](#lessons-from-the-quest-for-ie6-compatibility) might be of help.

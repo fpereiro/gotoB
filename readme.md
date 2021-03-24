@@ -3945,6 +3945,149 @@ We define `B.diff`, the last function of gotoв. This function takes two arrays 
 
 I'd like to thank [Nicholas Butler](https://www.codeproject.com/Articles/42279/Investigating-Myers-diff-algorithm-Part-1-of-2) and [James Coglan](https://blog.jcoglan.com/2017/02/12/the-myers-diff-algorithm-part-1/) for their wonderful explanation of the implementation of the Myers' diff algorithm.
 
+Before going into the implementation, it's very helpful to understand the algorithm. To do this, I will write down my notes as I understand the algorithm by following James Coglan's article.
+
+The Myers' diff algorithm gives us a *minimal set of changes* that can covert a string `A` to a string `B`. Changes can be either deletions or insertions. To use the example given by James Coglan in his article:
+
+- `A`: abcabba
+- `B`: cbabac
+
+One way to convert `A` into `B` is to remove `abcabba` and then add `cbabac`. That would imply 13 changes (7 deletions and 6 insertions). But there are ways of changing them that would require far fewer edits. For example: remove `ab`, leave `c` in place, add a `b`, leave `ab` in place, remove `b`, leave `a` in place and add `c`. In total, there are 5 changes only (3 deletions and 2 insertions). Note that when characters are left in place, those don't count as changes.
+
+Interestingly enough, there is more than one way to change `A` into `B` with only 5 edits. For example, you could remove `ab`, leave `c` in place, remove an `a`, leave `b` in place, add an `a`, leave `ba` in place and add `c`. Both this solution and the previous one require 5 changes. Both are *minimal*, because there is no way to change one string into the other with less than 5 edits.
+
+How do we pick a set of changes if there are multiple ones that will get the job done in the minimal amount of changes? There are two other considerations:
+
+1. Priorize deletions over insertions; that is, if the algorithm can delete `x` and then add `y`, it should do it in that order instead of adding `y` first and removing `x` afterwards.
+2. Instead of interleaving out deletions and insertions, batch them. So, for example, if `xz` have to be removed and `yw` added, instead of removing `x`, adding `y`, removing `z` and adding `z`, it is preferred to first remove `xz` and then add `yw`.
+
+So the four requirements are then: 1) transform a string `A` into a string `B`; 2) with a minimal amount of edits (deletions & insertions); 3) doing deletions first, then insertions; 4) if possible, batching deletions and then insertions instead of interleaving them.
+
+A way to represent the problem graphically is to put the original string (`A`) in the horizontal axis and desired string in the vertical axis. To go back to the previous example:
+
+```
+  abcabba
+
+c   .
+b  .  ..
+a .  .  .
+b  .  ..
+a .  .  .
+c   .
+
+```
+
+The dots represent those positions where both characters are the same. Those are places where the characters are the same in both strings. They represent free movements, in that they don't cost any edits (as you may remember, we're trying to minimize the amount of edits).
+
+An edit script can be seen as a way through this graph. The first solution that had 13 edits could be graphed like this:
+
+```
+  abcabba
+ ├───────┐
+c        │
+b        │
+a        │
+b        │
+a        │
+c        │
+         x
+```
+
+Notice that each deletion is graphed as a move to the right and each insertion as a move downwards. The `x` [marks the spot](https://en.wikipedia.org/wiki/Indiana_Jones_and_the_Last_Crusade) to where we want to get to.
+
+The following solution we saw, with 5 edits only, could be graphed like this:
+
+For example: remove `ab`, leave `c` in place, add a `b`, leave `ab` in place, remove `b`, leave `a` in place and add `c`. In total, there are 5 changes only (3 deletions and 2 insertions). Note that when characters are left in place, those don't count as changes.
+
+```
+  abcabba
+ ├──
+c   \
+b    |
+a    \
+b     \─
+a       \
+c        |
+         x
+```
+
+Note that the graph above has four diagonals, which represent characters left in place. The edits are the three deletions and two insertions.
+
+The other solution we mentioned, also a minimal edit, can be graphed like this:
+
+```
+  abcabba
+ ├──
+c   \─
+b     \
+a      |
+b      \
+a       \
+c        |
+         x
+```
+
+If we see the graph again, we can use cartesian coordinates to represent each possible path. `(0, 0)` would be the beginning of the graph; in the example above with strings `A` and `B`, `(7, 6)` would be the end result. Note that `(0, 0)` corresponds to the first two characters of each string, whereas `(7, 6)` is a point "beyond" both strings which denotes the end state.
+
+```
+   01234567
+   abcabba
+0 c
+1 b
+2 a
+3 b
+4 a
+5 c
+6         x
+```
+
+Going back to the requirements of the algorithm, seen in terms of the graph:
+
+1. Transform `A` into `B`: this is represented as going from `(0, 0)` to `(7, 6)`.
+2. Minimal amount of edits: maximize the amount of diagonals and hence minimize the number of horizontal or vertical moves.
+3. Deletions first: if given a choice, move right first, then downwards.
+4. Batch deletions and insertions: if given a choice, move in one direction, then in the next one.
+
+How we can find the shortest path in the example above?
+
+1. Let's start at `(0, 0)`. From here we can move either right to `(1, 0)` or down to `(0, 1)`.
+```
+0,0 -> 1,0
+ |
+ v
+0,1
+```
+2. From `(0, 1)` we can move either right to `(1, 1)` or down to `(0, 2)`.
+3. If we move right from `(0, 1)` to `(1, 1)`, we see there's a diagonal from `(1, 1)` to `(2, 2)`. If there's a diagonal path available, we don't consider it as a move, and, since it takes closer to our goal, we take it. So moving right from `(0, 1)` takes us to `(2, 2)`.
+4. If we move down from `(0, 1)` to `(0, 2)`, we see there's a diagonal from `(0, 2)` to `(1, 3)`. But wait! There's also another diagonal from `(1, 3)` to `(2, 4)`. So we take them both. Moving down from `(0, 1)` takes us to `(2, 4)`.
+5. Going back to `(1, 0)`, we can move either right to `(2, 0)` or down to `(1, 1)`.
+6. If we move right from `(1, 0)` to `(2, 0)`, there's a diagonal from `(2, 0)` to `(3, 1)`, so moving right takes us to `(3, 1)`.
+7. If we move down from `(1, 0)` to `(1, 1)`, there's a diagonal to `(2, 2)`, so moving right takes us to `(2, 2)`. Note that this point was also reached by moving right from `(0, 1)` to `(1, 1)`, also in two moves. Since we prefer deletions before insertions, we consider this point to be reached from `(1, 0)` instead of `(0, 1)`.
+
+By this point, we have done two moves. Our ending points from which we can explore further paths are `(2, 4)`, `(2, 2)` and `(3, 1)`. `(0, 1)` was discarded because we priorized `(1, 0)` -> `(2, 2)` over it (see #7 above).
+
+```
+0,0 -> 1,0 -> 3,1
+ |      |
+ v      v
+0,1    2,2
+ |
+ v
+2,4
+```
+
+8. From `(2, 4)` we can move either right to `(3, 4)` or down to `(2, 5)`.
+9. If we move right from `(2, 4)` to `(3, 4)` we find a diagonal that takes us to `(4, 5)`.
+10. If we move down from `(2, 4)` to `(2, 5)` we find a diagonal that takes us to `(3, 6)`.
+
+
+
+TODO
+
+
+
+
+
 This function takes two arrays of strings, `s1` and `s2`. `s1` represents the old list of strings; `s2` represents the new list, to which we want to get from `s1`.
 
 ```javascript
@@ -3965,8 +4108,6 @@ The algorithm, as implemented here, is the first version of the algorithm presen
 TODO
 
 notes:
-   minimal edit script. deletions before additions. bunch of deletions, then bunch of insertions, instead of interleaving.
-   greediness: keep on keeping stuff in a row, if you can.
    old string horizontal, new string vertical. going right is to remove, going down is to add, going in diagonal is to keep.
    diagonal paths are free.
    non-diagonal point: test going down and going right. none of those is a diagonal? keep those options open and proceed.

@@ -8,7 +8,7 @@
       "lith":      "6.0.6",
       "recalc":    "5.1.0",
       "teishi":    "5.0.3",
-      "uglify-js": "3.13.0"
+      "uglify-js": "3.13.8"
    },
    "main": "gotoB.min.js",
    "author": "Federico Pereiro <fpereiro@gmail.com>",

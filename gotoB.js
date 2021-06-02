@@ -613,58 +613,53 @@ Please refer to readme.md to read the annotated source.
 
    B.diff = function (s1, s2) {
 
-      var V = [], sol, d = 0, vl, vc, k, out, y, point, diff, v, last, t = time ();
+      var diff = [], VList = [], VLast, VNew, D = 0, k, x, t = time ();
 
-      while (d <= s1.length + s2.length) {
+      while (D <= s1.length + s2.length) {
 
          if (B.internal.timeout && (time () - t > B.internal.timeout)) return false;
 
-         vl = V [V.length - 1] || {1: [0, 0]};
-         vc = {};
-         V.push (vc);
+         k = -D;
+         VLast = VList [VList.length - 1] || {1: 0};
+         VNew = {};
+         VList.push (VNew);
 
-         k = -d;
+         while (k <= D) {
 
-         while (k < -d + 2 * d + 1) {
+            if (k === -D || (k !== D && VLast [k + 1] > VLast [k - 1])) x = VLast [k + 1];
+            else                                                        x = VLast [k - 1] + 1;
 
-            if (k === -d || (k !== d && vl [k - 1] [1] < vl [k + 1] [1])) out = [0, vl [k + 1] [1]];
-            else                                                          out = [0, vl [k - 1] [1] + 1, true];
+            while (x < s1.length && (x - k) < s2.length && s1 [x] === s2 [x - k]) x++;
 
-            y = out [1] - k;
-
-            while (out [1] < s1.length && y < s2.length && s1 [out [1]] === s2 [y]) {
-               out [1]++; y++; out [0]++;
-            }
-
-            vc [k] = out;
-
-            if (out [1] < s1.length || y < s2.length) {
+            VNew [k] = x;
+            if (x < s1.length || (x - k) < s2.length) {
                k += 2;
                continue;
             }
 
-            point = {x: out [1], y: y};
-            diff  = [];
-
-            v = d;
-
-            while (v > -1) {
-               last = V [v] [point.x - point.y];
-               y = last [1] - (point.x - point.y);
-               if (last [0]) dale.go (dale.times (last [0]), function (v2) {
-                  diff.unshift (['keep', s1 [last [1] - v2]]);
-               });
-               if (last [2]) diff.unshift (['rem', s1 [last [1] - last [0] - 1]]);
-               else          diff.unshift (['add', s2 [y        - last [0] - 1]]);
-               point.x = last [1] - last [0] - (last [2] ? 1 : 0);
-               point.y = y        - last [0] - (last [2] ? 0 : 1);
-               v--;
+            while (x > 0) {
+               if (k === -D || (k !== D && VList [D - 1] [k + 1] > VList [D - 1] [k - 1])) {
+                  k++;
+                  while (x > (D === 0 ? 0 : VList [D - 1] [k])) {
+                     diff.unshift (['keep', s1 [x - 1]]);
+                     x--;
+                  }
+                  if (D > 0) diff.unshift (['add', s2 [x - k]]);
+               }
+               else {
+                  k--;
+                  x--;
+                  while (x > VList [D - 1] [k]) {
+                     diff.unshift (['keep', s1 [x]]);
+                     x--;
+                  }
+                  diff.unshift (['rem', s1 [x]]);
+               }
+               D--;
             }
-
-            diff.shift ();
             return diff;
          }
-         d++;
+         D++;
       }
    }
 

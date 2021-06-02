@@ -132,6 +132,11 @@ The frontend and backend communicate through the [web](https://en.wikipedia.org/
 The frontend always starts the conversation by making a *request* to the backend. The backend replies to the frontend's request with a *response*. (There are exceptions to this, but in general it is true). The communication between frontend and backend is a sequence of requests and responses.
 
 
+
+TODO
+two sources of events: user interactions and responders
+responders don't call responders; they only call events!
+
 TODO
 - html/css/js
 - state

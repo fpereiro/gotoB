@@ -398,7 +398,7 @@ And, of course, gotoв must be very useful for building a real webapp.
 - **Batteries included**: the core functionality for building a webapp is all provided. Whatever libraries you add on top will probably be for specific things (nice CSS, a calendar widget, etc.)
 - **Trivial to set up**: add `<script src="https://cdn.jsdelivr.net/gh/fpereiro/gotob...@/gotoB.min.js"></script>` at the top of the `<body>`.
 - **Everything in plain sight**: all properties and state are directly accessible from the javascript console of the browser. DOM elements have stringified event handlers that can be inspected with any modern browser.
-- **Performance**: gotoв itself is small (~14kb when minified and gzipped, including all dependencies) so it is loaded and parsed quickly. Its view redrawing mechanism is reasonably fast.
+- **Performance**: gotoв itself is small (~14kB when minified and gzipped, including all dependencies) so it is loaded and parsed quickly. Its view redrawing mechanism is reasonably fast.
 - **Cross-browser compatibility**: gotoв is intended to work on virtually all the browsers you may encounter. See browser current compatibility above in the *Installation* section.
 
 ### What does gotoв *not* care about?
@@ -3947,7 +3947,7 @@ I'd like to thank [Nicholas Butler](https://www.codeproject.com/Articles/42279/I
 
 Before going into the implementation, it's very helpful to understand the algorithm. To do this, I will write down my notes as I understand the algorithm by following James Coglan's article.
 
-The Myers' diff algorithm gives us a *minimal set of changes* that can covert a string `A` to a string `B`. Changes can be either deletions or insertions. To use the example given by James Coglan in his article:
+The Myers' diff algorithm gives us a *minimal set of changes* that can convert a string `A` to a string `B`. Changes can be either deletions or insertions. To use the example given by James Coglan in his article:
 
 - `A`: abcabba
 - `B`: cbabac
@@ -3958,7 +3958,7 @@ Interestingly enough, there is more than one way to change `A` into `B` with onl
 
 How do we pick a set of changes if there are multiple ones that will get the job done in the minimal amount of changes? There are two other considerations:
 
-1. Priorize deletions over insertions; that is, if the algorithm can delete `x` and then add `y`, it should do it in that order instead of adding `y` first and removing `x` afterwards.
+1. Prioritize deletions over insertions; that is, if the algorithm can delete `x` and then add `y`, it should do it in that order instead of adding `y` first and removing `x` afterwards.
 2. Instead of interleaving out deletions and insertions, batch them. So, for example, if `xz` have to be removed and `yw` added, instead of removing `x`, adding `y`, removing `z` and adding `z`, it is preferred to first remove `xz` and then add `yw`.
 
 So the four requirements are then: 1) transform a string `A` into a string `B`; 2) with a minimal amount of edits (deletions & insertions); 3) doing deletions first, then insertions; 4) if possible, batching deletions and then insertions instead of interleaving them.
@@ -3968,16 +3968,16 @@ A way to represent the problem graphically is to put the original string (`A`) i
 ```
   abcabba
 
-c   .
-b  .  ..
-a .  .  .
-b  .  ..
-a .  .  .
-c   .
+c   \
+b  \  \\
+a \  \  \
+b  \  \\
+a \  \  \
+c   \
 
 ```
 
-The dots represent those positions where both characters are the same. Those are places where the characters are the same in both strings. They represent free movements, in that they don't cost any edits (as you may remember, we're trying to minimize the amount of edits).
+The diagonals represent those positions where both characters are the same. Those are places where the characters are the same in both strings. They represent free movements, in that they don't cost any edits (as you may remember, we're trying to minimize the amount of edits).
 
 An edit script can be seen as a way through this graph. The first solution that had 13 edits could be graphed like this:
 
@@ -4048,72 +4048,360 @@ Going back to the requirements of the algorithm, seen in terms of the graph:
 3. Deletions first: if given a choice, move right first, then downwards.
 4. Batch deletions and insertions: if given a choice, move in one direction, then in the next one.
 
-How we can find the shortest path in the example above?
+Now that we have a more clear idea of what the algorithm is about, we go to Myers' original paper:
 
-1. Let's start at `(0, 0)`. From here we can move either right to `(1, 0)` or down to `(0, 1)`.
-```
-0,0 -> 1,0
- |
- v
-0,1
-```
-2. From `(0, 1)` we can move either right to `(1, 1)` or down to `(0, 2)`.
-3. If we move right from `(0, 1)` to `(1, 1)`, we see there's a diagonal from `(1, 1)` to `(2, 2)`. If there's a diagonal path available, we don't consider it as a move, and, since it takes closer to our goal, we take it. So moving right from `(0, 1)` takes us to `(2, 2)`.
-4. If we move down from `(0, 1)` to `(0, 2)`, we see there's a diagonal from `(0, 2)` to `(1, 3)`. But wait! There's also another diagonal from `(1, 3)` to `(2, 4)`. So we take them both. Moving down from `(0, 1)` takes us to `(2, 4)`.
-5. Going back to `(1, 0)`, we can move either right to `(2, 0)` or down to `(1, 1)`.
-6. If we move right from `(1, 0)` to `(2, 0)`, there's a diagonal from `(2, 0)` to `(3, 1)`, so moving right takes us to `(3, 1)`.
-7. If we move down from `(1, 0)` to `(1, 1)`, there's a diagonal to `(2, 2)`, so moving right takes us to `(2, 2)`. Note that this point was also reached by moving right from `(0, 1)` to `(1, 1)`, also in two moves. Since we prefer deletions before insertions, we consider this point to be reached from `(1, 0)` instead of `(0, 1)`.
+- Strings `A` (source, length `N`) and `B` (target, length `M`).
+- Edit graph: start at `(0, 0)` and end at `(N, M)`, made of edges (lines). Its edges can be horizontal `(x - 1, y) -> (x, y)`, vertical `(x, y - 1) -> (x, y)` or diagonal `(x - 1, y - 1) -> (x, y)` edges that form a directed acyclical graph. The points `(x, y)` where `A [x]` is equal to `B [y]` are called *match points*.
+- Trace: a sequence of `L` match points such that `x [i] < x [i + 1]` and `y [i] < y [i + 1]` for successive points.
+- A path through the graph takes you from `(0, 0)` to `(N, M)`.
+- From a trace, a path can always be reconstructed by connecting the diagonal edges with vertical and horizontal edges. However, multiple paths can correspond to a given trace - these paths might differ from each other only in their non-diagonal edges.
+- A subsequence of a string is a string obtained by deleting zero or more symbols from the given string. A common subsequence of two strings is a subsequence of both.
+- Each trace gives rise to a common subsequence of A and B and viceversa. The intuition for this is that a trace is a list of points where the characters for both strings are the same. So, there's a 1:1 relationship between common subsequences and traces.
+- An edit script is a set of insertion and deletion commands that transform A into B. Delete takes a character from A (a horizontal edge); insert adds a character into A (a vertical edge). The delete command `xD` deletes the symbol `A [x]` from A; the insert command `x I b [w], b [x], ...` inserts symbols b [w], b [x], ... after the character after position `x`. All actions should be thought of as being executed simultaneously - otherwise, insertions/deletions at the beginning of A would affect insertions/deletions towards the end of A.
+- The length of an edit script is the number of deletions and insertions.
+- There's a 1:1 correspondence between a trace and an edit script. For every trace of length L, there is a corresponding edit script of length D = N + M - 2L.
+- However, there could be multiple paths per trace. How can this be? The explanation is that the edit script is a list of operations, but it doesn't specify their order. What makes a specific path is the order in which these edit operations take place.
+- To map an edit script to a trace, perform all deletes on A, see that the result is a common subsequence of A and B, and then map the subsequence to its unique trace.
+- Going back to the example of `abcabba` and `cbabac`: common subsequences of length 4: `caba`, `baba`, `cbba`. Each of them maps to a trace: `caba: (3, 1) (4, 3) (5, 4) (7, 5)`, `baba: (2, 2) (4, 3) (5, 4) (7, 5)` and `cbba: (3, 1) (5, 2) (6, 4) (7, 5)`. But note the multiple paths: to go from `(0, 0)` to `(1, 1)` (the last point being the starting point of the diagonal that takes you to `(2, 2)`) you need one insertion and one deletion, which can be done in any order. In that case, there are two paths that map to the same trace and the same edit script.
+- "The problem of finding the longest common subsequence (LCS) is equivalent to finding a path from `(0, 0)` to `(N, M)` with the maximum number of diagonal edges. The problem of inding a shortest edit script (SES) is equivalent to finding a path from `(0, 0)` to `(N, M)` with the minimum number of non-diagonal edges. These are dual problems as a path with the maximum number of diagonal edges has the minimal number of non-diagonal edges (D+2L = M+N). Consider adding a weight or cost to every edge. Give diagonal edges weight 0 and non-diagonal edges weight 1. The LCS/SES problem is equivalent to finding a minimum-cost path from (0,0) to (N,M) in the weighted edit graph and is thus a special instance of the single-source shortest path problem."
+- "The problem of finding a shortest edit script reduces to finding a path from (0,0) to (N,M) with the fewest number of horizontal and vertical edges."
+- D-path: a path starting at `(0, 0)` that has exactly D non-diagonal edges. A 0-path only has diagonal edges. By induction, a D path is a D-1 path followed by a non-diagonal edge and then a possibly empty sequence of diagonal edges called a *snake*. The snake is this sequence of diagonal edges at the end, which can also have length 0.
+- Number diagonals in the graph: diagonal k is that where the points `x - y = k`, so for example, diagonal 0 is that where `x = y`. The range of diagonals goes from -M to N. A vertical edge of length 1 starting on diagonal k ends on diagonal k - 1; an horizontal edge starting on diagonal k ends on diagonal k + 1; a snake (which is a sequence of diagonal edges) stays on the same diagonal where it starts.
+- Lemma 1 of the proof: a D-path must end on diagonal `k ∈ {-D, -D+2, ..., D-2, D}`. Proof is by induction: if D is 0, the path is made of diagonals and starts and ends on diagonal 0. Assuming inductively that a D-path must end on diagonal `k ∈ {-D, -D+2, ..., D-2, D}.` A D+1 path is a D-path ending on a diagonal k and followed by a non-diagonal edge (that goes to either k-1 or k+1) and a snake (that stays on the same diagonal). So then every D+1 path ends on diagonal `∈ {-D±1, -D+2±1, ..., D-2±1, D±1}`, which is equivalent to `{-D-1, -D+1, ..., D-1, D+1}`. "The result holds by induction. The lemma implies that D-paths end solely on odd diagonals when D is odd and even diagonals when D is even."
+- To make this more my speed: if D is 0, the path starts and ends at diagonal 0. If D is 1, the path starts at diagonal 0 and ends either at diagonal 1 or diagonal -1. If D is 2, it ends either in diagonal 1+1 (2), 1-1 (0), -1+1 (0) or -1-1 (-2). If D is 3, it ends in diagonal 2+1 (3), 2-1 (1), 0+1 (1), 0-1 (-1), -2+1 (-1) or -2-1 (-3).
+- "A D-path is furthest reaching in diagonal k if and only if it is one of the D-paths ending on diagonal k whose end point has the greatest possible row (column) number of all such paths." That is, the furthest reaching path is the one that ends the farthest from the origin.
+- Lemma 2 gives "an inductive characterization of furthest reaching D-paths and embodies a greedy principle: furthest reaching D-paths are obtained by greedily extending furthest reaching D-1 paths."
+- Lemma 2:
+   - "A furthest reaching 0-path ends at `(x,x)`, where x is `min (z - 1 || a[z] ≠ b[z] or z>M or z>N)`." The `x, x` point is because it being a 0 diagonal, x must be equal to y. x must be equal to the index of the last uninterrupted matching character of both strings or it must be either M or N, if both strings are the same.
+   - "A furthest reaching D-path on diagonal k can without loss of generality be decomposed into a furthest reaching (D − 1)-path on diagonal k − 1, followed by a horizontal edge, followed by the longest possible snake or it may be decomposed into a furthest reaching (D − 1)-path on diagonal k+1, followed by a vertical edge, followed by the longest possible snake." So, a furthest reaching D-path equals a furthest reaching D-1 path plus a horizontal or vertical edge, plus a snake (remember the snake is a sequence of diagonal edges with length 0 or more).
+- Proof of lemma 2:
+   - D path = D-1 path + non-diagonal edge + snake.
+   - Final snake must be maximal, otherwise D-path would not be furthest reaching.
+   - Suppose the D-1 path is not furthest reaching. "But then a furthest reaching (D − 1)-path can be connected to the final snake of the D-path with an appropriate non-diagonal move. Thus the D-path can always be decomposed as desired."
+- The last step sounds problematic to me. How do we know that if the furthest reaching D path is (say) at diagonal k, the furthest reaching D-1 path is either at diagonal k-1 or k+1? This lemma is the justification for the optimality of the greediness, that you don't get stuck in a local maximum if you follow the diagonals when you find them without considering alternatives. At this point, in the interest of keeping things moving, I'm going to assume the correctness of Lemma 2. If by some remote chance you're reading this and you're interested on this topic (and perhaps hopefully you understand Lemma 2 better than I do), please contact me or open an issue!
+- General outline of the algorithm:
+   - D is the number of non-diagonal edges of a path. It can be as low as 0 (for two identical strings) or M+N (for two strings without any common characters).
+   - The outer loop: we iterate on D, starting with D=0 and going in increments of 1 until potentially reaching M+N. If the inner loop stops us, D will end up being less. The algorithm, if correct, ensures that D is equal to the minimum edit distance, that is, the minimum number of edits that can convert string A into B. You might wonder: if the strings are of different length (M is larger or smaller than N), why not start at D=abs(m-n)? And I think the answer is: despite knowing that a low value of D is impossible, we still need to calculate the further reaching paths for low values of D.
+   - The inner loop:
+      - For k=-D to k=D, incrementing in steps of 2: find the endpoint of the furthest reaching D-path in diagonal k. How is this found?
+      - If the endpoint is (n, m) then the D-path is an optimal solution and both loops stop.
+      - The justification for only using odd diagonals if D is odd, and even diagonals if D is even, is given by Lemma 1. And k cannot be less than -D or more than D because if you do a maximum of D moves to the right (or down), you cannot go further than diagonals -D or D.
+- Detailed implementation of the algorithm:
+   - The outer loop:
+      - The array `V` contains the furthest reaching paths in elements `V [-D], V [-D+2], ... V [D-2], V [D]`. Because the endpoints for a D path and a D+1 path are disjoint (if the former are odd indexes, the latter are even indexes, or the other way around), we can just use one array instead of two.
+      - In case there's a snake (a set of diagonals) going from (0,0), the algorithm starts at a fictitious endpoint (-1, 0) and then moves down to (0, 0), to use the same code that follows the diagonal to follow any possible diagonals starting at (0, 0). Myers: "Note that a fictitious endpoint, (0, − 1), set up in Line 1 of the algorithm is used to find the endpoint of the furthest reaching 0-path." Why downards and not
+      - To record an endpoint `(x, y)` in diagonal k it suffices to retain just x because y is known to be x - k. "Consequently, V is an array of integers where `V [k]` contains the row index of the endpoint of a furthest reaching path in diagonal k."
+      - The algorithm as presented can only yield D (the minimum edit distance) and the final k for one of the optimal paths. To compute the diff, at the end of each iteration of D (the outer loop), a copy of `V` is stored. At the end of the process, we backtrack to determine an optimal path, and from there the diff itself.
+      - Once all the iterations of the inner loop finish, increment D by one. Keep on going until D reaches N + M (this will only happen if both strings have no characters in common).
+   - The inner loop:
+      - 1. Decide whether you move down or right. Case 1: move down when k = -D (because you cannot move right from a diagonal k=-D-1, since k=-D is the minimum diagonal on this iteration of the outer loop); case 2: move right when k = D (because you cannot move down from a diagonal k=D+1, since k=D is the maximum diagonal on this iteration of the outer loop); case 3: move down if the x value for diagonal k + 1 is *larger* than the x value for diagonal k - 1; case 4: move right if the x value for diagonal k - 1 is *larger or equal* than the x value for diagonal k + 1. Note the asymmetry between cases 3 and 4: if the x values are the same, we prefer moving right than moving down; through this mechanism, we prioritize deletions over insertions.
+      - 2. Once you move down or right, check if the s1 [x] and s2 [x - k] are the same. If so, you're in a diagonal, so increase x. Keep on going until they stop matching or you reach (n, m). In this way, snakes (contiguous diagonals) are followed.
+      - 3. Once you reach the end of the snake (which might have length 0 or more), register the x position in V [D] [k].
+      - 4. Unless (n, m) is reached, increment k by 2 and keep on going.
+   - Reconstructing the diff: when reaching the result (x is equal to N and x - k (y) is equal to M), we know the right value of both x and k. From here, using the values of V at the end of each outer loop iteration, we backtrack to reconstruct the path, and as we do that, we assemble the actual diff:
+      - While x > 0:
+         - Decide to move up or left. This is exactly the same as the condition for the inner loop, but in reverse. Case 1: move up when k = -D; Case 2: move left when k = D; case 3: move up if the x value for diagonal k + 1 is *larger* than the x value for diagonal k - 1; case 4: move left if the x value for diagonal k - 1 is *larger or equal* than the x value for diagonal k + 1.
+         - If we move up:
+            - Increment k
+            - Follow the snake:
+               - If x is greater than the x value reached on diagonal k at position D, then there's a snake of length one or more (this means that there are matching characters). While x is greater than this x value reached on diagonal k at position D, add `keep` elements and decrement x.
+               - If we're already on diagonal 0 and x is not 0 yet, we go back all the way to the origin (0,0), adding `keep` elements and decrementing x, since in this case there must be a snake that takes us to the origin.
+            - If D > 0, add an `add` element to the diff. If D is 0, x will already have gone up all the way to the origin, so there's no need to add it.
+         - If we move left:
+            - Decrement k.
+            - Decrement x, since we are moving left.
+            - Follow the snake:
+               - If x is greater than the x value reached on diagonal k at position D, then there's a snake of length one or more (this means that there are matching characters). While x is greater than this x value reached on diagonal k at position D, add `keep` elements and decrement x.
+            - Add a `rem` element to the diff. If D is 0, x will already have gone up all the way to the origin, so there's no need to add it.
+         - Decrement D
 
-By this point, we have done two moves. Our ending points from which we can explore further paths are `(2, 4)`, `(2, 2)` and `(3, 1)`. `(0, 1)` was discarded because we priorized `(1, 0)` -> `(2, 2)` over it (see #7 above).
+Let's now follow the example above (`abcabba -> cbabac`), doing the same computations that the algorithm does.
 
-```
-0,0 -> 1,0 -> 3,1
- |      |
- v      v
-0,1    2,2
- |
- v
-2,4
-```
+- Set V [0] to {1: 0}
+- D = 0:
+   - k = 0: move down from -1,0 to 0,0 because k = -D
+   - V [0] is now {0: 0, 1: 0}
+- D = 1:
+   - k = -1: move down  from 0,0 to 0,1 because k = -D
+   - k =  1: move right from 0,0 to 1,0 because k =  D
+   - V [1] is {-1: 0, 0: 0, 1: 1}
+- D = 2:
+   - k = -2: move down  from 0,1 to 0,2 because k = -D; move from 0,2 to 1,3 because s1 [0] (a) is equal to s2 [2] (a) (snake has length 1).
+   - k =  0: move down  from 1,0 to 1,1 because V [1] [1] (1) > V [1] [-1] (0); move from 1,1 to 2,2 because s1 [1] (b) is equal to s2 [1] (b) (snake has length 1).
+   - k =  2: move right from 1,0 to 2,0 because k =  D; move from 2,0 to 3,1 because s1 [2] (a) is equal to s2 [0] (a) (snake has length 1).
+   - V [2] is {-2: 1, -1: 0, 0: 2, 1: 1, 2: 3}
+- D = 3:
+   - k = -3: move down  from 0,2 to 0,3 because k = -D
+   - k = -1: move down  from 2,2 to 2,3 because V [2] [0] (2) > V [2] [-2] (1).
+   - k =  1: move down  from 3,1 to 3,2 because V [2] [2] (3) > V [2] [0] (2); move from 3,2 to 4,3 because s1 [3] (a) is equal to s2 [2] (a) and from 4,3 to 5,4 because s1 [4] (b) is equal to s2 [3] (b) (snake has length 2).
+   - k =  3: move right from 3,1 to 4,1 because k =  D
+   - V [3] is {-3: 0, -2: 1, -1: 2, 0: 2, 1: 5, 2: 3, 3: 4}
+- D = 4:
+   - k = -4: move down  from 0,3 to 0,4 because k = -D; move from 0,4 to 1,5 because s1 [0] (a) is equal to s2 [4] (a) (snake has length 1).
+   - k = -2: move down  from 2,3 to 2,4 because V [3] [-1] (2) > V [3] [-3] (0).
+   - k =  0: move down  from 5,4 to 5,5 because V [3] [1] (5) > V [3] [-1] (2).
+   - k =  2: move right from 5,4 to 6,4 because V [3] [1] (5) >= V [3] [-1] (2); move from 6,4 to 7,5 because s1 [6] (a) is equal to s2 [4] (a).
+   - k =  4: move right from 4,1 to 5,1 because k =  D; move from 5,1 to 6,2 because s1 [5] (b) is equal to s2 [1] (b), then from 6,2 to 7,3 because s1 [6] (a) is equal to s2 [2] (a) (snake has length 2).
+   - V [4] is {-4: 0, -3: 0, -2: 2, -1: 2, 0: 5, 1: 5, 2: 7, 3: 4, 4: 7}
+- D = 5:
+   - k = -5: move down from 1,5 to 1,6 because k = -D
+   - k = -3: move down from 2,4 to 2,5 because V [4] [-2] (2) > V [4] [-4] (0); move from 2,5 to 3,6 because s1 [2] (c) is equal to s2 [5] (c) (snake has length 1).
+   - k = -1: move down from 5,5 to 5,6 because V [4] [0] (5) > V [4] [-2] (2)
+   - k =  1: move down from 7,5 to 7,6 because V [4] [2] (7) > V [4] [0] (5). We've reached 7,6 which is the endpoint. Stop. Hammertime!
+   - We now know that a shortest path exists in k = 1 and D = 5.
+   - V [4] is {-5: 1, -4: 0, -3: 2, -2: 2, -1: 5, 0: 5, 1: 7, 2: 7, 3: 4, 4: 7}
+- Reconstructing the diff:
+   - First movement:
+      - D = 5, k = 1, x = 7
+      - We move up because V [4] [2] (7) > V [4] [0] (5). k is now incremented to 2.
+      - V [4] [2] is 7, which is the same as x, so the snake has length 0.
+      - We add an `add` element to the diff, with value s2 [x - k], which is s2 [5] (`c`). Diff is now `[['add', 'c']]`.
+      - We decrement D to 4.
+   - Second movement:
+      - D = 4, k = 2, x = 7
+      - We move left because V [3] [1] (5) >= V [3] [3] (4). k is now decremented to 1 and x is decremented to 6.
+      - We compare x (6) to V [3] [1] (5). Since x is larger, there is a snake with length 1. We add a `keep` element with value s1 [6] (a). Diff is now `[['keep', 'a'], ['add', 'c']]`. We decrement x to 5. Now, x is the same as V [3] [1], so we don't add any more `keep` elements.
+      - We add a `rem` element with value s1 [5] (b). Diff is now `[['rem', 'b'], ['keep', 'a'], ['add', 'c']]`.
+      - We decrement D to 3.
+   - Third movement:
+      - D = 3, k = 1, x = 5
+      - We move up because V [3] [2] (3) > V [3] [0] (2). We increment k to 2.
+      - We compare x (5) to V [2] [2] (3). Since x is larger by 2, the snake has length 2. We add a `keep` element with value s1 [4] (b), decrement x to 4, add a `keep` element with value s1 [3] (b) and decrement x to 3. Diff is now `[['keep', 'a'], ['keep', 'b'], ['rem', 'b'], ['keep', 'a'], ['add', 'c']].
+      - We add an `add` element to the diff, with value s2 [x - k], which is s2 [1] (b). Diff is now `[['add', 'b'], ['keep', 'a'], ['keep', 'b'], ['rem', 'b'], ['keep', 'a'], ['add', 'c']]`.
+      - We decrement D to 2.
+   - Fourth movement:
+      - D = 2, k = 2, x = 3
+      - We move left because k === D. We decrement k to 1 and x to 2.
+      - We compare x (2) to V [1] [1] (1). Since x is larger by 1, the snake has length 1. We add a `keep` element with value s1 [2] (c) and decrement x to 1. Diff is now `[['keep', 'c'], ['add', 'b'], ['keep', 'a'], ['keep', 'b'], ['rem', 'b'], ['keep', 'a'], ['add', 'c']]`.
+      - We add a `rem` element with value s1 [1] (b). Diff is now `[['rem', 'b'], ['keep', 'c'], ['add', 'b'], ['keep', 'a'], ['keep', 'b'], ['rem', 'b'], ['keep', 'a'], ['add', 'c']]`.
+      - We decrement D to 1.
+   - Fifth movement:
+      - D = 1, k = 1, x = 1
+      - We move left because k === D. We decrement k to 0 and x to 0.
+      - We compare x (0) to V [0] [0] (0). Since they are the same, the snake has length 0.
+      - We add a `rem` element with value s1 [0] (a). Diff is now `[['rem', 'a'], ['rem', 'b'], ['keep', 'c'], ['add', 'b'], ['keep', 'a'], ['keep', 'b'], ['rem', 'b'], ['keep', 'a'], ['add', 'c']]`.
+      - We decrement D to 0.
+   - Because x is 0, the loop that reconstructs the diff is now complete.
 
-8. From `(2, 4)` we can move either right to `(3, 4)` or down to `(2, 5)`.
-9. If we move right from `(2, 4)` to `(3, 4)` we find a diagonal that takes us to `(4, 5)`.
-10. If we move down from `(2, 4)` to `(2, 5)` we find a diagonal that takes us to `(3, 6)`.
-
-
-
-TODO
-
-
-
-
+Let's now see how `B.diff` is implemented.
 
 This function takes two arrays of strings, `s1` and `s2`. `s1` represents the old list of strings; `s2` represents the new list, to which we want to get from `s1`.
+
+While we don't use it like this, it would be possible for `s1` and `s2` to be strings instead of arrays of strings. As long as the arguments are accessible through by bracket notation and strict equality is expected, the function will work properly.
 
 ```javascript
    B.diff = function (s1, s2) {
 ```
 
-The algorithm, as implemented here, is the first version of the algorithm presented on the paper, which takes linear time but uses quadratic space.
+The algorithm, as implemented here, is the first version of the algorithm presented on the paper, which takes linear time but uses quadratic space. Myers presents a linear space version of the algorithm (the one used by Git) but that is more complex in implementation terms and, more importantly (according to Myers) "is roughly twice as slow as the basic O(ND) algorithm". We choose here the version that takes less time and uses more space.
+
+This function is heavily optimized since it represents a large part of the running time of gotoв. For that reason, the programming style is somewhat different from that of the rest of the library and its dependencies.
+
+We define as many variables as possible in the outer loop to improve performance on certain (older) browsers. Here are the variables:
+
+- `diff`: the array where we'll store the diff to be returned by the function.
+- `VList`: a list of position lists. Each of these position lists is a snapshot of `V` (as defined in the paper) for a given value of `D`.
+- `VLast`: a reference to the last element of `VList`.
+- `VNew`: the current element of `VList` being constructed.
+- `D`, `k` and `x`.
+- `t`, a timestamp used to determine whether `B.diff` has been running for too long.
 
 ```javascript
-      var V = [], sol, d = 0, vl, vc, k, out, y, point, diff, v, last, t = time ();
+      var diff = [], VList = [], VLast, VNew, D = 0, k, x, t = time ();
 ```
 
-- d: number of moves made (diagonal free; if two equal strings, 0; if two completely dissimilar, d can be the sum of the length of both)
-- k = x - y
-- for each d starting at 0, fill in each move for k from -d to d in steps of 2. move down or right?  If k is −d then the move must be downward, likewise if k is +d then we must move rightward. For all other values of k, we pick the position with the highest x from the two adjacent k values in the previous column, and determine where that move leads us.
-- Instead of storing farthermost point, keep list of points for each position, hence the array.
+The outer loop increments `D` from 0 until the length of both inputs, incrementing it by 1. As we saw above, `D` represents the minimum number of edits necessary to convert `s1` into `s2`. In the case where both inputs are the same, `D` will be 0; at the opposite end, if both inputs are completely dissimilar, `D` can reach the sum of both their lengths (but not more).
 
-TODO
+```javascript
+      while (D <= s1.length + s2.length) {
+```
 
-notes:
-   old string horizontal, new string vertical. going right is to remove, going down is to add, going in diagonal is to keep.
-   diagonal paths are free.
-   non-diagonal point: test going down and going right. none of those is a diagonal? keep those options open and proceed.
-   is any of those the start of a diagonal? go to the end of the diagonal.
-   if two paths take you to the same point in the same number of moves, priorize those that delete first (abandon the other one)
-   deletion first means that we can recycle elements by seeing them first, storing them and then re-using them (rather than the alternative of having to do a lookahead)
+If `B.internal.timeout` is set and the current running time of the current execution of `B.diff` exceeds it, we will return `false`. In this way, `B.diff` stops itself from running for too long when comparing two long inputs that are very dissimilar. If `B.internal.timeout` is not set, `B.diff` will run until it completes the diff.
+
+```javascript
+         if (B.internal.timeout && (time () - t > B.internal.timeout)) return false;
+```
+
+Within the outer loop, we do a number of operations:
+- Set `k` to `-D`.
+- Set `VLast` to the last element stored in `VList`. If no such element is present (because we're doing the first iteration of the outer loop), we initialize `VLast` to `{1: 0}`. More on this below.
+- Set `VNew` to a new object.
+- Push `VNew` into `VList`. `VList` will contain a number of objects, each of which contains the the indexes of the farthest reaching paths for each diagonal. `VList` is in effect a list of snapshots of this object containing the indexes of the farthest reaching paths, and it will contain one snapshot per value of `D`.
+
+```javascript
+         k = -D;
+         VLast = VList [VList.length - 1] || {1: 0};
+         VNew = {};
+         VList.push (VNew);
+```
+
+We enter the inner loop, which goes from -D to D in jumps of 2.
+
+```javascript
+         while (k <= D) {
+```
+
+Within the inner loop, we need to decide whether we move down or we move right to the current diagonal. We move down if one of the following circumstances applies:
+- `k` is equal to `-D`. Since this is the lowest possible diagonal, the previous point needs to be up, not to its left, otherwise it would be at a non-existing diagonal -D-1.
+- `k` is *not* equal to `D` *and* the value of `VLast` for the `k + 1` diagonal is *larger* than that of the `k - 1` diagonal. The first part of the condition is the analogue of the previous condition: to reach the highest possible diagonal, we cannot reach it by moving down from a non-existing diagonal D+1. Notice that we prefer to move *right* rather than *down* if the value of `k + 1` is the same of `k - 1`. This is the way in which the algorithm prefers deletions (moving right) over insertions (moving down).
+
+An interesting implementation consequence of the way this algorithm works is that by performing deletions first, it is much easier to recycle DOM elements: the discarded elements are kept in a variable and can be re-used as needed - `B.applyDiff` does this extensively. If the algorithm would prioritize insertions, we'd have to implement a lookahead for recycling DOM elements.
+
+We set `x` to the value of `x` reached by the furthest reaching path in diagonal `k + 1`. As we move down, we don't need to further change the value of `x`.
+
+```javascript
+            if (k === -D || (k !== D && VLast [k + 1] > VLast [k - 1])) x = VLast [k + 1];
+```
+
+Otherwise, we move right. This only happens if one of the following circumstances applies (all of them are the opposite of the ones we just saw for moving left):
+
+- `k` is equal to `D`.
+- `k` is *not* equal to `-D` *and* the value of `VLast` for the `k - 1` diagonal is *larger or equal* than that of the `k + 1` diagonal.
+
+We set `x` to the value of `x` reached by the furthest reaching path in diagonal `k - 1`, plus 1. This plus 1 indicates we're moving right.
+
+```javascript
+            else                                                        x = VLast [k - 1] + 1;
+```
+
+Why do we set `VLast` to `{1: 0}` in the first iteration? This is because when D is 0 and we're starting the first iteration, `k` is equal to `-D`. In this case, we move down from diagonal 1 and the value of `x` will be set 0, which is the right value for starting the process.
+
+We now follow the snake by checking whether there are elements of both inputs that are the same (what the paper calls *matching points*). While we don't exceed the length of `s1` or `s2`, as long as their values are the same, we increment `x`. Note this can happen zero times, in which case the snake has then length 0.
+
+Remember that `x - k` is equal to `y`, since `k === x - y`. The only reason we haven't defined an `y` variable is to make the function as fast as possible.
+
+```javascript
+            while (x < s1.length && (x - k) < s2.length && s1 [x] === s2 [x - k]) x++;
+```
+
+Once we followed the snake, we set the index in `VNew` for the furthest reaching path in `k`. This concludes our work for this execution of the inner loop for this combination of values for `D` and `k`.
+
+```javascript
+            VNew [k] = x;
+```
+
+While `x` is less than the length of the first input, and `y` is smaller than the length of the second one, we keep on going by incrementing `k` by 2 and doing another iteration of the inner loop.
+
+```javascript
+            if (x < s1.length || (x - k) < s2.length) {
+               k += 2;
+               continue;
+            }
+```
+
+If we're here, we're done! The current value of `D` and `k` will give us an optimal path from `s1` to `s2`. We now have to reconstruct the path taken and build the diff in the process.
+
+Since we're going to reconstruct a path back to the origin, we'll be moving until `x` is 0.
+
+```javascript
+            while (x > 0) {
+```
+
+We now decide whether we have to move up or left. The condition is the same as the one we used to determine earlier whether we would move down or right. The only difference is that we now use the `D - 1` element of `VList`, which represents the previous snapshot of `V`. The condition below, if true, indicates a move upwards.
+
+```javascript
+               if (k === -D || (k !== D && VList [D - 1] [k + 1] > VList [D - 1] [k - 1])) {
+```
+
+If we move up, we increment `k`.
+
+```javascript
+                  k++;
+```
+
+We now follow the snake. If `D` is 0, we attempt to trace `x` all the way to the origin; otherwise, we trace it until the position of x reached in the furthest reaching path of the diagonal `k + 1`.
+
+The case where `D` is 0 can only happen on this branch, since it covers the case where `k === -D` - remember that the only possible value for `k` when `D` is 0 is also 0.
+
+```javascript
+                  while (x > (D === 0 ? 0 : VList [D - 1] [k])) {
+```
+
+For each matching element between `s1` and `s2`, we add a `keep` element to the diff, referencing an element from `s1`. Note that we subtract 1 from `x` since arrays in javascript are zero-indexed (so that, say, the third element has index `2`). We then decrement `x` by 1. Also note that we add the element to the beginning of the diff, since we're reconstructing the diff backwards.
+
+Instead of referencing an element from `s1`, we could have referenced element `x - k` from `s2` here instead. The result would have been the same.
+
+```javascript
+                     diff.unshift (['keep', s1 [x - 1]]);
+                     x--;
+                  }
+```
+
+At this point, we're done following the snake. We now add an `add` element to the `diff`, referencing an element from `s2` and using `x - k` as our index.
+
+```javascript
+                  if (D > 0) diff.unshift (['add', s2 [x - k]]);
+               }
+```
+
+If we move left, we decrement both `k` and `x` by 1. `x` needs to be decremented because we're moving to a lower diagonal. `k` is decremented since `y` (`x - k`) should stay the same in this case.
+
+```javascript
+               else {
+                  k--;
+                  x--;
+```
+
+We now follow the snake until `x` has the same value as the furthest reaching path from diagonal `k - 1`.
+
+```javascript
+                  while (x > VList [D - 1] [k]) {
+```
+
+For each matching element between `s1` and `s2`, we add a `keep` element to the diff, referencing an element from `s1`. Note that we don't subtract 1 from `x` since we just decremented `x` before following the snake.
+
+We then decrement `x` by 1.
+
+```javascript
+                     diff.unshift (['keep', s1 [x]]);
+                     x--;
+                  }
+```
+
+At this point, we're done following the snake. We now add a `rem` element to the `diff`, referencing an element from `s1` and using `x` as our index.
+
+```javascript
+                  diff.unshift (['rem', s1 [x]]);
+               }
+```
+
+Whether we move up or left, we decrement `D` by 1. This concludes the logic for reconstructing the diff.
+
+```javascript
+               D--;
+            }
+```
+
+At this point, the diff is ready, so we return it.
+
+```javascript
+            return diff;
+```
+
+We close the inner loop.
+
+```javascript
+         }
+```
+
+We increment `D` and close the outer loop.
+
+```javascript
+         D++;
+      }
+```
+
+There's nothing else to do, so we close the function.
+
+```javascript
+   }
+```
+
+We close the module.
+
+```javascript
+}) ();
+```
 
 ## License
 

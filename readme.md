@@ -6,7 +6,7 @@ gotoв is a framework for making the frontend of a web application (henceforth *
 
 ## Current status of the project
 
-The current version of gotoв, v2.0.0, is considered to be *mostly stable* and *mostly complete*. [Suggestions](https://github.com/fpereiro/gotoB/issues) and [patches](https://github.com/fpereiro/gotoB/pulls) are welcome. Besides bug fixes, there are no changes planned.
+The current version of gotoв, v2.0.0, is considered to be *mostly stable* and *mostly complete*. [Suggestions](https://github.com/fpereiro/gotoB/issues) and [patches](https://github.com/fpereiro/gotoB/pulls) are welcome. Besides bug fixes, and the completion of the tutorial, there are no changes planned.
 
 gotoв is part of the [ustack](https://github.com/fpereiro/ustack), a set of libraries to build webapps which aims to be fully understandable by those who use it.
 

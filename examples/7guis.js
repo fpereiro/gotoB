@@ -349,7 +349,7 @@ views.cells = function () {
    return ['div', [
       ['style', [
       ]],
-      ['h2', ['Cells (under construction)']],
+      ['h2', ['Cells (to be implemented in the future)']],
    ]];
 }
 

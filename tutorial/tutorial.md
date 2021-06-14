@@ -1,12 +1,12 @@
-# Tutorial
+# Tutorial: Developing a Frontend from First Principles
 
 This tutorial is conceived as a small book that gently explains how to develop the frontend of a web application (henceforth, *webapp*).
 
 This tutorial requires you to have some knowledge of HTML, CSS and js (Javascript) - but only a little bit!
 
-This will be most useful for those just dipping their feet into developing webapps. Experienced frontend devs might get bored, especially in the first sections.
+This will be most useful for those just dipping their feet into developing webapps. However, it can be also useful for more experienced developers seeking to reconsider the parts of a webapp from first principles.
 
-This is the resource I wanted to find back when I started writing webapps back in 2009; ten years later, I'm writing it for those of you who are today starting out.
+This is the resource I wanted to find back when I started writing webapps back in 2009; more than ten years later, I'm writing it for those of you who are today starting out.
 
 **Warning: this tutorial is currently being written and several sections are still drafts or altogether missing.**
 
@@ -59,7 +59,9 @@ The main functions of the backend are:
 - Provide information to the frontend.
 - Validate and store data.
 
-The *frontend* doesn't directly run on the *user device*. Rather, it runs on a *[browser](https://en.wikipedia.org/wiki/Web_browser)*, which in turn runs on the user device. Likewise, the *backend* doesn't directly run on a *server*. Rather, it runs on a *[runtime](https://en.wikipedia.org/wiki/Runtime_system)*, which is a place to run a program in the server. Examples of runtimes for backends are [node.js](https://en.wikipedia.org/wiki/Node.js) and [PHP](https://en.wikipedia.org/wiki/PHP).
+The *frontend* doesn't directly run on the *user device*. Rather, it runs on a *[browser](https://en.wikipedia.org/wiki/Web_browser)*, which in turn runs on the user device. Likewise, the *backend* doesn't directly run on a *server*. Rather, it runs on a *[runtime](https://en.wikipedia.org/wiki/Runtime_system)*. The runtime is a program that itself runs on the server. Examples of runtimes for backends are [node.js](https://en.wikipedia.org/wiki/Node.js) and [PHP](https://en.wikipedia.org/wiki/PHP).
+
+It is a little mind-bending, but it really works that way: both the browser and the runtime are programs that run programs.
 
 This is a good moment to clarify a common question: what is a server? The simplest definition: a computer running 24/7/365 that is connected to the internet. The [cloud](https://en.wikipedia.org/wiki/Cloud_computing) is essentially a bunch of servers somewhere, usually on several datacenters.
 

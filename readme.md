@@ -6,7 +6,7 @@ gotoв is a framework for making the frontend of a web application (henceforth *
 
 ## Current status of the project
 
-The current version of gotoв, v2.0.0, is considered to be *mostly stable* and *mostly complete*. [Suggestions](https://github.com/fpereiro/gotoB/issues) and [patches](https://github.com/fpereiro/gotoB/pulls) are welcome. Besides bug fixes, and the completion of the tutorial, there are no changes planned.
+The current version of gotoв, v2.0.0, is considered to be *mostly stable* and *mostly complete*. [Suggestions](https://github.com/fpereiro/gotoB/issues) and [patches](https://github.com/fpereiro/gotoB/pulls) are welcome. Besides bug fixes, and the completion of the tutorial in one of the appendixes, there are no changes planned.
 
 gotoв is part of the [ustack](https://github.com/fpereiro/ustack), a set of libraries to build webapps which aims to be fully understandable by those who use it.
 
@@ -48,10 +48,6 @@ Browser compatibility has been tested in the following browsers:
 
 The author wishes to thank [Browserstack](https://browserstack.com) for providing tools to test cross-browser compatibility.
 
-## Tutorial
-
-An in-depth tutorial is available [here](tutorial/tutorial.md). The tutorial covers the general principles of building a webapp and introduces gotoв as a possible solution to the fundamental problems of building a frontend. It requires only basic knowledge of HTML, javascript and programming, so if you're learning how to build webapps, it might be a good place to start.
-
 ## Index
 
 - [Examples](#examples)
@@ -63,6 +59,7 @@ An in-depth tutorial is available [here](tutorial/tutorial.md). The tutorial cov
 - [License](#license)
 - [Appendix: A brief history of the frontend](#a-brief-history-of-the-frontend)
 - [Appendix: Lessons from the quest for IE6 compatibility](#lessons-from-the-quest-for-ie6-compatibility)
+- [Appendix: Tutorial: Developing a Frontend from First Principles](#tutorial-developing-a-frontend-from-first-principles)
 
 ## Examples
 
@@ -4536,3 +4533,7 @@ Why even bother with making gotoв compatible on old browsers that nobody uses a
 - **Trying something different**: most js frameworks and libraries are constantly moving in the direction of dropping support for older browsers. I figured it would be interesting to do the opposite - and indeed it was!
 
 To restate the first point: it is remarkable that a modern web framework can be at all implemented in browsers that are (as of 2021) 20 years old. This is not a testament to gotoв's prowess, but rather to the prowess of js as a language, and that of the browser as an application platform. Even if their ES3 implementations have aged badly, their fundamentals have aged extremely well.
+
+## Tutorial: Developing a Frontend from First Principles
+
+[Here you can find](tutorial/tutorial.md). a tutorial that covers the general principles of building a webapp from first principles, starting at a very basic level. It requires only basic knowledge of HTML, javascript and programming. If you are just beginning and you want to understand the basic concepts of a webapp, you might find it useful. If you are a more experienced developer that is interested in reconsidering the concepts of the frontend from the ground up, you might be interested in it too.

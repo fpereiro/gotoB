@@ -6,7 +6,7 @@ gotoв is a framework for making the frontend of a web application (henceforth *
 
 ## Current status of the project
 
-The current version of gotoв, v2.0.0, is considered to be *mostly stable* and *mostly complete*. [Suggestions](https://github.com/fpereiro/gotoB/issues) and [patches](https://github.com/fpereiro/gotoB/pulls) are welcome. Besides bug fixes, and the completion of the tutorial in one of the appendixes, there are no changes planned.
+The current version of gotoв, v2.0.1, is considered to be *mostly stable* and *mostly complete*. [Suggestions](https://github.com/fpereiro/gotoB/issues) and [patches](https://github.com/fpereiro/gotoB/pulls) are welcome. Besides bug fixes, and the completion of the tutorial in one of the appendixes, there are no changes planned.
 
 gotoв is part of the [ustack](https://github.com/fpereiro/ustack), a set of libraries to build webapps which aims to be fully understandable by those who use it.
 
@@ -1632,7 +1632,7 @@ Below is the annotated source.
 
 ```javascript
 /*
-gotoB - v2.0.0
+gotoB - v2.0.1
 
 Written by Federico Pereiro (fpereiro@gmail.com) and released into the public domain.
 
@@ -1691,7 +1691,7 @@ The remaining seven keys of the main object map to recalc entities. The first on
 - `r.forget`, the function for deleting an event responder.
 
 ```javascript
-   var B = window.B = {v: '2.0.0', B: 'в', t: time (), r: r, responders: r.responders, store: r.store, log: r.log, call: r.call, respond: r.respond, forget: r.forget};
+   var B = window.B = {v: '2.0.1', B: 'в', t: time (), r: r, responders: r.responders, store: r.store, log: r.log, call: r.call, respond: r.respond, forget: r.forget};
 ```
 
 gotoв is essentially a set of functions built on top of recalc. The last six keys are meant as shorthands to the corresponding recalc objects for quicker debugging from the browser console. If it wasn't for these shorthands, instead of writing `B.call`, for example, we'd have to write `B.r.call`, which is longer and doesn't look as nice.

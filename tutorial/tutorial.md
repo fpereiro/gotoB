@@ -1,10 +1,10 @@
 # Tutorial: Developing a Frontend from First Principles
 
-This tutorial is conceived as a small book that gently explains how to develop the frontend of a web application (henceforth, *webapp*).
+This tutorial is conceived as a small book that gently explains the main concepts of the frontend of a web application (henceforth, *webapp*).
 
 This tutorial requires you to have some knowledge of HTML, CSS and js (Javascript) - but only a little bit!
 
-This will be most useful for those just dipping their feet into developing webapps. However, it can be also useful for more experienced developers seeking to reconsider the parts of a webapp from first principles.
+This will be most useful for those just dipping their feet into developing webapps. However, it can be also useful for more experienced developers seeking to reconsider the parts of a webapp from first principles, using a conceptual perspective.
 
 This is the resource I wanted to find back when I started writing webapps back in 2009; more than ten years later, I'm writing it for those of you who are today starting out.
 

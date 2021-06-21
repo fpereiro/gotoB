@@ -382,6 +382,16 @@ var app = function () {
 B.mount ('body', app);
 
 var app = function () {
+   return B.view ('username', function (username) {
+      return ['div', B.view ('counter', function (counter) {
+         return ['h1', [username, counter]];
+      })];
+   });
+}
+
+B.mount ('body', app);
+
+var app = function () {
    return B.view (['Data', 'counter'], function (counter) {
       // Don't invoke B.call from inside a vfun, unless you have a great reason to!
       B.call ('side', ['effects', 'rule']);

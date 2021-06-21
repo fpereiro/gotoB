@@ -736,7 +736,8 @@
                      [['a', {opaque: true}, ['LITERAL', '<svg></svg>']], ['P 19 a {"opaque":true} <svg></svg>']],
                      [['a', {opaque: true}, '<svg></svg>'], ['P 19 a {"opaque":true} &lt;svg&gt;&lt;/svg&gt;']],
                      [['a', '<svg></svg>'], ['O a', 'L &lt;svg&gt;&lt;/svg&gt;', 'C a']],
-                     [['div', [['a', {href: 'c'}], ['p', 2]]], ['O div', 'O a {"href":"c"}', 'C a', 'O p', 'L 2', 'C p', 'C div']]
+                     [['div', [['a', {href: 'c'}], ['p', 2]]], ['O div', 'O a {"href":"c"}', 'C a', 'O p', 'L 2', 'C p', 'C div']],
+                     [['style', ['div', {margin: 0}]], ['O style', 'L div{margin:0;}', 'C style']]
                   ], undefined, function (v, k) {
                      if (! eq (B.prediff (v [0]), v [1])) return 'B.prediff mismatch: ' + (k + 1) + ' ' + JSON.stringify (v) + '   ' + B.prediff (v [0]);
                   });
@@ -1811,6 +1812,38 @@
                   B.internal.count = B.internal.count - 1;
                });
 
+               Test ('B.view, style', function () {
+
+                  B.unmount ('body');
+                  B.mount ('body', function () {
+                     return B.view (['Data', 'margin'], function (margin) {
+                        return ['div', [
+                           ['style', ['div', {margin: margin || 0}]]
+                        ]];
+                     });
+                  });
+
+                  if ([
+                     '<div id="в21" path="Data:margin"><style>div{margin:0;}</style></div>',
+                     // IE<=8 removes the quotes around id, uppercases the tag and removes the <style> altogether!
+                     '<DIV id=в21 path="Data:margin"></DIV>'
+                  ].indexOf (document.body.innerHTML) === -1) return 'Invalid style #1 ' + document.body.innerHTML;
+
+                  // Because IE<=8 gets rid of the <style> altogether, we cannot expect gotoB to redraw things properly, so we skip this test.
+                  if (! B.internal.oldIE) {
+                     B.call (x, 'set', ['Data', 'margin'], 2);
+
+                     if ([
+                        '<div id="в21" path="Data:margin"><style>div{margin:2px;}</style></div>',
+                        // IE<=8 removes the quotes around id, uppercases the tag and removes the <style> altogether!
+                        '<DIV id=в21 path="Data:margin"></DIV>'
+                     ].indexOf (document.body.innerHTML) === -1) return 'Invalid style #2 ' + document.body.innerHTML;
+                  }
+
+                  // We preserve the id for this test to avoid modifying the ids on all the following tests.
+                  B.internal.count = B.internal.count - 1;
+               });
+
                Test ('B.view, events', function () {
                   B.unmount ('body');
                   B.mount ('body', function () {
@@ -1932,7 +1965,7 @@
                      '<DIV>\r\n<P>hello</P>\r\n<UL id=в22 path="Data:items">\r\n<LI>' + Data.items.join ('</LI>\r\n<LI>') + '</LI></UL></DIV>'
                   ].indexOf (document.body.innerHTML) === -1) return 'Trample #1: ' + document.body.innerHTML;
                   var llog = teishi.last (B.log);
-                  if (llog.args [0].diffLength !== false) return 'Trample #1 timeout was ignored.';
+                  if (llog.args [0].diff !== false) return 'Trample #1 timeout was ignored.';
 
                   B.unmount ('body');
                   B.mount ('body', function () {
@@ -1951,7 +1984,7 @@
                      '<DIV>\r\n<P>hello</P>\r\n<DIV id=в23 path="Data:items">\r\n<P>' + Data.items.join ('</P>\r\n<P>') + '</P></DIV></DIV>'
                   ].indexOf (document.body.innerHTML) === -1) return 'Trample #2: ' + document.body.innerHTML;
                   llog = teishi.last (B.log);
-                  if (llog.args [0].diffLength !== false) return 'Trample #2 timeout was ignored.';
+                  if (llog.args [0].diff !== false) return 'Trample #2 timeout was ignored.';
 
                   B.unmount ('body');
                   B.mount ('body', function () {
@@ -1972,7 +2005,7 @@
                      '<DIV>\r\n<P>hello</P>\r\n<UL id=в24 path="Data:items">\r\n<LI>' + Data.items.join ('</LI>\r\n<LI>') + '</LI></UL><FOOTER></FOOTER></DIV>'
                   ].indexOf (document.body.innerHTML) === -1) return 'Trample #3: ' + document.body.innerHTML;
                   llog = teishi.last (B.log);
-                  if (llog.args [0].diffLength !== false) return 'Trample #3 timeout was ignored.';
+                  if (llog.args [0].diff !== false) return 'Trample #3 timeout was ignored.';
 
                   B.internal.timeout = 200;
 
@@ -2130,24 +2163,24 @@
 
                B.call (x, 'set', ['Data', 'perf', 'data'], data);
                Time ['3: set data'] = time () - dale.acc (Time, function (a, b) {return a + b});
-               clog ('set data', last (B.log).args [0].ms, last (B.log).args [0].diffLength);
+               clog ('set data', last (B.log).args [0].ms, last (B.log).args [0].diff);
 
                B.call (x, 'set', ['Data', 'perf', 'data', 10, 2], 'something');
                Time ['4: update one item'] = time () - dale.acc (Time, function (a, b) {return a + b});
-               clog ('update one', last (B.log).args [0].ms, last (B.log).args [0].diffLength);
+               clog ('update one', last (B.log).args [0].ms, last (B.log).args [0].diff);
 
                B.call (x, 'set', ['Data', 'perf', 'class'], 'aclass');
                Time ['5: update all items'] = time () - dale.acc (Time, function (a, b) {return a + b});
-               clog ('update all', last (B.log).args [0].ms, last (B.log).args [0].diffLength);
+               clog ('update all', last (B.log).args [0].ms, last (B.log).args [0].diff);
 
                B.call (x, 'rem', ['Data', 'perf', 'data', 10], 2);
                Time ['6: remove one item'] = time () - dale.acc (Time, function (a, b) {return a + b});
-               clog ('remove one', last (B.log).args [0].ms, last (B.log).args [0].diffLength);
+               clog ('remove one', last (B.log).args [0].ms, last (B.log).args [0].diff);
 
                B.call (x, 'add', ['Data', 'perf', 'data', 10], 999);
 
                Time ['7: add an item'] = time () - dale.acc (Time, function (a, b) {return a + b});
-               clog ('add an item', last (B.log).args [0].ms, last (B.log).args [0].diffLength);
+               clog ('add an item', last (B.log).args [0].ms, last (B.log).args [0].diff);
 
                B.prod = true;
                B.unmount ('body');
@@ -2169,23 +2202,23 @@
                B.call (x, 'set', ['Data', 'perf'], {});
                B.call (x, 'set', ['Data', 'perf', 'data'], data);
                Time ['9: set data (prod)'] = time () - dale.acc (Time, function (a, b) {return a + b});
-               clog ('set data prod', last (B.log).args [0].ms, last (B.log).args [0].diffLength);
+               clog ('set data prod', last (B.log).args [0].ms, last (B.log).args [0].diff);
 
                B.call (x, 'set', ['Data', 'perf', 'data', 10, 2], 'something');
                Time ['10: update one item (prod)'] = time () - dale.acc (Time, function (a, b) {return a + b});
-               clog ('update one prod', last (B.log).args [0].ms, last (B.log).args [0].diffLength);
+               clog ('update one prod', last (B.log).args [0].ms, last (B.log).args [0].diff);
 
                B.call (x, 'set', ['Data', 'perf', 'class'], 'aclass');
                Time ['11: update all items (prod)'] = time () - dale.acc (Time, function (a, b) {return a + b});
-               clog ('update all prod', last (B.log).args [0].ms, last (B.log).args [0].diffLength);
+               clog ('update all prod', last (B.log).args [0].ms, last (B.log).args [0].diff);
 
                B.call (x, 'rem', ['Data', 'perf', 'data', 10], 2);
                Time ['12: remove one item (prod)'] = time () - dale.acc (Time, function (a, b) {return a + b});
-               clog ('remove one prod', last (B.log).args [0].ms, last (B.log).args [0].diffLength);
+               clog ('remove one prod', last (B.log).args [0].ms, last (B.log).args [0].diff);
 
                B.call (x, 'add', ['Data', 'perf', 'data', 10], 999);
                Time ['13: add an item (prod)'] = time () - dale.acc (Time, function (a, b) {return a + b});
-               clog ('add item prod', last (B.log).args [0].ms, last (B.log).args [0].diffLength);
+               clog ('add item prod', last (B.log).args [0].ms, last (B.log).args [0].diff);
 
                Time ['14: total time'] = dale.acc (dale.fil (Time, undefined, function (v, k) {
                   if (k !== 'zero') return v;

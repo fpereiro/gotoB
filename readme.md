@@ -6,7 +6,7 @@ gotoв is a framework for making the frontend of a web application (henceforth *
 
 ## Current status of the project
 
-The current version of gotoв, v2.0.1, is considered to be *mostly stable* and *mostly complete*. [Suggestions](https://github.com/fpereiro/gotoB/issues) and [patches](https://github.com/fpereiro/gotoB/pulls) are welcome. Besides bug fixes, and the completion of the tutorial in one of the appendixes, there are no changes planned.
+The current version of gotoв, v2.1.0, is considered to be *mostly stable* and *mostly complete*. [Suggestions](https://github.com/fpereiro/gotoB/issues) and [patches](https://github.com/fpereiro/gotoB/pulls) are welcome. Besides bug fixes, and the completion of the tutorial in one of the appendixes, there are no changes planned.
 
 gotoв is part of the [ustack](https://github.com/fpereiro/ustack), a set of libraries to build webapps which aims to be fully understandable by those who use it.
 
@@ -29,7 +29,7 @@ gotoв is written in Javascript. You can use it in the browser by loading the pr
 Or you can use this link to use the latest version - courtesy of [jsDelivr](https://jsdelivr.com).
 
 ```html
-<script src="https://cdn.jsdelivr.net/gh/fpereiro/gotob@59e2620c8fb905030cc7232c361add9cce2bc288/gotoB.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/fpereiro/gotob@??/gotoB.min.js"></script>
 ```
 
 gotoв uses non-ASCII symbols, so you also must specify an [encoding](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/meta) for your document (for example [UTF-8](https://en.wikipedia.org/wiki/UTF-8)) by placing a `<meta>` tag in the `<head>` of the document: `<meta charset="utf-8">`.
@@ -393,7 +393,7 @@ And, of course, gotoв must be very useful for building a real webapp.
 - **Fast reload**: the edit-reload cycle should take under two seconds. No need to wait until no bundle is completed.
 - **Smallness**: gotoв and its dependencies are < 2048 lines of consistent, annotated javascript. In other words, it is less than 2048 lines on top of [vanilla.js](http://vanilla-js.com/).
 - **Batteries included**: the core functionality for building a webapp is all provided. Whatever libraries you add on top will probably be for specific things (nice CSS, a calendar widget, etc.)
-- **Trivial to set up**: add `<script src="https://cdn.jsdelivr.net/gh/fpereiro/gotob@59e2620c8fb905030cc7232c361add9cce2bc288/gotoB.min.js"></script>` at the top of the `<body>`.
+- **Trivial to set up**: add `<script src="https://cdn.jsdelivr.net/gh/fpereiro/gotob@??/gotoB.min.js"></script>` at the top of the `<body>`.
 - **Everything in plain sight**: all properties and state are directly accessible from the javascript console of the browser. DOM elements have stringified event handlers that can be inspected with any modern browser.
 - **Performance**: gotoв itself is small (~14kB when minified and gzipped, including all dependencies) so it is loaded and parsed quickly. Its view redrawing mechanism is reasonably fast.
 - **Cross-browser compatibility**: gotoв is intended to work on virtually all the browsers you may encounter. See browser current compatibility above in the *Installation* section.
@@ -1062,6 +1062,29 @@ B.mount ('body', app);
 // The HTML for the <h1> will be something like <h1 id="в1" path="Data:counter"></h1>
 ```
 
+If you nest views, you need to specify different elements for them - that is, one invocation to `B.view` cannot simply return another invocation to `B.view`.
+
+```javascript
+
+// This will not work, gotoB will return an error saying that you cannot specify an id on the element returned by the vfun.
+var app = function () {
+   return B.view ('username', function (username) {
+      return B.view ('counter', function (counter) {
+         return ['h1', [username, counter]];
+      });
+   });
+}
+
+// This will work - notice there's a `<div>` and inside of it, an `<h1>`.
+var app = function () {
+   return B.view ('username', function (username) {
+      return ['div', B.view ('counter', function (counter) {
+         return ['h1', [username, counter]];
+      })];
+   });
+}
+```
+
 It is highly discouraged to call events from inside a `vfun`, unless you have a great reason to do so (if you do, I'm very curious about your use case, so please let me know!). `vfuns` make much more sense as pure functions. Events should be called from `rfuns` rather than `vfuns`.
 
 ```javascript
@@ -1362,7 +1385,7 @@ If you set `B.prod` to `true`, you'll turn on *production mode*. When production
 
 With `B.prod` enabled, gotoв will be faster to create liths (since it will stop validating them) but the functions for diffing views and applying changes to the DOM will run at the same speed. By default, after 200ms gotoв gives up on performing diffs between the old and the new version of a view. To override this, you can set `B.internal.timeout` to another value. If gotoв spends more than that amount of time applying the diff algorithm, it gives up and instead creates a new set of DOM elements to replace the old ones. This is called *trampling*.
 
-Every gotoв redraw calls an event with verb `redraw` and a `path` that is the same of that of the redrawn view. These events contain performance information, namely: how much time it took to `create` the lith, how much time it took to `prediff` it (an intermediate processing step), how much the actual `diff` computation took, how much time it took to apply the changes to the `DOM`, and a `total` amount of time. You can inspect these through `B.eventlog`.
+Every gotoв redraw calls an event with verb `redraw` and a `path` that is the same of that of the redrawn view. These events contain performance information, namely: how much time it took to `create` the lith, how much time it took to `prediff` it (an intermediate processing step), how much the actual `diff` computation took, how much time it took to apply the changes to the `DOM`, and a `total` amount of time. You can inspect these through `B.eventlog`. The event also informs the length of the `diff`, and how many edits the diff required (the more edits, the more different were the old and the new view, and the longer the diff takes to computed and to be applied to the DOM).
 
 Most gotoв errors are quite straightforward: an invalid input is passed to one of the functions. The trickiest errors to understand are those related to the drawing (or redrawing) of views. Here's a list of common errors and what can be done about it:
 
@@ -1632,7 +1655,7 @@ Below is the annotated source.
 
 ```javascript
 /*
-gotoB - v2.0.1
+gotoB - v2.1.0
 
 Written by Federico Pereiro (fpereiro@gmail.com) and released into the public domain.
 
@@ -1691,7 +1714,7 @@ The remaining seven keys of the main object map to recalc entities. The first on
 - `r.forget`, the function for deleting an event responder.
 
 ```javascript
-   var B = window.B = {v: '2.0.1', B: 'в', t: time (), r: r, responders: r.responders, store: r.store, log: r.log, call: r.call, respond: r.respond, forget: r.forget};
+   var B = window.B = {v: '2.1.0', B: 'в', t: time (), r: r, responders: r.responders, store: r.store, log: r.log, call: r.call, respond: r.respond, forget: r.forget};
 ```
 
 gotoв is essentially a set of functions built on top of recalc. The last six keys are meant as shorthands to the corresponding recalc objects for quicker debugging from the browser console. If it wasn't for these shorthands, instead of writing `B.call`, for example, we'd have to write `B.r.call`, which is longer and doesn't look as nice.
@@ -3046,10 +3069,10 @@ We call an event with verb `redraw`, `x.path` as its path (which will be the pat
 
 - The id of the `responder`
 - `ms`, an object with the performance information of the redraw, measuring how many milliseconds each part of the redrawing process took. The keys are the following: `create`, with the time taken by the invocation of the responder to draw the view; `diff`, with the time taken by the diffing algorithm, including the prediffing; `DOM`, with the time taken to apply the changes to the DOM; and finally, `total`, the sum of these three.
-- `diffLength`, the number of items computed in the diff, which is a measure of its complexity. This will be `false` in case of a trample.
+- `diff`, which is either `false` in case of a trample, or an object with the `length` of the diff, as well as the number of `edits` required by the diff.
 
 ```javascript
-      B.call (x, 'redraw', x.path, {responder: responder.id, ms: {create: msCreate, prediff: t1 - t0, diff: t2 - t1, DOM: time () - t2, total: time () - t0 + msCreate}, diffLength: diff === false ? false : diff.length});
+      B.call (x, 'redraw', x.path, {responder: responder.id, ms: {create: msCreate, prediff: t1 - t0, diff: t2 - t1, DOM: time () - t2, total: time () - t0 + msCreate}, diff: diff === false ? false : {length: diff.length, edits: diff.edits}});
 ```
 
 We iterate the queue to find the next queued redraw, if any. If the queue is empty, nothing will happen.
@@ -3208,6 +3231,12 @@ In this case, there's nothing else to do except to push another element to denot
 ```javascript
          return output;
       }
+```
+
+If the element is a `<style>` that contains a litc, we convert its elements to CSS using `lith.css.g`. Notice we pass the `prod` flag to `lith.css.g`, since all inputs have already been validated.
+
+```javascript
+      if (input [0] === 'style' && type (contents) === 'array') contents = lith.css.g (contents, true);
 ```
 
 If the element is a `<table>`, we store the current length of `output` in a variable `tableIndex`. We'll see why shortly.
@@ -4288,7 +4317,13 @@ While `x` is less than the length of the first input, and `y` is smaller than th
 
 If we're here, we're done! The current value of `D` and `k` will give us an optimal path from `s1` to `s2`. We now have to reconstruct the path taken and build the diff in the process.
 
-Since we're going to reconstruct a path back to the origin, we'll be moving until `x` is 0.
+Before we reconstruct the path, we set the value of `D` inside `diff.edits` so we know how many edits were required to turn `s1` into `s2`.
+
+```javascript
+            diff.edits = D;
+```
+
+Since we're going to reconstruct a path back to the origin, we'll be retracing our steps until `x` is 0.
 
 ```javascript
             while (x > 0) {

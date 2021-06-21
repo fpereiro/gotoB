@@ -1,5 +1,5 @@
 /*
-gotoB - v2.0.1
+gotoB - v2.1.0
 
 Written by Federico Pereiro (fpereiro@gmail.com) and released into the public domain.
 
@@ -16,7 +16,7 @@ Please refer to readme.md to read the annotated source.
 
    var type = teishi.type, time = Date.now ? function () {return Date.now ()} : function () {return new Date ().getTime ()};
 
-   var B = window.B = {v: '2.0.1', B: 'в', t: time (), r: r, responders: r.responders, store: r.store, log: r.log, call: r.call, respond: r.respond, forget: r.forget};
+   var B = window.B = {v: '2.1.0', B: 'в', t: time (), r: r, responders: r.responders, store: r.store, log: r.log, call: r.call, respond: r.respond, forget: r.forget};
 
    // *** ERROR REPORTING ***
 
@@ -403,7 +403,7 @@ Please refer to readme.md to read the annotated source.
          if (! B.prod && errorIndex !== undefined) return B.error (x, 'B.redraw', 'Redraw error: DOM element missing.', {diffIndex: errorIndex, diffElement: diff [errorIndex], diff: diff, responder: responder.id});
       }
 
-      B.call (x, 'redraw', x.path, {responder: responder.id, ms: {create: msCreate, prediff: t1 - t0, diff: t2 - t1, DOM: time () - t2, total: time () - t0 + msCreate}, diffLength: diff === false ? false : diff.length});
+      B.call (x, 'redraw', x.path, {responder: responder.id, ms: {create: msCreate, prediff: t1 - t0, diff: t2 - t1, DOM: time () - t2, total: time () - t0 + msCreate}, diff: diff === false ? false : {length: diff.length, edits: diff.edits}});
 
       var nextRedraw = dale.stopNot (B.internal.queue, undefined, function () {
          var next = B.internal.queue.shift ();
@@ -441,6 +441,8 @@ Please refer to readme.md to read the annotated source.
          output [output.length - 1] = 'P ' + length + output [output.length - 1].slice (1) + ' ' + lith.g (contents, true);
          return output;
       }
+
+      if (input [0] === 'style' && type (contents) === 'array') contents = lith.css.g (contents, true);
 
       if (input [0] === 'table') var tableIndex = output.length;
       B.prediff (contents, output);
@@ -637,6 +639,7 @@ Please refer to readme.md to read the annotated source.
                continue;
             }
 
+            diff.edits = D;
             while (x > 0) {
                if (k === -D || (k !== D && VList [D - 1] [k + 1] > VList [D - 1] [k - 1])) {
                   k++;

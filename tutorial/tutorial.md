@@ -12,19 +12,39 @@ This is the resource I wanted to find back when I started writing webapps back i
 
 ## Part 1: basic concepts
 
-### Why develop webapps?
+### Why are webapps important?
+
+Nowadays, our lives happen in two worlds: the physical world and the digital world. Unless you printed this tutorial on paper, you're right now immersed in the digital world.
+
+The digital world has become an inseparable part of our lives. Through it, we interact with each other, work, create and even store our memories.
+
+However, we cannot access the digital world directly, like we do with the physical one. Instead, we do it through devices which are connected to the internet and running applications.
+
+We use applications to access the digital world. They act as our digital eyes, hands and ears. Through them, we talk, collaborate, create memories and go about our daily lives.
 
 You're probably familiar with three types of applications:
 
 - Native mobile applications, both the ones that come preinstalled on a phone or tablet, plus those you can install from either Google's Play Store or Apple's App Store.
 - Native desktop applications, such as Microsoft's Office suite.
-- Webapps, which run on web browsers on both mobile and desktop devices, without requiring installation. For example: Google Docs (the one on your browser!).
+- Webapps, which run on web browsers on both mobile and desktop devices, without requiring installation. For example: Google Docs.
+
+Native apps, both mobile and desktop, are controlled by the companies that manufacture the devices or the operative systems of those devices (such as Windows).
+
+Web apps, in contrast, by only requiring a device connected to the internet and a web browser, allow developers to reach billions of people with minimal friction, and without requiring any big company's permission.
+
+Web apps are the core of the web as we know it. The web is open and unconstrained and not owned by anyone. By writing a web app you can do what you want, avoid the gatekeepers and provide access to users regardless of where they are, what kind of device they have, or what kind of operating system they run.
+
+If you want to improve people's lives, creating a web app might be a great way to do so. Web apps mean freedom for creators and users.
+
+That’s why web apps are important.
+
+## What are web apps?
 
 Webapps are different from native applications in a few ways:
 
 - **No installation required**: the user accesses the application directly from the browser, which is already installed.
 - **One application for all devices**: if properly written, a webapp can be seamlessly used from both mobile and desktop devices.
-- **It is a service**: instead of storing most of its information on the users' device like native applications do, webapps retrieve and store information on a server that is accessible through an internet connection.
+- **They are a service**: instead of storing most of its information on the users' device like native applications do, webapps retrieve and store information on a server that is accessible through an internet connection.
 
 What are the benefits of webapps?
 - **No installation**. By merely requiring a device with internet and a web browser, webapps allow you to reach billions of people with minimal friction.
@@ -45,10 +65,12 @@ What are the benefits of webapps?
 ```
 
 A webapp is made of two programs:
-- The frontend, a program that runs on a browser.
-- The backend, a program that runs on a server.
+- The **frontend**, a program that runs on a **browser**.
+- The **backend**, a program that runs on a **runtime**.
 
 A web developer needs to write both programs to develop a complete webapp.
+
+Both programs communicate through the web.
 
 The main functions of the frontend are:
 - Show information to the user.
@@ -59,17 +81,17 @@ The main functions of the backend are:
 - Provide information to the frontend.
 - Validate and store data.
 
-The *frontend* doesn't directly run on the *user device*. Rather, it runs on a *[browser](https://en.wikipedia.org/wiki/Web_browser)*, which in turn runs on the user device. Likewise, the *backend* doesn't directly run on a *server*. Rather, it runs on a *[runtime](https://en.wikipedia.org/wiki/Runtime_system)*. The runtime is a program that itself runs on the server. Examples of runtimes for backends are [node.js](https://en.wikipedia.org/wiki/Node.js) and [PHP](https://en.wikipedia.org/wiki/PHP).
+The *frontend* doesn't directly run on the *user device*. Rather, it runs on a *[browser](https://en.wikipedia.org/wiki/Web_browser)*, which is a program that runs on the user device. Likewise, the *backend* doesn't directly run on a *server*. Rather, it runs on a *[runtime](https://en.wikipedia.org/wiki/Runtime_system)*. The runtime is a program that itself runs on the server. Examples of runtimes for backends are [node.js](https://en.wikipedia.org/wiki/Node.js) and [PHP](https://en.wikipedia.org/wiki/PHP).
 
 It is a little mind-bending, but it really works that way: both the browser and the runtime are programs that run programs.
 
-This is a good moment to clarify a common question: what is a server? The simplest definition: a computer running 24/7/365 that is connected to the internet. The [cloud](https://en.wikipedia.org/wiki/Cloud_computing) is essentially a bunch of servers somewhere, usually on several datacenters.
+This is a good moment to clarify a common question: what is a server? The simplest definition: a computer running 24/7/365 that is connected to the internet. The [cloud](https://en.wikipedia.org/wiki/Cloud_computing) is essentially a bunch of servers somewhere, usually on several datacenters, that are always on and always connected to the internet.
 
 You are probably acquainted with user devices: they mainly consist of personal computers, smartphones and tablets. The device where you're reading this is also a user device.
 
 ### How is a webapp loaded?
 
-Loading the backend is easy: you put it in the server and you run it. The backend is a program that will run constantly and forever, until you stop it.
+Loading the backend is easy: you put the entire program in the server and use the runtime to run it.it  The backend is a program that will run constantly and forever, until you stop it.
 
 The frontend, however, is different. When the user opens a new tab to go to a webapp, the frontend is not there yet. It must be *loaded* onto the browser first. How does this happen?
 
@@ -123,6 +145,8 @@ It is important to understand how this happens; the diagram above explains the m
 
 A frontend is a group of HTML, CSS & js files. Once all of these files are loaded onto the browser, the frontend is ready to run.
 
+This tutorial only covers the frontend aspect of webapp development. We will however learn how to make requests to the backend so that when you get around to write your server, your frontend will be ready for it!
+
 ### How do the frontend and the backend communicate?
 
 The frontend and backend communicate through the [web](https://en.wikipedia.org/wiki/World_Wide_Web). The web is a way to exchange information that runs on top of the [internet](https://en.wikipedia.org/wiki/Internet). How are the web and the internet related? Think of it in this way:
@@ -131,37 +155,17 @@ The frontend and backend communicate through the [web](https://en.wikipedia.org/
 - The web is the *vehicles* that run on the highway.
 - The user device and the server are *locations* that can be connected through vehicles running in the highway.
 
-The frontend always starts the conversation by making a *request* to the backend. The backend replies to the frontend's request with a *response*. (There are exceptions to this, but in general it is true). The communication between frontend and backend is a sequence of requests and responses.
+The frontend always starts the conversation by making a *request* to the backend. The backend replies to the frontend's request with a *response*. (There are exceptions to this, but in general it holds true). The communication between frontend and backend is a sequence of requests and responses.
 
+### Why frontends use HTML, CSS and js?
 
-
-TODO
-two sources of events: user interactions and responders
-responders don't call responders; they only call events!
-
-TODO
-- html/css/js
-- state
-   - what is it
-   - cycle of change
-- templates
-   - replacement, conditional, iteration
-   - in the backend vs in the frontend
-
-
-
-
-Why three types of files instead of one? Each type of file has its specific uses:
+Why web apps use three types of files instead of one? Each type of file has its specific uses:
 
 - [HTML](https://en.wikipedia.org/wiki/HTML) files are *markup*, which is what is shown on the page.
 - [CSS](https://en.wikipedia.org/wiki/CSS) files are *stylesheets*, which determine how the HTML looks.
-- [js](https://en.wikipedia.org/wiki/JavaScript) files are *logic*, which can modify the HTML & CSS and communicate with the backend.
+- [js](https://en.wikipedia.org/wiki/JavaScript) files are *code*, which can modify the HTML & CSS and communicate with the backend.
 
-Modern webapps - including those built with gotoв - are reliant on js. But they still use HTML & CSS.
-
-
-why js? apps without js.
-
+Modern webapps - including those built with gotoв - are reliant on js. But they still use HTML & CSS. Even the most modern frontend frameworks still need to rely on HTML and CSS to create web apps.
 
 The HTML and CSS represent the actual content of the page. HTML is what is shown on the page, while the CSS changes the way that the HTML looks. js is usually there to produce some changes on the HTML and CSS, but it is not strictly necessary and it is actually possible to write webapps without js.
 
@@ -171,19 +175,21 @@ When you load a webpage, an HTML file (which is text that conforms to certain ru
 
 The browser, when receiving HTML, CSS and js, starts putting things on the screen - and that's what you see when the page is fully loaded.
 
-### The two sides of a webapp
 
-You might have heard the terms *frontend*, *backend*, *browser* and *server* in the context of webapps. These terms are fundamentally important.
 
-The terms *frontend* and *browser* refer to the same thing: the HTML, CSS and js that gets loaded in the browser and is seen by your users. The client code is the program that a web browser runs.
 
-The terms *backend* and *server* refer to the same thing: a program that provides files (like HTML, CSS and js, plus images) to a web browser, and also handles other operations like storing user data. The backend code is a program run on a server connected to the internet (if you're starting out, it might also be good to know that a server is merely a computer running somewhere 24/7).
 
-The *frontend* and the *backend* - or the *client* and the *server*, if you prefer - interact with each other through the internet.
 
-**In essence, a webapp is two programs: one that runs on a web browser and another one that runs on a server**. Frontend and backend are the two sides of the coin of a webapp. To fully build a webapp, you need to do both.
 
-This tutorial only covers the frontend aspect of webapp development. We will however learn how to make requests to the backend so that when you get around to write your server, your frontend will be ready for it!
+
+
+
+
+
+
+
+
+
 
 ### Is it a webpage or is it a webapp?
 
@@ -262,29 +268,44 @@ The state matters for two things:
 - It determines the interface.
 - It determines possible actions for the user.
 
-The interface is a vehicle that allows the user to interact with the webapp. The user cannot interact with the state directly.
+### What is an interface?
 
-The interface is made of HTML, CSS & js.
+The interface is the way in which a user interacts with the webapp. Through it, the user receives and gives information. In the same way that we cannot interact with the virtual world directly and we need webapps to do so, we need interfaces to interact with our webapps. Interfaces are the true windows to our digital world.
 
-The interface allows the user two things: 1) see their state; 2) allow them to change the state.
+The interface is the part of the frontend that the user can see.
+
+The interface has two main purposes: 1) see their state; 2) allow them to change the state.
 
 The interface is not static. It depends on the state!
 
-The flow goes in one direction (the karmic wheel of the app):
+The flow of change always goes in one direction (the karmic wheel of the app):
+
+```
 initial state -> initial interface -> user picks an interaction -> state is updated -> interface is updated -> user picks another interaction
+
 create account  -> initial state -> draw initial version of the HTML -> this allows certain interactions -> user picks an interaction -> state changes -> HTML is updated -> user picks another interaction -> state changes -> ...
-This is the core cycle of any application with an interface.
+```
 
-- user starts using app with a basic state (only username).
-- app holds state for *each user*.
-- at any point in time, there's one state.
-- possible interactions are determined by the state.
-- user interacts with app and generates further state (emails, account preferences). others users may interact too. each interaction can create a change in the state.
-- the state is a sum/crystallization of all past interactions.
+To summarize the pattern further: `state -> interface -> user interacts with the interface -> new state -> new interface`. This is the core cycle of any application with an interface.
 
-- The state goes both locally on the browser/client and also on the server. Some state might be just held on the client.
+At any point in time, there's one state. All possible interactions of the user are determined by the state. Each interaction can create a change in the state. The state is the sum of all past interactions.
+
+The app holds state for *each user*.
+
+The state is stored both locally on the frontend and also on the backend. Most of the state is permanent, but some parts of it (usually stored in the frontend) may be lost if the user refreshes the page.
+
+
+
+
+
+TODO
+
+- Parallelism between clicking on a link on website and user interaction on a webapp!
+
+
 
 ### The birth of templates
+
 
 With documents, repeating parts or whatever it's just all there. A few documents there. A lot of websites perfectly happy to be done by hand.
 
@@ -344,6 +365,22 @@ merge with the top
 Not design, implementation! This is core. Iteration, but not the same. We're concerned here with implementation.
 
 HTMC: html and perhaps some css. CSS also comes from external stylesheets.
+
+
+
+
+
+
+
+
+TODO
+- why js? apps without js.
+- templates
+   - replacement, conditional, iteration
+   - in the backend vs in the frontend
+- events
+   - two sources of events: user interactions and responders
+   - responders don't call responders; they only call events!
 
 
 data + templates = the page!

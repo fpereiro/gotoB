@@ -1,5 +1,5 @@
 /*
-gotoB - v2.1.0
+gotoB - v2.1.1
 
 Written by Federico Pereiro (fpereiro@gmail.com) and released into the public domain.
 
@@ -16,7 +16,7 @@ Please refer to readme.md to read the annotated source.
 
    var type = teishi.type, time = Date.now ? function () {return Date.now ()} : function () {return new Date ().getTime ()};
 
-   var B = window.B = {v: '2.1.0', B: 'в', t: time (), r: r, responders: r.responders, store: r.store, log: r.log, call: r.call, respond: r.respond, forget: r.forget};
+   var B = window.B = {v: '2.1.1', B: 'в', t: time (), r: r, responders: r.responders, store: r.store, log: r.log, call: r.call, respond: r.respond, forget: r.forget};
 
    // *** ERROR REPORTING ***
 
@@ -39,29 +39,28 @@ Please refer to readme.md to read the annotated source.
       B.eventlog ()
    });
 
-   B.eventlog = function () {
+   B.eventlog = function (search) {
       if (c ('#eventlog')) document.body.removeChild (c ('#eventlog'));
 
-      var index = {}, colors = ['#fe6f6c', '#465775', '#e086c3', '#8332ac', '#462749', '#044389', '#59c9a6', '#ffad05', '#7cafc4', '#5b6c5d'], columns = ['#', 'ms', 'type', 'id', 'from', 'verb', 'path', 'args'], shorten = function (s) {return s.length > 500 ? s.slice (0, 500) + '... [' + (s.length - 500) + ' more characters]' : s};
+      var index = {}, colors = ['#fe6f6c', '#465775', '#e086c3', '#8332ac', '#462749', '#044389', '#59c9a6', '#ffad05', '#7cafc4', '#5b6c5d'], columns = ['#', 'ms', 'type', 'id', 'from', 'verb', 'path', 'args'], shorten = function (s) {return s.length > 600 ? s.slice (0, 300) + '... [' + (s.length - 600) + ' more characters] ...' + s.slice (-300) : s}, counter = 0;
 
       document.body.innerHTML += lith.g (['table', {id: 'eventlog'}, [
          ['style', ['#eventlog', {'border-collapse': 'collapse', 'font-family': 'monospace', 'font-size': 18, position: 'absolute', 'right, top': 4, width: Math.min (window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth, 800), 'z-index': '10000', border: 'solid 4px #4488DD'}, ['th, td', {'padding-left, padding-right': 10, 'border-bottom, border-right': 'solid 1px black'}]]],
          ['tr', dale.go (columns, function (header) {
             return ['th', {style: lith.css.style ({'background-color': '#efefef'})}, header];
          })],
-         dale.go (B.log, function (entry, k) {
+         dale.go (B.log, function (entry) {
+            if (search !== undefined && ! JSON.stringify (entry).match (new RegExp (search, 'i'))) return;
             var responderIndex = entry.id [0] !== 'E' && entry.from && entry.from.match (/^E\d+$/) ? (entry.id + '/' + entry.from) : undefined;
-            index [responderIndex || entry.id] = k;
-            return ['tr', {style: lith.css.style ({'background-color': {0: '#fcfcfc', 1: '#efefef'} [k % 2]})}, dale.go (['#' + (k + 1), entry.t - B.t, entry.id.match (/^E\d+$/) ? 'event' : 'responder', entry.id, entry.from, entry.verb, entry.path.join (':'), shorten (dale.go (entry.args, B.str).join (', '))], function (value, k2) {
+            index [responderIndex || entry.id] = counter++;
+            return ['tr', {style: lith.css.style ({'background-color': {0: '#fcfcfc', 1: '#efefef'} [(counter - 1) % 2]}), 'class': entry.id [0] === 'E' ? 'evlog-ev' : 'evlog-resp'}, dale.go (['#' + counter, entry.t - B.t, entry.id.match (/^E\d+$/) ? 'event' : 'responder', entry.id, entry.from, entry.verb, entry.path.join (':'), shorten (dale.go (entry.args, B.str).join (', '))], function (value, k2) {
                if (k2 === 1) return ['td', (value / 1000) + (! (value % 1000) ? '.0' : '') + (! (value % 100) ? '0' : '') + (! (value % 10) ? '0' : '') + 's'];
                if (k2 !== 3 && k2 !== 4) return ['td', value];
-               var onclick = value === undefined ? '' : ('var row = c ({from: c ("#eventlog"), selector: "tr"}) [' + ((index [value] === undefined ? index [responderIndex] : index [value]) + 1) + ']; row.scrollIntoView (); row.style.background = "#8e8e8e"; setTimeout (function () {row.style.background = "#bebebe"}, 500); setTimeout (function () {row.style.background = "white"}, 1000);');
+               var onclick = value === undefined ? '' : ('var row = c ({from: c ("#eventlog"), selector: "tr"}) [' + ((index [value] === undefined ? index [responderIndex] : index [value]) + 1) + ']; if (row) row.scrollIntoView (); if (row) row.style.background = "#8e8e8e"; if (row) setTimeout (function () {row.style.background = "#bebebe"}, 500); if (row) setTimeout (function () {row.style.background = "white"}, 1000);');
                return ['td', {onclick: onclick, style: lith.css.style ({cursor: 'pointer', 'font-weight': 'bold', color: colors [parseInt (index [value]) % colors.length]})}, value === undefined ? '' : value];
             })];
          }),
       ]], true);
-
-      c ('tr') [B.log.length].scrollIntoView ();
    }
 
    // *** DATA FUNCTIONS ***
@@ -286,7 +285,7 @@ Please refer to readme.md to read the annotated source.
 
       if (! B.prod && teishi.stop ('B.view', [
          dale.stopNot (paths, false, function (path) {
-            return r.isPath (path) ? true : B.error ('B.view', 'Invalid path:', path, 'Arguments', {path: path});
+            return r.isPath (path) ? true : B.error ('B.view', 'Invalid path:', path);
          }),
          function () {return ['fun', fun, 'function']}
       ], function (error) {
@@ -298,8 +297,8 @@ Please refer to readme.md to read the annotated source.
       var makeElement = function () {
          var count = B.internal.count, children = [];
          var elem = fun.apply (null, dale.go (paths, B.get));
-         if (! B.prod && B.validateLith (elem) !== 'Lith') return B.error ('B.view', 'View function must return a lith element but instead returned:', elem, 'Arguments:', {path: path});
-         if (! B.prod && type (elem [1]) === 'object' && elem [1].id !== undefined) return B.error ('B.view', 'View function must return a lith element without an id attribute but instead returned:', elem, 'Arguments:', {path: path});
+         if (! B.prod && B.validateLith (elem) !== 'Lith') return B.error ('B.view', 'View function must return a lith element but instead returned:', elem, 'Error:', B.validateLith (elem), 'Path:', path);
+         if (! B.prod && type (elem [1]) === 'object' && elem [1].id !== undefined) return B.error ('B.view', 'View function must return a lith element without an id attribute but instead returned:', elem, 'Path:', path);
 
          dale.go (dale.times (B.internal.count - count, count), function (k) {
             var responder = B.responders [B.B + k];

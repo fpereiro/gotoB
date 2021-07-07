@@ -6,7 +6,7 @@ gotoв is a framework for making the frontend of a web application (henceforth *
 
 ## Current status of the project
 
-The current version of gotoв, v2.1.0, is considered to be *mostly stable* and *mostly complete*. [Suggestions](https://github.com/fpereiro/gotoB/issues) and [patches](https://github.com/fpereiro/gotoB/pulls) are welcome. Besides bug fixes, and the completion of the tutorial in one of the appendixes, there are no changes planned.
+The current version of gotoв, v2.1.1, is considered to be *mostly stable* and *mostly complete*. [Suggestions](https://github.com/fpereiro/gotoB/issues) and [patches](https://github.com/fpereiro/gotoB/pulls) are welcome. Besides bug fixes, and the completion of the tutorial in one of the appendixes, there are no changes planned.
 
 gotoв is part of the [ustack](https://github.com/fpereiro/ustack), a set of libraries to build webapps which aims to be fully understandable by those who use it.
 
@@ -1352,6 +1352,8 @@ As we said in a previous section, gotoв stores a list of all the events called 
 
 Instead of inspecting `B.log` with the browser console, you can invoke `B.eventlog`, a function which will add an HTML table to the page where you can see all the information about the events. The table presented by `B.eventlog` is ordered by time (so you can see what happened first and what later), it allows to track dependencies between events (if the context is passed in nested calls, see below) and it shows the time when the event was called relative to the initial loading of the application (which allows for performance benchmarking).
 
+If you pass a string as the first argument to `B.eventlog`, the table will only show entries that have some text that match the string. The match is case-insensitive.
+
 Logging is turned on by default and all events calls and responder matches are registered. In some cases you might need to change this behavior. For this reason, you can override `B.r.addLog`, the function which takes logs and pushes them into `B.log`.
 
 - If you want to turn off all logging: `B.r.addLog = function () {}`.
@@ -1367,8 +1369,6 @@ B.r.addLog = function (log) {
 // In this example, the password is passed inside an object as the first argument to a responder.
 B.r.addLog = function (log) {
    if (log.args && log.args [0] && log.args [0].password) {
-      // If you modify the log, you need to copy it first, otherwise you'll modify it for the responder as well.
-      log.args [0] = teishi.copy (log.args [0]);
       log.args [0].password = 'REDACTED';
    }
    B.log.push (log);
@@ -1655,7 +1655,7 @@ Below is the annotated source.
 
 ```javascript
 /*
-gotoB - v2.1.0
+gotoB - v2.1.1
 
 Written by Federico Pereiro (fpereiro@gmail.com) and released into the public domain.
 
@@ -1714,7 +1714,7 @@ The remaining seven keys of the main object map to recalc entities. The first on
 - `r.forget`, the function for deleting an event responder.
 
 ```javascript
-   var B = window.B = {v: '2.1.0', B: 'в', t: time (), r: r, responders: r.responders, store: r.store, log: r.log, call: r.call, respond: r.respond, forget: r.forget};
+   var B = window.B = {v: '2.1.1', B: 'в', t: time (), r: r, responders: r.responders, store: r.store, log: r.log, call: r.call, respond: r.respond, forget: r.forget};
 ```
 
 gotoв is essentially a set of functions built on top of recalc. The last six keys are meant as shorthands to the corresponding recalc objects for quicker debugging from the browser console. If it wasn't for these shorthands, instead of writing `B.call`, for example, we'd have to write `B.r.call`, which is longer and doesn't look as nice.
@@ -1774,17 +1774,19 @@ The `true` third argument passed to `lith.g` turns off lith's validation for thi
       }, 3000);
 ```
 
-We invoke `B.eventlog`, a function we'll define below and which will print a table with all the events called and all responders matched so far. We then close the responder.
+We invoke `B.eventlog`, a function we'll define below and which will print a table with the events called and responders matched so far. We then close the responder.
 
 ```javascript
       B.eventlog ()
    });
 ```
 
-We define `B.eventlog`, a function that prints a table with a list of all the events called and all responders matched so far. This table can be very useful for debugging purposes. This function prints a subset of the information contained at `B.r.log`.
+We define `B.eventlog`, a function that prints a table with a list of the events called and the responders matched so far. This table can be very useful for debugging purposes. This function uses the information contained at `B.r.log`.
+
+The function takes an single optional argument, `search`, a string that can be used to find for events and responders that have matching text.
 
 ```javascript
-   B.eventlog = function () {
+   B.eventlog = function (search) {
 ```
 
 If there's already a DOM element with `id` `eventlog`, we remove it.
@@ -1797,10 +1799,11 @@ We define four variables for drawing the table of events:
 - `index`, which will store the ordinal position of each event or responder.
 - `colors`, a list of colors to assign to event & responder ids.
 - `columns`, the columns for the table.
-- `shorten`, a function that takes a string and returns a shortened version if the string is over 500 characters, also adding the number of characters omitted.
+- `shorten`, a function that takes a string and returns a shortened version if the string is over 600 characters, also adding the number of characters omitted. If the string is more than 600 characters, it takes the extra characters from the middle of the string, rather than the end.
+- `counter`, a variable that keeps track of how many rows we have added so far.
 
 ```javascript
-      var index = {}, colors = ['#fe6f6c', '#465775', '#e086c3', '#8332ac', '#462749', '#044389', '#59c9a6', '#ffad05', '#7cafc4', '#5b6c5d'], columns = ['#', 'ms', 'type', 'id', 'from', 'verb', 'path', 'args'], shorten = function (s) {return s.length > 500 ? s.slice (0, 500) + '... [' + (s.length - 500) + ' more characters]' : s};
+      var index = {}, colors = ['#fe6f6c', '#465775', '#e086c3', '#8332ac', '#462749', '#044389', '#59c9a6', '#ffad05', '#7cafc4', '#5b6c5d'], columns = ['#', 'ms', 'type', 'id', 'from', 'verb', 'path', 'args'], shorten = function (s) {return s.length > 600 ? s.slice (0, 300) + '... [' + (s.length - 600) + ' more characters] ...' + s.slice (-300) : s}, counter = 0;
 ```
 
 We will add to the body a `<table>` element with `id` `eventlog`.
@@ -1827,7 +1830,13 @@ We iterate the `columns` and generate a row with all the headers for the table.
 We iterate the entries of `B.log`, an array that contains a list of all the events called and all responders matched.
 
 ```javascript
-         dale.go (B.log, function (entry, k) {
+         dale.go (B.log, function (entry) {
+```
+
+If `search` is defined, we filter out those entries that have no text that matches `search`. Note we perform case-insensitive search.
+
+```javascript
+            if (search !== undefined && ! JSON.stringify (entry).match (new RegExp (search, 'i'))) return;
 ```
 
 We define a variable `responderFrom` that, in the case of a responder that has a `from` attribute, is of the form `ID/FROM` (`ID` being the `id` of the responder and `FROM` being the `id` of the event that matched the responder). If these conditions are not met, `from` is left as `undefined`.
@@ -1840,14 +1849,16 @@ We set an entry in `index` to associate the event with element `id` with the pos
 
 Since a responder can be matched multiple times, using the `from` allows us to reference a particular matching of the responder. Since responders can only be matched by events, and events have unique ids, then an unambigous matching is possible if logging is turned on.
 
+Note we use `counter` rather than the position of the entry on `B.log` in case we're filtering out some entries because `search` was passed to `B.eventlog`.
+
 ```javascript
-            index [responderIndex || entry.id] = k;
+            index [responderIndex || entry.id] = counter++;
 ```
 
-We prepare the row on which we'll print the details of either the event or responder. We alternate a background color (with two types of grays).
+We prepare the row on which we'll print the details of either the event or responder. We alternate a background color (with two types of grays). We also set two different classes for event vs. responder rows (`evlog-ev` and `evlog-resp`).
 
 ```javascript
-            return ['tr', {style: lith.css.style ({'background-color': {0: '#fcfcfc', 1: '#efefef'} [k % 2]})}, dale.go (['#' + (k + 1), entry.t - B.t, entry.id.match (/^E\d+$/) ? 'event' : 'responder', entry.id, entry.from, entry.verb, entry.path.join (':'), dale.go (entry.args, B.str).join (', ')], function (value, k2) {
+            return ['tr', {style: lith.css.style ({'background-color': {0: '#fcfcfc', 1: '#efefef'} [(counter - 1) % 2]}), 'class': entry.id [0] === 'E' ? 'evlog-ev' : 'evlog-resp'}, dale.go (['#' + counter, entry.t - B.t, entry.id.match (/^E\d+$/) ? 'event' : 'responder', entry.id, entry.from, entry.verb, entry.path.join (':'), shorten (dale.go (entry.args, B.str).join (', '))], function (value, k2) {
 ```
 
 If we're printing the second column (`ms`), we round the value.
@@ -1864,10 +1875,12 @@ For all columns that are not the second (`ms`, already covered) or the fourth (`
 
 For the `entry` and `from` columns (which contain references to events called), we add an `onclick` event to jump to that event on the table. We also apply a color taken from `colors` and based on the position of the event in the list. Note that for responders, since `index [value]` will be `undefined`, we use `index [from]` as the index.
 
+In all cases, before using `row` we check whether it exists, since it may be absent if certain rows were filtered out by a `search` argument.
+
 One more thing to notice about the `onclick` is that it performs a very simple animation when a row is selected, by using timeouts to set different gray backgrounds. This aids the visibility of the selected row and is compatible with all supported browsers.
 
 ```javascript
-               var onclick = value === undefined ? '' : ('var row = c ({from: c ("#eventlog"), selector: "tr"}) [' + ((index [value] === undefined ? index [responderIndex] : index [value]) + 1) + ']; row.scrollIntoView (); row.style.background = "#8e8e8e"; setTimeout (function () {row.style.background = "#bebebe"}, 500); setTimeout (function () {row.style.background = "white"}, 1000);');
+               var onclick = value === undefined ? '' : ('var row = c ({from: c ("#eventlog"), selector: "tr"}) [' + ((index [value] === undefined ? index [responderIndex] : index [value]) + 1) + ']; if (row) row.scrollIntoView (); if (row) row.style.background = "#8e8e8e"; if (row) setTimeout (function () {row.style.background = "#bebebe"}, 500); if (row) setTimeout (function () {row.style.background = "white"}, 1000);');
                return ['td', {onclick: onclick, style: lith.css.style ({cursor: 'pointer', 'font-weight': 'bold', color: colors [parseInt (index [value]) % colors.length]})}, value === undefined ? '' : value];
             })];
 ```
@@ -1879,10 +1892,9 @@ We close the iterating function and the call to `lith.g` - note the `true` param
       ]], true);
 ```
 
-We scroll to the last row of the table (representing the last element called) using the `scrollIntoView` method. There's nothing left to do so we close the function.
+There's nothing left to do so we close the function.
 
 ```javascript
-      c ('tr') [B.log.length].scrollIntoView ();
    }
 ```
 
@@ -2586,7 +2598,7 @@ We iterate `paths` and apply `r.isPath` to determine whether they are valid path
 
 ```javascript
          dale.stopNot (paths, false, function (path) {
-            return r.isPath (path) ? true : B.error ('B.view', 'Invalid path:', path, 'Arguments', {path: path});
+            return r.isPath (path) ? true : B.error ('B.view', 'Invalid path:', path);
          }),
 ```
 
@@ -2631,13 +2643,13 @@ We invoke `fun`, passing the current values of each of `paths` as an argument (w
 If we're not in production mode, we validate `elem` with `B.validateLith` (which is defined below). If `elem` is not a lith, we report an error through `B.error` and return `false`.
 
 ```javascript
-         if (! B.prod && B.validateLith (elem) !== 'Lith') return B.error ('B.view', 'View function must return a lith element but instead returned:', elem, 'Arguments:', {path: path});
+         if (! B.prod && B.validateLith (elem) !== 'Lith') return B.error ('B.view', 'View function must return a lith element but instead returned:', elem, 'Error:', B.validateLith (elem), 'Path:', path);
 ```
 
 If we're not in production mode, we check that `elem` doesn't contain an `id` attribute, since that attribute must be set by `B.view`. This also prevents a `vfun` returning the direct output of another `vfun`, which would break the 1:1 correspondence between a responder and a reactive DOM element.
 
 ```javascript
-         if (! B.prod && type (elem [1]) === 'object' && elem [1].id !== undefined) return B.error ('B.view', 'View function must return a lith element without an id attribute but instead returned:', elem, 'Arguments:', {path: path});
+         if (! B.prod && type (elem [1]) === 'object' && elem [1].id !== undefined) return B.error ('B.view', 'View function must return a lith element without an id attribute but instead returned:', elem, 'Path:', path);
 ```
 
 We now find the reactive views that are children of the current one (if any). To do this, we make use of the fact that all reactive views have as id `в` followed by a number. Nested calls to `B.view` will by now have been executed, so `B.internal.count` will be updated.

@@ -1,8 +1,144 @@
-# Tutorial: Developing a Frontend from First Principles
+# Tutorial: so you want to write a frontend?
+
+If you are here, you probably want to develop a webapp, or you already are a webapp developer and want to get better at it. In this tutorial we will offer you as much *understanding* as possible. In our experience, the most daunting part about achieving mastery with webapps is understanding how it all fits together, and why certain things are done in the way that they are done.
+
+This tutorial replaces a more conventional format where we would just show how to develop webapps with gotoв. Instead of doing this, we first offer **a conceptual introduction** to webapps (*web applications*, in case you're not familiar with the abbreviation). After the main conceptual pieces are in place, we then cover **the basics of developing** the frontend of a webapp; gotoв appears on the scene only as the solution to certain problems that occur over and over.
+
+The purpose of this tutorial is to give you as much conceptual and practical understanding as possible, so that you can become a better web developer.
+
+This tutorial requires only basic knowledge of HTML, javascript and programming. If you are just beginning and you want to understand the basic concepts of a webapp, you may find it useful. If you are a more experienced developer that is interested in reconsidering the concepts of the frontend from the ground up, you might be interested in it too.
+
+## Part 1: a conceptual introduction to webapps
+
+This entire part is also contained in a [set of videos](TODO ADD LINK) with the same content. If you prefer to learn with videos, you can check them out now!
+
+In the first part of the tutorial, we present a *conceptual* introduction to webapps. Before even seeing a line of code, it can be extremely helpful to understand the basic concepts that explain the why, how and what of webapps. We will cover concepts such as *the virtual world*, *devices*, *application*, *user interface*, *logic*, *server*, *user*, *frontend*, *backend*, *HTML*, *JavaScript* and *framework*. By the end of this part, you should have a high-level understanding of how they all fit together.
+
+After all of this makes sense, it will be *far easier* to understand the details of how to implement a frontend. New knowledge can only be created as connections to knowledge you already have; our hope is that by giving you a short, yet rich web of concepts to understand webapps, the implementation details will become easier to understand, connect and remember.
+
+### Chapter 1: an introduction to the digital world
+
+Let's start at the beginning. Why do we even care about webapps? How are they meaningful to our lives?
+
+We currently live in the [digital age](https://en.wikipedia.org/wiki/Information_Age). As such, our lives happen in two worlds: the *physical world* and the *digital world*. The physical world needs little explanation: it consists of all that was there before the digital age. The digital world, however, is what is new for us as a species. Despite being the newcomer, the digital world is now everywhere - in fact, unless you printed this tutorial on paper, you're right now immersed in the digital world!
+
+The digital world came of age in the 1970s, with the development of [microcomputers](https://en.wikipedia.org/wiki/Microcomputer) and the [internet](https://en.wikipedia.org/wiki/Internet). It became massive in the early 1990s, with the development of the [web](https://en.wikipedia.org/wiki/World_Wide_Web), and received a final boost with the development of [smartphones](https://en.wikipedia.org/wiki/Smartphone) in the late 2000s. Cheap, powerful and interconnected computers made the digital age happen.
+
+As of the early 2020s, the digital world has become central to our lives. Through the digital world, most of humanity performs now a great deal of four essential activities:
+
+- **Storage of information**: the digital world is where most of our externally stored information now lives. (Externally stored means information stored outside of our own brains). Our external memories are by now overwhelmingly digital.
+- **Economic production**: work of all kinds happens now either exclusively through the digital world or is at least partially controlled or informed by it.
+- **Creation**: art and science are increasingly created and distributed through the digital world.
+- **Social interaction**: human interactions at all levels (person to person, small groups, large groups, national and international communities) are increasingly shaped by interactions happening in the digital world.
+
+In short, the digital world touches almost every aspect of our existence, both individual and social. Gaining understanding of it empowers you to:
+
+- Judge better: by understanding the digital world, you can make informed decisions (personal and political) concerning it.
+- Shape it directly: it is possible for anyone to build apps that can make a contribution to the digital world. By building an app, you might positively impact the lives of others.
+
+In the next chapter, we will understand what the virtual world is made of.
+
+### Chapter 2: an overview of the digital world
+
+We exist in a physical world. The digital world exists within the physical world, but we cannot access it directly. To access the digital world, we *use devices* that are *interconnected by a network* and *run applications*.
+
+
+
+However, we cannot access the digital world directly, like we do with the physical one. Instead, we do it through devices which are connected to the internet and running applications.
+
+We use applications to access the digital world. They act as our digital eyes, hands and ears. Through them, we talk, collaborate, create memories and go about our daily lives.
+
+   - test:   app: saveprompt, auth: are you sure,
+
+Three elements make up the digital world:
+Devices (computers, phones, tablets)
+Applications
+Connectivity (internet + web)
+What each element stands for?
+Device: hardware (basis, rigid, the bridge between the physical and the digital)
+Application: software (on top, flexible)
+Connectivity: allow devices to talk to each other through the network. Devices and applications become truly useful when they are connected with each other.
+Relationship between device and application:
+Mediator: operative system. The OS allows the device and the application interact. The OS is software, but those who make apps don’t change it, but take it as given. Think of it as a more
+The application runs “on top” of the OS (they talk to each other). The OS runs on top of the device (they talk to each other).
+Consider that the Device and the OS, for practical purposes, are one thing: a mixture of hardware and software on top of which you can run an application.
+Relationship between application and network:
+The network itself is a way to access other devices.
+But what really is going on is that, thanks to devices & OS, applications are talking *to each other* through the network. Applications communicate with other applications.
+The overall picture
+Two devices, each with three layers. Applications communicate with each other through the network.
+Add multiple devices at the end of the graph, to show that it’s not only 1:1, but n:n communication.
+
+
+
+
+
+```
+┌──╌ Digital world ╌─────────────────────────────────────────────────────────────────────────┐
+│                                                                                            │
+│  ┌──╌ Device (hardware) ╌──────────┐                  ┌──╌ Device (hardware) ╌──────────┐  │
+│  │                                 │                  │                                 │  │
+│  │  ┌─╌ Application (software) ╌─┐ │                  │  ┌─╌ Application (software) ╌─┐ │  │
+│  │  │       <────────────────────│─┼──╌ Internet ╌────┼──┼─────────>                  │ │  │
+│  │  └────────────────────────────┘ │    (network)     │  └────────────────────────────┘ │  │
+│  └─────────────────────────────────┘                  └─────────────────────────────────┘  │
+└────────────────────────────────────────────────────────────────────────────────────────────┘
+
+
+┌──╌ Digital world ╌───────────────────────────────────┐
+│                                                      │
+│  ┌──╌ Phone 1 ╌─┐                  ┌──╌ Phone 2 ╌─┐  │
+│  │              │                  │              │  │
+│  │  ┌─╌ App ╌─┐ │                  │  ┌─╌ App ╌─┐ │  │
+│  │  │  <──────│─┼──────╮  ╭────────┼──┼───>     │ │  │
+│  │  └─────────┘ │      │  │        │  └─────────┘ │  │
+│  └──────────────┘      ╎  ╎        └──────────────┘  │
+│                                                      │
+│                      Internet                        │
+│                      (network)                       │
+│                                                      │
+│  ┌─╌ Computer ╌─┐      ╎  ╎        ┌──╌ Server  ╌─┐  │
+│  │              │      │  │        │              │  │
+│  │  ┌─╌ App ╌─┐ │      │  │        │  ┌─╌ App ╌─┐ │  │
+│  │  │  <──────│─┼──────╯  ╰────────┼──┼───>     │ │  │
+│  │  └─────────┘ │                  │  └─────────┘ │  │
+│  └──────────────┘                  └──────────────┘  │
+│                                                      │
+└──────────────────────────────────────────────────────┘
+
+┌──╌ Digital world ╌───────────────────────────────────────┐
+│
+│ ┌──╌ Device ╌────────┐               ┌──╌ Device ╌──────┐
+│ │                    │               │                │
+│ │  ┌──╌ OS ╌───────┐ │               │  ┌──╌ OS ╌─────┐ │
+│ │  │               │ │               │  │               │  │
+│ │  │  ┌─╌ App ╌─┐  │ │               │  │  ┌─╌ App ╌─┐  │  │
+│ │  │  │  <──────┼──┼─┼────╌ web ╌────┼──┼──┼──────>      │   │  │
+│ │  │  └─────────┘  │ │   (internet)  │  │  └─────────────┘   │  │
+│ │  └───────────────┘ │               │  └────────────────────┘  │
+│ └────────────────────┘               └──────────────────────────┘
+│
+└──────────────────────────────────────────────────────┘
+```
+
+## Part 2: developing apps with gotoв
+
+Through examples!
+
+Understand not just how to do it in gotoв, but how you would do it without it and see what gotoв does for you.
+
+counter: full HTML version, update reads from HTML; second version: value in js, update from there. third version: gotoB.
+
+todo list: localstorage. responders.
+
+shopping cart: two views.
+
+crud: fake server. navigation based on being logged or not.
+
 
 This tutorial is conceived as a small book that gently explains the main concepts of the frontend of a web application (henceforth, *webapp*).
 
-This tutorial requires you to have some knowledge of HTML, CSS and js (Javascript) - but only a little bit!
+This tutorial requires you to have some knowledge of HTML, CSS and JS (Javascript) - but only a little bit!
 
 This will be most useful for those just dipping their feet into developing webapps. However, it can be also useful for more experienced developers seeking to reconsider the parts of a webapp from first principles, using a conceptual perspective.
 
@@ -37,6 +173,27 @@ Web apps are the core of the web as we know it. The web is open and unconstraine
 If you want to improve people's lives, creating a web app might be a great way to do so. Web apps mean freedom for creators and users.
 
 That’s why web apps are important.
+
+### Web standards
+
+If no one controls the web, how can the web work at all?
+
+The web works through *standards*. Standards are a way of doing things that follow certain rules. If you follow the rules of web standards, you can create a web app that can be part of the broader web, without anyone's permission.
+
+Standards are pretty much like a language. To understand others and be understood, you need to speak their language. No one is forcing you to speak any specific language, but to speak to someone, you need to do so in a language they understand. Web standards are the language of the web.
+
+The web is actually a collection of standards:
+
+- [Hypertext Transfer Protocol](https://en.wikipedia.org/wiki/Hypertext_Transfer_Protocol) - also known as HTTP.
+- [Hypertext Markup Language] - also known as HTML.
+- [Cascading Style Sheets](https://en.wikipedia.org/wiki/CSS) - also known as CSS.
+- [Javascript](https://en.wikipedia.org/wiki/JavaScript) - also known as JS.
+
+All of these standards make up the web.
+
+The web runs on top of the internet. And guess what? The internet itself is also powered by standards, such as [DNS](https://en.wikipedia.org/wiki/Domain_Name_System), [TCP/IP](https://en.wikipedia.org/wiki/Internet_protocol_suite), [WiFi](https://en.wikipedia.org/wiki/Wi-Fi) and [Ethernet](https://en.wikipedia.org/wiki/Ethernet).
+
+Standards are open to anyone and anyone can propose changes to them. Large tech companies have a strong say on how standards are shaped, but they do not control them, only influence them. Standards change slowly, in order to keep existing things working.
 
 ## What are web apps?
 
@@ -74,7 +231,7 @@ Both programs communicate through the web.
 
 The main functions of the frontend are:
 - Show information to the user.
-- Provide an user interface.
+- Provide a user interface.
 - Collect data provided by the user and send it to the backend.
 
 The main functions of the backend are:
@@ -174,6 +331,18 @@ HTML, CSS and js are text files, really. They have to conform to certain rules (
 When you load a webpage, an HTML file (which is text that conforms to certain rules, nothing else) may contain further CSS or js inside of it. These CSS or js files are also text, also conforming to certain rules.
 
 The browser, when receiving HTML, CSS and js, starts putting things on the screen - and that's what you see when the page is fully loaded.
+
+
+
+our example: step counter.
+
+views: cart and product pages
+
+pages are just webpages? Not really! The state
+
+The state: static
+
+The state: dynamic, the loop
 
 
 
@@ -763,23 +932,6 @@ Move it to the front, start with the end in mind: HTML & CSS. Change it. That's 
 changes: by the user and by the server!! start with the end in mind!!
 
 The button (in HTML, with an event) calls `increment`. `increment` increases the value, then updates the HTML. That's the cycle!
-
-```
-
-
-
-              ┌──╌ HTML ╌────────────────────────────┐
-              │                                      │
-internet <────┼──paragraph
-
-──────e <──────> local filesystem  │
-(localhost)   │                   ┬ ┬                            │
-              │                   │ └────────> redis             │
-              │                   │                              │
-              │                   └──────────────────────────────┼───> AWS S3 & SES
-              └──────────────────────────────────────────────────┘
-
-```
 
 Note: string references increment. That's how the circle is closed! Text diagram here!
 

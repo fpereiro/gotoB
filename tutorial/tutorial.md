@@ -40,38 +40,24 @@ In the next chapter, we will understand what the virtual world is made of.
 
 ### Chapter 2: an overview of the digital world
 
-We exist in a physical world. The digital world exists within the physical world, but we cannot access it directly. To access the digital world, we *use devices* that are *interconnected by a network* and *run applications*.
+We exist in a physical world. The digital world exists within the physical world, but we cannot access it directly. To access the digital world, we *use digital devices*.
 
+```
+┌──╌ Physical world ╌───────────────────────────────────────────┐
+│                                                               │
+│  ┌──╌ Human ╌───┐                   ┌──╌ Digital world ╌───┐  │
+│  │              │                   │                      │  │
+│  │       <──────│────╌ Digital ╌────┼───────────>          │  │
+│  │              │      devices      │                      │  │
+│  └──────────────┘                   └──────────────────────┘  │
+└───────────────────────────────────────────────────────────────┘
+```
 
+The digital world consists of three elements:
 
-However, we cannot access the digital world directly, like we do with the physical one. Instead, we do it through devices which are connected to the internet and running applications.
-
-We use applications to access the digital world. They act as our digital eyes, hands and ears. Through them, we talk, collaborate, create memories and go about our daily lives.
-
-   - test:   app: saveprompt, auth: are you sure,
-
-Three elements make up the digital world:
-Devices (computers, phones, tablets)
-Applications
-Connectivity (internet + web)
-What each element stands for?
-Device: hardware (basis, rigid, the bridge between the physical and the digital)
-Application: software (on top, flexible)
-Connectivity: allow devices to talk to each other through the network. Devices and applications become truly useful when they are connected with each other.
-Relationship between device and application:
-Mediator: operative system. The OS allows the device and the application interact. The OS is software, but those who make apps don’t change it, but take it as given. Think of it as a more
-The application runs “on top” of the OS (they talk to each other). The OS runs on top of the device (they talk to each other).
-Consider that the Device and the OS, for practical purposes, are one thing: a mixture of hardware and software on top of which you can run an application.
-Relationship between application and network:
-The network itself is a way to access other devices.
-But what really is going on is that, thanks to devices & OS, applications are talking *to each other* through the network. Applications communicate with other applications.
-The overall picture
-Two devices, each with three layers. Applications communicate with each other through the network.
-Add multiple devices at the end of the graph, to show that it’s not only 1:1, but n:n communication.
-
-
-
-
+- **Digital devices**, such as computers, tablets and phones.
+- **Applications**, which are programs that run on digital devices.
+- **A network** that interconnects all digital devices.
 
 ```
 ┌──╌ Digital world ╌─────────────────────────────────────────────────────────────────────────┐
@@ -83,8 +69,49 @@ Add multiple devices at the end of the graph, to show that it’s not only 1:1, 
 │  │  └────────────────────────────┘ │    (network)     │  └────────────────────────────┘ │  │
 │  └─────────────────────────────────┘                  └─────────────────────────────────┘  │
 └────────────────────────────────────────────────────────────────────────────────────────────┘
+```
 
+What each element stands for? Digital devices represent the **hardware** and are the immediate bridge between the physical and the digital world. Applications are **software** and through it the devices can do potentially unlimited things. Finally, the network enables **connectivity** between devices (and applications) existing in different parts of the physical world.
 
+While the devices are essential to the digital world, as users our attention is focused on the applications. Right now, you're looking at words on a screen (unless you printed this tutorial on paper, you crazy person); it is almost certain that you are paying much more attention to the text and what surrounds it than to your actual screen or keyboard. Applications are our true windows to the digital world. They act as our digital eyes, hands and ears.
+
+Applications don't run directly on the device. Rather, they run on a piece of software called the *operative system* (OS, for short), which in turns runs on the device. While the OS is software, from the perspective of an application developer, it could be considered as hardware: the OS is taken "as is" and cannot be easily (or at all) modified. So, for practical purposes, the device and its OS are a bundle on which applications run.
+
+```
+┌──╌ Digital world ╌─────────────────────────────────────────┐
+│                                                            │
+│ ┌──╌ Device ╌────────┐               ┌──╌ Device ╌───────┐ │
+│ │                    │               │                   │ │
+│ │  ┌──╌ OS ╌───────┐ │               │  ┌──╌ OS ╌──────┐ │ │
+│ │  │               │ │               │  │              │ │ │
+│ │  │  ┌─╌ App ╌─┐  │ │               │  │  ┌─╌ App ╌─┐ │ │ │
+│ │  │  │  <──────┼──┼─┼────╌ web ╌────┼──┼──┼────>    │ │ │ │
+│ │  │  └─────────┘  │ │   (internet)  │  │  └─────────┘ │ │ │
+│ │  └───────────────┘ │               │  └──────────────┘ │ │
+│ └────────────────────┘               └───────────────────┘ │
+│                                                            │
+└────────────────────────────────────────────────────────────┘
+```
+
+But for practical purposes, just think of it as:
+
+```
+┌──╌ Digital world ╌─────────────────────────────────────────────────────────────────────────┐
+│                                                                                            │
+│  ┌──╌ Device + OS  ╌───────────────┐                  ┌──╌ Device + OS  ╌───────────────┐  │
+│  │                                 │                  │                                 │  │
+│  │  ┌─╌ Application (software) ╌─┐ │                  │  ┌─╌ Application (software) ╌─┐ │  │
+│  │  │       <────────────────────│─┼──╌ Internet ╌────┼──┼─────────>                  │ │  │
+│  │  └────────────────────────────┘ │    (network)     │  └────────────────────────────┘ │  │
+│  └─────────────────────────────────┘                  └─────────────────────────────────┘  │
+└────────────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+Before we close this chapter, we need to cover the relationship between the application and the network. The network connects an application running on a certain device with another (or the same) application running on *another* device. Connectivity is what joins distinct devices into a connected whole - rather than having small digital islands (each device), by connecting them we create an entire digital world.
+
+Devices not only communicate one-on-one, but can also communicate with multiple devices at the same time.
+
+```
 ┌──╌ Digital world ╌───────────────────────────────────┐
 │                                                      │
 │  ┌──╌ Phone 1 ╌─┐                  ┌──╌ Phone 2 ╌─┐  │
@@ -105,21 +132,34 @@ Add multiple devices at the end of the graph, to show that it’s not only 1:1, 
 │  └──────────────┘                  └──────────────┘  │
 │                                                      │
 └──────────────────────────────────────────────────────┘
-
-┌──╌ Digital world ╌───────────────────────────────────────┐
-│
-│ ┌──╌ Device ╌────────┐               ┌──╌ Device ╌──────┐
-│ │                    │               │                │
-│ │  ┌──╌ OS ╌───────┐ │               │  ┌──╌ OS ╌─────┐ │
-│ │  │               │ │               │  │               │  │
-│ │  │  ┌─╌ App ╌─┐  │ │               │  │  ┌─╌ App ╌─┐  │  │
-│ │  │  │  <──────┼──┼─┼────╌ web ╌────┼──┼──┼──────>      │   │  │
-│ │  │  └─────────┘  │ │   (internet)  │  │  └─────────────┘   │  │
-│ │  └───────────────┘ │               │  └────────────────────┘  │
-│ └────────────────────┘               └──────────────────────────┘
-│
-└──────────────────────────────────────────────────────┘
 ```
+
+From the next chapter we will narrow our focus on applications. Here we go!
+
+### Chapter 3: introduction to applications
+
+A program written by someone or a team, to run on one or more devices
+An example to go along: a stopwatch app like the one you have in your phone.
+The three parts of an application:
+User Interface (UI): what the user sees. For example: the clock and the start button.
+Logic: what is possible to do with the app. For example: starting the clock, pausing it and resetting it.
+State: the data currently shown. For example: the current seconds elapsed, and whether the stopwatch is going or not.
+If a program has all three, it is an application.
+The UI does two things:
+Allows the user to see information: how much time elapsed? is it running or not?
+Allows the user to interact with the app: start, pause, delete.
+
+An application is dynamic and it depends on the State.
+The state starts empty. For example: the stopwatch is stopped and the time is 00:00:00
+A user interaction starts the stopwatch. That changes both the time elapsed and the fact that the stopwatch is going.
+The State doesn’t only change by user interactions: while the stopwatch is running, the app itself increases the time elapsed.
+
+The logic determines what is shown and what is possible:
+When the stopwatch is stopped, it allows you only to start it.
+When it is going, it allows you to either pause it or reset it.
+
+Overall picture:
+Initial state -> initial UI -> change to the state (either user interaction or from logic) -> new UI
 
 ## Part 2: developing apps with gotoв
 

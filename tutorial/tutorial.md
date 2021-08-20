@@ -134,29 +134,76 @@ Devices not only communicate one-on-one, but can also communicate with multiple 
 └──────────────────────────────────────────────────────┘
 ```
 
-From the next chapter we will narrow our focus on applications. Here we go!
+This completes our introduction to the digital world. We will now shift our focus to applications.
 
 ### Chapter 3: introduction to applications
 
-A program written by someone or a team, to run on one or more devices
-An example to go along: a stopwatch app like the one you have in your phone.
-The three parts of an application:
-User Interface (UI): what the user sees. For example: the clock and the start button.
-Logic: what is possible to do with the app. For example: starting the clock, pausing it and resetting it.
-State: the data currently shown. For example: the current seconds elapsed, and whether the stopwatch is going or not.
-If a program has all three, it is an application.
-The UI does two things:
-Allows the user to see information: how much time elapsed? is it running or not?
-Allows the user to interact with the app: start, pause, delete.
+As we saw in the previous chapter, applications are central to us because they act as the true windows to the digital world. But what *is* an application?
+
+An application is, simply put, a program written by a person or a team, meant to run on one or more types of devices.
+
+It's perhaps best to start with a concrete example on which to illustrate the concepts of this chapter. For this purpose, let's pick a typical stopwatch app, like the one that comes built-in in your phone.
+
+```
+┌──╌ Stopwatch app ╌─────────────────────────────┐
+│                                                │
+│                                                │
+│                    00:00:00                    │
+│                                                │
+│                  ┌─────────┐                   │
+│                  │  START  │                   │
+│                  └─────────┘                   │
+│                                                │
+└────────────────────────────────────────────────┘
+```
+
+An application is made of three parts:
+
+- **User interface (UI)**: this is what the user *sees*. In the stopwatch app, the UI would consist of the clock and the `START` button.
+- **Logic**: this is what determines *what* the app can do and *when* it can do it. In the stopwatch app, the logic determines that you can start the clock if it's stopped or paused, but not if it's already going.
+- **State**: this is what determines the *current situation* of the app. In the stopwatch app, the state consists of the time currently shown on the clock, as well as whether the stopwatch is stopped, running or paused.
+
+We venture to say that if a program has all three things (UI, logic and state) it is an application. All programs have logic, but not all of them have UI and state.
+
+```
+┌──╌ UI ╌──────────┐        ┌──╌ Logic ╌───────┐        ┌──╌ State ╌───────────────────┐
+│                  │        │                  │        │                              │
+│ - Clock display  │        │ - Available      │        │ - Time shown                 │
+│ - Buttons        │        │   operations     │        │ - Status of clock            │
+│                  │        │ - Move clock     │        │   (running, paused, stopped) │
+│                  │        │   forward        │        │                              │
+└──────────────────┘        │                  │        └──────────────────────────────┘
+                            └──────────────────┘
+
+
+
+
+            ┌──╌ Stopwatch app ╌─────────────────────────────┐
+            │                                                │
+            │                                                │
+            │                    00:00:00                    │
+            │                                                │
+            │                  ┌─────────┐                   │
+            │                  │  START  │                   │
+            │                  └─────────┘                   │
+            │                                                │
+            └────────────────────────────────────────────────┘
+```
+
+The UI performs two functions:
+- Allows the user to *see* information: how much time has elapsed? Is the stopwatch running or not? What are the available operations?
+- Allows the user to *interact* with the app: start, pause and stop the stopwatch.
+
+The logic determines what is shown and what is possible:
+When the stopwatch is stopped, it allows you only to start it.
+When it is going, it allows you to either pause it or reset it.
+When stopping it, it resets the stopwatch.
 
 An application is dynamic and it depends on the State.
 The state starts empty. For example: the stopwatch is stopped and the time is 00:00:00
 A user interaction starts the stopwatch. That changes both the time elapsed and the fact that the stopwatch is going.
 The State doesn’t only change by user interactions: while the stopwatch is running, the app itself increases the time elapsed.
 
-The logic determines what is shown and what is possible:
-When the stopwatch is stopped, it allows you only to start it.
-When it is going, it allows you to either pause it or reset it.
 
 Overall picture:
 Initial state -> initial UI -> change to the state (either user interaction or from logic) -> new UI
@@ -196,7 +243,7 @@ The digital world has become an inseparable part of our lives. Through it, we in
 
 However, we cannot access the digital world directly, like we do with the physical one. Instead, we do it through devices which are connected to the internet and running applications.
 
-We use applications to access the digital world. They act as our digital eyes, hands and ears. Through them, we talk, collaborate, create memories and go about our daily lives.
+We use applications to access the digital world. They act as our digital eyes, ears and hands. Through them, we talk, collaborate, create memories and go about our daily lives.
 
 You're probably familiar with three types of applications:
 

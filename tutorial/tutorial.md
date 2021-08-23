@@ -1,6 +1,6 @@
 # Tutorial: so you want to write a frontend?
 
-If you are here, you probably want to develop a webapp, or you already are a webapp developer and want to get better at it. In this tutorial we will offer you as much *understanding* as possible. In our experience, the most daunting part about achieving mastery with webapps is understanding how it all fits together, and why certain things are done in the way that they are done.
+If you are here, you probably want to develop a webapp, or you already are a webapp developer and want to get better at it. In this tutorial we will offer you as much *understanding* as possible. In our experience, the most daunting part about achieving mastery with webapps is understanding how it all fits together, and why certain things are done in a certain way.
 
 This tutorial replaces a more conventional format where we would just show how to develop webapps with gotoв. Instead of doing this, we first offer **a conceptual introduction** to webapps (*web applications*, in case you're not familiar with the abbreviation). After the main conceptual pieces are in place, we then cover **the basics of developing** the frontend of a webapp; gotoв appears on the scene only as the solution to certain problems that occur over and over.
 
@@ -71,9 +71,9 @@ The digital world consists of three elements:
 └────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-What each element stands for? Digital devices represent the **hardware** and are the immediate bridge between the physical and the digital world. Applications are **software** and through it the devices can do potentially unlimited things. Finally, the network enables **connectivity** between devices (and applications) existing in different parts of the physical world.
+What each element stands for? Digital devices are **hardware** and represent the immediate bridge between the physical and the digital world. Applications are **software** and through it the devices can do unlimited things. Finally, the network enables **connectivity** between devices (and applications) existing in different parts of the physical world.
 
-While the devices are essential to the digital world, as users our attention is focused on the applications. Right now, you're looking at words on a screen (unless you printed this tutorial on paper, you crazy person); it is almost certain that you are paying much more attention to the text and what surrounds it than to your actual screen or keyboard. Applications are our true windows to the digital world. They act as our digital eyes, hands and ears.
+While the devices and the network are essential to the digital world, as users our attention is focused on the applications. Right now, you're looking at words on a screen (unless you printed this tutorial on paper, you crazy person); it is almost certain that you are paying much more attention to the text and what surrounds it than to your actual screen or keyboard, or to the fact that you're connected to the internet. Applications are our true windows to the digital world. They act as our digital eyes, hands and ears.
 
 Applications don't run directly on the device. Rather, they run on a piece of software called the *operative system* (OS, for short), which in turns runs on the device. While the OS is software, from the perspective of an application developer, it could be considered as hardware: the OS is taken "as is" and cannot be easily (or at all) modified. So, for practical purposes, the device and its OS are a bundle on which applications run.
 
@@ -140,8 +140,6 @@ This completes our introduction to the digital world. We will now shift our focu
 
 As we saw in the previous chapter, applications are central to us because they act as the true windows to the digital world. But what *is* an application?
 
-An application is, simply put, a program written by a person or a team, meant to run on one or more types of devices.
-
 It's perhaps best to start with a concrete example on which to illustrate the concepts of this chapter. For this purpose, let's pick a typical stopwatch app, like the one that comes built-in in your phone.
 
 ```
@@ -157,7 +155,7 @@ It's perhaps best to start with a concrete example on which to illustrate the co
 └────────────────────────────────────────────────┘
 ```
 
-An application is made of three parts:
+An application is a program made of three parts:
 
 - **User interface (UI)**: this is what the user *sees*. In the stopwatch app, the UI would consist of the clock and the `START` button.
 - **Logic**: this is what determines *what* the app can do and *when* it can do it. In the stopwatch app, the logic determines that you can start the clock if it's stopped or paused, but not if it's already going.
@@ -173,11 +171,11 @@ We venture to say that if a program has all three things (UI, logic and state) i
 │                  │        │ - Move clock     │        │   (running, paused, stopped) │
 │                  │        │   forward        │        │                              │
 └──────────────────┘        │                  │        └──────────────────────────────┘
-                            └──────────────────┘
-
-
-
-
+                |           └──────────────────┘           |
+                |                    |                     |
+                |                    |                     |
+                |                    |                     |
+                v                    v                     v
             ┌──╌ Stopwatch app ╌─────────────────────────────┐
             │                                                │
             │                                                │
@@ -190,23 +188,128 @@ We venture to say that if a program has all three things (UI, logic and state) i
             └────────────────────────────────────────────────┘
 ```
 
-The UI performs two functions:
-- Allows the user to *see* information: how much time has elapsed? Is the stopwatch running or not? What are the available operations?
-- Allows the user to *interact* with the app: start, pause and stop the stopwatch.
+The *UI* performs two functions:
+- Allows the user to **see** information: how much time has elapsed? Is the stopwatch running or not? What are the available operations?
+- Allows the user to **interact** with the app: start, pause and stop the stopwatch.
 
-The logic determines what is shown and what is possible:
-When the stopwatch is stopped, it allows you only to start it.
-When it is going, it allows you to either pause it or reset it.
-When stopping it, it resets the stopwatch.
+The *logic* determines the UI and what is possible to do with it:
+- When the stopwatch is stopped, the logic only allows you to start the stopwatch.
+- When the stopwatch is going, the logic only allows you to either pause it or reset it.
 
-An application is dynamic and it depends on the State.
-The state starts empty. For example: the stopwatch is stopped and the time is 00:00:00
-A user interaction starts the stopwatch. That changes both the time elapsed and the fact that the stopwatch is going.
-The State doesn’t only change by user interactions: while the stopwatch is running, the app itself increases the time elapsed.
+The logic also determines the time displayed in the clock:
+- When you click on the button for stopping the stowpatch, the logic resets the clock.
+- When the stopwatch is going, the logic constantly updates the clock.
+- When the stopwatch is paused, the logic keeps the clock unchanged.
+
+The *state* is what tells you *where the app is at*. For example, in the stopwatch app, the state is made of the following:
+- Current time: *00:00:00* or more.
+- Current mode of the clock: *stopped*, *paused* or *playing*.
+
+The state of the app determines both how the UI looks and what operations the logic will perform. We would not go too far if we consider that an application is considered to be a *mathematical function of its state* (if you are wary of mathematics, please don't skip this section, we'll make it as clear as we can!). Take the square-by-two function:
+
+```
+square-by-two (1) -> 1 (because 1 * 1 is 1)
+square-by-two (2) -> 4 (because 2 * 2 is 4)
+square-by-two (3) -> 9 (because 3 * 3 is 9)
+```
+
+The same happens with the stopwatch:
+
+```
+stopwatch (clock is at 00:00:00 and clock is stopped)
+                       |
+                       |
+                       v
+  ┌──╌ Stopwatch app ╌─────────────────────────────┐
+  │                                                │
+  │                                                │
+  │                    00:00:00                    │
+  │                                                │
+  │                  ┌─────────┐                   │
+  │                  │  START  │                   │
+  │                  └─────────┘                   │
+  │                                                │
+  └────────────────────────────────────────────────┘
 
 
-Overall picture:
-Initial state -> initial UI -> change to the state (either user interaction or from logic) -> new UI
+
+stopwatch (clock is 02:00:00 and clock is stopped)
+                       |
+                       |
+                       v
+  ┌──╌ Stopwatch app ╌─────────────────────────────┐
+  │                                                │
+  │                                                │
+  │                    02:00:00                    │
+  │                                                │
+  │                  ┌─────────┐                   │
+  │                  │  START  │                   │
+  │                  └─────────┘                   │
+  │                                                │
+  └────────────────────────────────────────────────┘
+
+
+
+stopwatch (clock is at 02:00:00 and clock is running)
+                       |
+                       |
+                       v
+  ┌──╌ Stopwatch app ╌─────────────────────────────┐
+  │                                                │
+  │                                                │
+  │                    02:00:00                    │
+  │                                                │
+  │          ┌─────────┐      ┌────────┐           │
+  │          │  PAUSE  │      │  STOP  │           │
+  │          └─────────┘      └────────┘           │
+  │                                                │
+  └────────────────────────────────────────────────┘
+
+
+
+stopwatch (clock is at 02:00:00 and clock is paused)
+                       |
+                       |
+                       v
+  ┌──╌ Stopwatch app ╌─────────────────────────────┐
+  │                                                │
+  │                                                │
+  │                    02:00:00                    │
+  │                                                │
+  │          ┌─────────┐      ┌────────┐           │
+  │          │  START  │      │  STOP  │           │
+  │          └─────────┘      └────────┘           │
+  │                                                │
+  └────────────────────────────────────────────────┘
+```
+
+As you can see, the *state* determines how the app looks at any given moment. If the app changes, it is because the state was changed.
+
+Two things can change the state:
+
+- A user interaction. For example, the user clicking on a button.
+- A logic operation. For example, the clock moving one second forward.
+
+As we mentioned before, when the state changes, the UI changes. So the UI changes both in response to user interactions and logic operations. After the UI changes, both the user and the logic may have new operations available. In this way, an app constantly changes. You could call it the *fundamental cycle of an application*:
+
+```
+    ┌───────────┐     ┌────────────┐     ┌─────────────┐     ┌───────────┐     ┌────────────┐
+    │  Initial  │     │  Initial   │     │  Change to  │     │  New      │     │  New       │
+    │  state    │---> │  UI        │---> │  the state  │---> │  state    │---> │  UI        │
+    │           │     │            │     │             │     │           │     │            │
+    └───────────┘     └────────────┘     └─────────────┘     └───────────┘     └────────────┘
+```
+
+We've covered lots of ground in this chapter. The main takeaways are:
+
+- An app is made of 1) UI, 2) logic, 3) state.
+- The state determines the UI.
+- Both the user and the logic can change the state.
+
+In the next chapter we will cover two more fundamental concepts: *users* and *servers*.
+
+### Chapter 4: users and servers
+
 
 ## Part 2: developing apps with gotoв
 

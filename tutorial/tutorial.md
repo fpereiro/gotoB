@@ -205,7 +205,17 @@ The *state* is what tells you *where the app is at*. For example, in the stopwat
 - Current time: *00:00:00* or more.
 - Current mode of the clock: *stopped*, *paused* or *playing*.
 
-The state of the app determines both how the UI looks and what operations the logic will perform. We would not go too far if we consider that an application is considered to be a *mathematical function of its state* (if you are wary of mathematics, please don't skip this section, we'll make it as clear as we can!). Take the square-by-two function:
+The state of the app determines both how the UI looks and what operations the logic will perform. We would not go too far if we consider that an application is considered to be a *mathematical function of its state* (if you are wary of mathematics, please don't skip this section, we'll make it as clear as we can!).
+
+Think of a mathematical function as a little box which, when receiving an input, immediately produces an output. You don't necessarily care what is inside the box. What is most important is that, when you give a certain input X to the function, it produces a result Y. A function can be then understood as a process that transforms an input X into a result Y.
+
+```
+function (x) -> y
+```
+
+Notice that the input to the function is shown above between brackets. The result from passing `x` to the function goes after the arrow `->`.
+
+Let's take the example of the square-by-two function:
 
 ```
 square-by-two (1) -> 1 (because 1 * 1 is 1)
@@ -283,7 +293,13 @@ stopwatch (clock is at 02:00:00 and clock is paused)
   └────────────────────────────────────────────────┘
 ```
 
-As you can see, the *state* determines how the app looks at any given moment. If the app changes, it is because the state was changed.
+In the examples above, we consider `stopwatch` to be a function. The input we pass to the function is the *state*. What's then the result? The UI!
+
+```
+app (state) -> UI
+```
+
+The *state* determines how the app looks at any given moment. If the app changes, it is because the state was changed.
 
 Two things can change the state:
 
@@ -308,7 +324,172 @@ We've covered lots of ground in this chapter. The main takeaways are:
 
 In the next chapter we will cover two more fundamental concepts: *users* and *servers*.
 
-### Chapter 4: users and servers
+### Chapter 4: data, servers and accounts
+
+In this chapter we will review three concepts that will put you "on the other side" of this tutorial. If you understand these three pieces of the puzzle, it's a fair bet to say you'll be able to grasp the rest of the concepts in this tutorial quite easily.
+
+The concepts are three: *data*, *servers* and *user accounts*. From the perspective of applications, each of them creates the need for the following one. For example, without data, servers are not really necessary. Without servers, user accounts are almost useless.
+
+But indeed, data is the lifeblood of the digital world. As a result, data, servers and accounts are fundamental concepts to be understood. So here we go!
+
+To follow along, we will change our example from the stopwatch app to a simple todo list app:
+
+```
+  ┌──╌ Todo list app ╌────────────────┐
+  │                                   │
+  │         ┌─────────┐               │
+  │         │ ....... │<-- input box  │
+  │         └─────────┘               │
+  │      ┌───────────────┐            │
+  │      │  CREATE TODO  │            │
+  │      └───────────────┘            │
+  │                                   │
+  │      LIST OF TODOS:               │
+  │                                   │
+  │                                   │
+  │                                   │
+  └───────────────────────────────────┘
+```
+
+The todo list app has:
+1. An input box, where you can write a todo item.
+2. A button for saving the todo item in the list.
+3. The actual list of todos.
+
+If we add a couple of todos, the app will look like this:
+
+```
+  ┌──╌ Todo list app ╌────────────────┐
+  │                                   │
+  │         ┌─────────┐               │
+  │         │ ....... │               │
+  │         └─────────┘               │
+  │      ┌───────────────┐            │
+  │      │  CREATE TODO  │            │
+  │      └───────────────┘            │
+  │                                   │
+  │      LIST OF TODOS:               │
+  │                        ┌────────┐ │
+  │      - Write tutorial  │ DELETE │ │
+  │                        └────────┘ │
+  │                                   │
+  │                        ┌────────┐ │
+  │      - Bake birthday   │ DELETE │ │
+  │        cake            └────────┘ │
+  │                                   │
+  │                                   │
+  └───────────────────────────────────┘
+```
+
+When you finish a todo, you can simply delete it, so that your list will only contain things that you haven't done yet. The app is quite rudimentary, but this app contains all the elements we need to understand in this chapter.
+
+Let's start with the data. Data is information that is meant to *persist*. In the stopwatch example, you probably would not be surprised if the time on the clock was resetted if you either close the app or restart your phone. With the todo list, however, you probably expect the app to *remember* your list of todos - otherwise, why bother writing them down?
+
+The data is, then, information that the app must remember indefinitely. Data is the *permanent part* of the *state*. As we defined it on the last chapter, the *state* is what tells you *where the app is at*. The data, then is that information that determines where the app is at *and* persists over time.
+
+Some parts of the state are not permanent and are not stored in the data. Let's see an example:
+
+```
+  ┌──╌ Todo list app ╌────────────────┐
+  │                                   │
+  │         ┌─────────┐               │
+  │         │ buy a t │               │
+  │         └─────────┘               │
+  │      ┌───────────────┐            │
+  │      │  CREATE TODO  │            │
+  │      └───────────────┘            │
+  │                                   │
+  │      LIST OF TODOS:               │
+  │                        ┌────────┐ │
+  │      - Write tutorial  │ DELETE │ │
+  │                        └────────┘ │
+  │                                   │
+  │                        ┌────────┐ │
+  │      - Bake birthday   │ DELETE │ │
+  │        cake            └────────┘ │
+  │                                   │
+  │                                   │
+  └───────────────────────────────────┘
+```
+
+Notice that we entered `buy a t` in the input box of the app. If, however, we close the app (or restart our phone) before hitting the `CREATE TODO` button, that half-formed todo item will disappear when we open the app again. Before we closed the app, `buy a t` was part of the state, but not part of the data.
+
+```
+┌──╌ Todo list app ╌──────────────┐
+│                                 │
+│  ┌──╌ State  ╌───────────────┐  │
+│  │                           │  │
+│  │  - Half-entered todo      │  │
+│  │                           │  │
+│  │  ┌─╌ Data ╌─────┐         │  │
+│  │  │              │         │  │
+│  │  │ - Todo list  │         │  │
+│  │  │              │         │  │
+│  │  └──────────────┘         │  │
+│  └───────────────────────────┘  │
+└─────────────────────────────────┘
+```
+
+Now, where is the data stored? Since the app needs to "remember" the data, it must write the data somewhere, so that then it can read it back up when necessary.
+
+The natural place to store data is in the device itself. All phones, tablets and computers have [storage media](https://en.wikipedia.org/wiki/Computer_data_storage) from which apps can read and write data.
+
+Storing the data in your device, however, has two problems:
+
+- If you lose or damage the device, your data is lost.
+- Your data is tied to one device.
+
+Granted, for a simple todo list, you might not care if you lose the data - you might be much more aggravated by the fact that you lost your phone! And you might not be interested in using the todo list app from other devices like your computer.
+
+But for many other applications, you do care about not losing your data, and you care about accessing your data from different devices.
+
+Servers are the solution to this problem. But what is a server?
+
+A server is a device (more specifically, a computer), that is constantly on and connected to the internet. In other words, a computer that is always on and always connected. Unless a server is undergoing temporary maintenance, and assuming it doesn't crash, it will always be ready to operate.
+
+An applications can store its data on a server. Going back to our todo list example, whenever you add or remove an item from the list, the app can send the entire todo list to the server instructing it to keep a copy of the list.
+
+When the app is restarted, the app can ask the server for a copy of the list.
+
+```
+App storing data on the server (saving):
+
+┌──╌ App ╌─────────┐                   ┌──╌ Server ╌─────────────┐
+│             ─────┼──╌ todo list ╌────┼─────>                   │
+└──────────────────┘                   └─────────────────────────┘
+
+App retrieving data from the server (loading):
+
+┌──╌ App ╌─────────┐                   ┌──╌ Server ╌─────────────┐
+│            <─────┼──╌ todo list ╌────┼─────                    │
+└──────────────────┘                   └─────────────────────────┘
+```
+
+
+TODO
+
+server: a computer + network + program that communicates with the app that is running on your device. always running.
+
+functions: store. but also enable communication with others and crunch other data.
+
+unless you'd have one user, the server needs *user accounts*. who's who? it's not enough to detect the devic. you might login to the todo list app on your phone, or perhaps through your tablet or your computer.
+
+user account as a digital box: if you have the right username/password, the data inside it unlocks.
+
+Apps without data: stopwatch.
+
+Apps with data but without server: simple games in your phone (they register the high scores).
+
+Apps with data and server, but without user accounts: none. You need user accounts to use a server.
+
+Apps with data, server and user accounts: almost all the apps you use nowadays!
+
+- storage/backup
+- data collection & crunching (stocks)
+- communication (could be seen as data collection)
+
+
+
 
 
 ## Part 2: developing apps with gotoв

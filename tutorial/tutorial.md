@@ -22,7 +22,7 @@ Let's start at the beginning. Why do we even care about webapps? How are they me
 
 We currently live in the [digital age](https://en.wikipedia.org/wiki/Information_Age). As such, our lives happen in two worlds: the *physical world* and the *digital world*. The physical world needs little explanation: it consists of all that was there before the digital age. The digital world, however, is what is new for us as a species. Despite being the newcomer, the digital world is now everywhere - in fact, unless you printed this tutorial on paper, you're right now immersed in the digital world!
 
-The digital world came of age in the 1970s, with the development of [microcomputers](https://en.wikipedia.org/wiki/Microcomputer) and the [internet](https://en.wikipedia.org/wiki/Internet). It became massive in the early 1990s, with the development of the [web](https://en.wikipedia.org/wiki/World_Wide_Web), and received a final boost with the development of [smartphones](https://en.wikipedia.org/wiki/Smartphone) in the late 2000s. Cheap, powerful and interconnected computers made the digital age happen.
+The digital world came of age in the 1970s, with the development of [microcomputers](https://en.wikipedia.org/wiki/Microcomputer) and the [internet](https://en.wikipedia.org/wiki/Internet). It became massive in the early 1990s, with the development of the [web](https://en.wikipedia.org/wiki/World_Wide_Web), and experienced its tipping point with the development of [smartphones](https://en.wikipedia.org/wiki/Smartphone) in the late 2000s. Cheap, powerful and interconnected computers made the digital age happen.
 
 As of the early 2020s, the digital world has become central to our lives. Through the digital world, most of humanity performs now a great deal of four essential activities:
 
@@ -328,7 +328,7 @@ In the next chapter we will cover two more fundamental concepts: *users* and *se
 
 In this chapter we will review three concepts that will put you "on the other side" of this tutorial. If you understand these three pieces of the puzzle, it's a fair bet to say you'll be able to grasp the rest of the concepts in this tutorial quite easily.
 
-The concepts are three: *data*, *servers* and *user accounts*. From the perspective of applications, each of them creates the need for the following one. For example, without data, servers are not really necessary. Without servers, user accounts are almost useless.
+The concepts are three: *data*, *servers* and *user accounts*. From the perspective of applications, each of them creates the need for the following one. For example, without data, servers are not really necessary. Without servers, user accounts are mostly useless.
 
 But indeed, data is the lifeblood of the digital world. As a result, data, servers and accounts are fundamental concepts to be understood. So here we go!
 
@@ -381,13 +381,27 @@ If we add a couple of todos, the app will look like this:
   └───────────────────────────────────┘
 ```
 
-When you finish a todo, you can simply delete it, so that your list will only contain things that you haven't done yet. The app is quite rudimentary, but this app contains all the elements we need to understand in this chapter.
+When you finish a todo, you can simply delete it, so that your list will only contain things that you haven't done yet. The app is quite rudimentary, but it is enough to illustrate all the elements we need to understand in this chapter.
 
-Let's start with the data. Data is information that is meant to *persist*. In the stopwatch example, you probably would not be surprised if the time on the clock was resetted if you either close the app or restart your phone. With the todo list, however, you probably expect the app to *remember* your list of todos - otherwise, why bother writing them down?
+Let's start with **data**. Data is information that is meant to *persist*. In the stopwatch example, you probably would not be surprised if the time on the clock was resetted if you either close the app or restart your phone. With the todo list, however, you probably expect the app to *remember* your list of todos - otherwise, why bother writing them down?
 
 The data is, then, information that the app must remember indefinitely. Data is the *permanent part* of the *state*. As we defined it on the last chapter, the *state* is what tells you *where the app is at*. The data, then is that information that determines where the app is at *and* persists over time.
 
-Some parts of the state are not permanent and are not stored in the data. Let's see an example:
+```
+┌──╌ State ╌──────────────┐
+│                         │
+│ - Non-persistent info   │
+│                         │
+│  ┌──╌ Data ╌─────────┐  │
+│  │                   │  │
+│  │ - Persistent info │  │
+│  │                   │  │
+│  └───────────────────┘  │
+│                         │
+└─────────────────────────┘
+```
+
+Some parts of the state are not permanent and therefore are not data. Let's see an example:
 
 ```
   ┌──╌ Todo list app ╌────────────────┐
@@ -412,7 +426,7 @@ Some parts of the state are not permanent and are not stored in the data. Let's 
   └───────────────────────────────────┘
 ```
 
-Notice that we entered `buy a t` in the input box of the app. If, however, we close the app (or restart our phone) before hitting the `CREATE TODO` button, that half-formed todo item will disappear when we open the app again. Before we closed the app, `buy a t` was part of the state, but not part of the data.
+Notice that we entered `buy a t` in the input box of the app. If, however, we close the app (or restart our phone/computer) before hitting the `CREATE TODO` button, that half-formed todo item will disappear when we open the app again. Before we closed the app, `buy a t` was part of the state, but not part of the data.
 
 ```
 ┌──╌ Todo list app ╌──────────────┐
@@ -432,12 +446,12 @@ Notice that we entered `buy a t` in the input box of the app. If, however, we cl
 
 Now, where is the data stored? Since the app needs to "remember" the data, it must write the data somewhere, so that then it can read it back up when necessary.
 
-The natural place to store data is in the device itself. All phones, tablets and computers have [storage media](https://en.wikipedia.org/wiki/Computer_data_storage) from which apps can read and write data.
+The most natural place to store data is in the device itself. All phones, tablets and computers have [storage media](https://en.wikipedia.org/wiki/Computer_data_storage) from which apps can read and write data.
 
 Storing the data in your device, however, has two problems:
 
-- If you lose or damage the device, your data is lost.
-- Your data is tied to one device.
+- If you lose or damage the device, your data is lost. To remediate this, you would have to do periodic backups of your data.
+- Your data is tied to one device. To remediate this, you would have to carry around an updated copy of your data in a portable storage device.
 
 Granted, for a simple todo list, you might not care if you lose the data - you might be much more aggravated by the fact that you lost your phone! And you might not be interested in using the todo list app from other devices like your computer.
 
@@ -447,34 +461,63 @@ Servers are the solution to this problem. But what is a server?
 
 A server is a device (more specifically, a computer), that is constantly on and connected to the internet. In other words, a computer that is always on and always connected. Unless a server is undergoing temporary maintenance, and assuming it doesn't crash, it will always be ready to operate.
 
-An applications can store its data on a server. Going back to our todo list example, whenever you add or remove an item from the list, the app can send the entire todo list to the server instructing it to keep a copy of the list.
+An application can store its data on a server. Going back to our todo list example, whenever you add or remove an item from the list, the app can send the entire todo list to the server instructing it to keep a copy of the list.
 
 When the app is restarted, the app can ask the server for a copy of the list.
 
 ```
-App storing data on the server (saving):
+App storing data on the server (saving data):
 
 ┌──╌ App ╌─────────┐                   ┌──╌ Server ╌─────────────┐
 │             ─────┼──╌ todo list ╌────┼─────>                   │
 └──────────────────┘                   └─────────────────────────┘
 
-App retrieving data from the server (loading):
+App retrieving data from the server (loading data):
 
 ┌──╌ App ╌─────────┐                   ┌──╌ Server ╌─────────────┐
 │            <─────┼──╌ todo list ╌────┼─────                    │
 └──────────────────┘                   └─────────────────────────┘
 ```
 
+Going back to the todo list app, imagine that we now have a server that is able to store the todo lists for each of the app users. Now, the data is no longer tied to the device:
 
-TODO
+- If you lose your device, there's a copy of your todo list still on the server.
 
-server: a computer + network + program that communicates with the app that is running on your device. always running.
+```
+┌──╌ New device╌───┐                   ┌──╌ Server ╌─────────────┐
+│            <─────┼──╌ todo list ╌────┼─────                    │
+└──────────────────┘                   └─────────────────────────┘
+```
 
-functions: store. but also enable communication with others and crunch other data.
+- If you use the app from more than one device, each device can have the last version of the list by synchronizing with the server.
 
-unless you'd have one user, the server needs *user accounts*. who's who? it's not enough to detect the devic. you might login to the todo list app on your phone, or perhaps through your tablet or your computer.
+```
+For example, you first update the list from your phone.
 
-user account as a digital box: if you have the right username/password, the data inside it unlocks.
+┌──╌ Phone ╌───────┐                   ┌──╌ Server ╌─────────────┐
+│             ─────┼──╌ todo list ╌────┼─────>                   │
+└──────────────────┘                   └─────────────────────────┘
+
+Then, you open the list in your computer.
+
+┌──╌ Computer ╌────┐                   ┌──╌ Server ╌─────────────┐
+│            <─────┼──╌ todo list ╌────┼─────                    │
+└──────────────────┘                   └─────────────────────────┘
+```
+
+Developing and maintaining a server is not easy, but it massively increases the value of an application for users, even only for the fact that they persist data and allow the app to be used from different devices. (Servers actually enable the generation and processing of data that is not directly created by the user, which can also add huge value to an application - we go into that into a small aside section at the end of this chapter).
+
+A server is meant to serve multiple users of an app, not just one. Maintaining a server for each user is not economically feasible and it is not technically necessary. A single server (or a single group of servers) can serve tens, thousands or millions of users!
+
+Going back to the example of the todo list app, earlier we said that "*we now have a server that is able to store the todo lists for each of the app users*". If the server is to store and retrieve todo lists for each user, *the server needs to have a concept of what a user is*. In other words, when your phone asks the server for the latest version of the todo list, the server must know that it is *your* list and not anyone else's. This brings us to the third and last concept of the chapter: user accounts.
+
+An user account is a way in which a server can identify an user. The most basic version of a user account is the combination of an *username* (which identifies the user) and a *password* (which is a secret combination of digits and characters, ideally only known by the user). More sophisticated user accounts can be connected to an email address, or to other ways of proving identity (see, for example, [multi-factor authentication](https://en.wikipedia.org/wiki/Multi-factor_authentication)).
+
+Conceptually, it all boils down to the same thing: a username or user identifier, plus a secret piece of data. When a device sends both to the server, the server will be able to identify the user that's using the device.
+
+Once a server knows that a certain device is sending requests on behalf of user X, it will allow that device to read and write the data associted with user X. This works not unlike a locker box: each user has its data on a certain section of the server. The server, if properly programmed, will only give access to a certain box to the owner of the box.
+
+
 
 Apps without data: stopwatch.
 
@@ -483,6 +526,8 @@ Apps with data but without server: simple games in your phone (they register the
 Apps with data and server, but without user accounts: none. You need user accounts to use a server.
 
 Apps with data, server and user accounts: almost all the apps you use nowadays!
+
+### Aside: data not generated by the main user
 
 - storage/backup
 - data collection & crunching (stocks)

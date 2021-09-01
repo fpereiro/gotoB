@@ -507,33 +507,146 @@ Then, you open the list in your computer.
 
 Developing and maintaining a server is not easy, but it massively increases the value of an application for users, even only for the fact that they persist data and allow the app to be used from different devices. (Servers actually enable the generation and processing of data that is not directly created by the user, which can also add huge value to an application - we go into that into a small aside section at the end of this chapter).
 
-A server is meant to serve multiple users of an app, not just one. Maintaining a server for each user is not economically feasible and it is not technically necessary. A single server (or a single group of servers) can serve tens, thousands or millions of users!
+A server is meant to serve multiple users of an app, not just one. Maintaining a server for each user is neither economically feasible not technically necessary. A single server (or a single group of servers) can serve thousands or millions of users!
+
+```
+  ┌──╌ Phone 1 ╌─┐                  ┌──╌ Phone 2 ╌─┐
+  │              │                  │              │
+  │  ┌─╌ App ╌─┐ │                  │  ┌─╌ App ╌─┐ │
+  │  │  <──────│─┼──────╮  ╭────────┼──┼───>     │ │
+  │  └─────────┘ │      │  │        │  └─────────┘ │
+  └──────────────┘      ╎  ╎        └──────────────┘
+                     ┌─────────┐
+                     │   App   │
+                     │  Server │
+                     └─────────┘
+  ┌╌ Computer 1╌─┐      ╎  ╎        ┌─╌ Computer 2╌┐
+  │              │      │  │        │              │
+  │  ┌─╌ App ╌─┐ │      │  │        │  ┌─╌ App ╌─┐ │
+  │  │  <──────│─┼──────╯  ╰────────┼──┼───>     │ │
+  │  └─────────┘ │                  │  └─────────┘ │
+  └──────────────┘                  └──────────────┘
+
+```
 
 Going back to the example of the todo list app, earlier we said that "*we now have a server that is able to store the todo lists for each of the app users*". If the server is to store and retrieve todo lists for each user, *the server needs to have a concept of what a user is*. In other words, when your phone asks the server for the latest version of the todo list, the server must know that it is *your* list and not anyone else's. This brings us to the third and last concept of the chapter: user accounts.
 
-An user account is a way in which a server can identify an user. The most basic version of a user account is the combination of an *username* (which identifies the user) and a *password* (which is a secret combination of digits and characters, ideally only known by the user). More sophisticated user accounts can be connected to an email address, or to other ways of proving identity (see, for example, [multi-factor authentication](https://en.wikipedia.org/wiki/Multi-factor_authentication)).
+An user account is a way in which a server can identify an user. The most basic version of a user account is the combination of an *username* (which identifies the user) and a *password* (which is a secret combination of digits and characters, ideally only known by the user). More sophisticated user accounts involve an email address and possibly other ways of proving identity (see, for example, [multi-factor authentication](https://en.wikipedia.org/wiki/Multi-factor_authentication)).
 
-Conceptually, it all boils down to the same thing: a username or user identifier, plus a secret piece of data. When a device sends both to the server, the server will be able to identify the user that's using the device.
+Conceptually, it all boils down to the same thing: a username (or user identifier, such as an email address), plus a secret piece of data. When a device sends both to the server, the server will be able to identify the user that's using the device.
+
+```
+┌╌ Mono's Phone ╌──┐    username = mono        ┌──╌ Server ╌─────────────┐
+│             ─────┼──╌ password = 1234   ╌────┼─────>                   │
+└──────────────────┘                           └─────────────────────────┘
+
+┌╌ Mono's Phone ╌──┐    success!               ┌──╌ Server ╌─────────────┐
+│            <─────┼──╌ now I know you    ╌────┼─────                    │
+└──────────────────┘    are the user "mono"    └─────────────────────────┘
+
+Side note: please don't use 1234 as your password. It is really, really easy to guess.
+```
+
+If someone who is not the user `mono` would try to gain access to the server by guessing the password, if they get the password wrong, the server will not recognize this person as `mono`; instead, the server will reply with an error.
+
+```
+┌╌ Shady's Phone ╌─┐    username = mono        ┌──╌ Server ╌─────────────┐
+│             ─────┼──╌ password = 4321   ╌────┼─────>                   │
+└──────────────────┘                           └─────────────────────────┘
+
+┌╌ Shady's Phone ╌─┐    failure!               ┌──╌ Server ╌─────────────┐
+│            <─────┼──╌ wrong password    ╌────┼─────                    │
+└──────────────────┘    you are not "mono"     └─────────────────────────┘
+```
 
 Once a server knows that a certain device is sending requests on behalf of user X, it will allow that device to read and write the data associted with user X. This works not unlike a locker box: each user has its data on a certain section of the server. The server, if properly programmed, will only give access to a certain box to the owner of the box.
 
+```
+┌╌ Mono's Phone ╌──┐    username = mono        ┌──╌ Server ╌─────────────┐
+│             ─────┼──╌ password = 1234   ╌────┼─────>                   │
+└──────────────────┘                           └─────────────────────────┘
+
+┌╌ Mono's Phone ╌──┐    success!               ┌──╌ Server ╌─────────────┐
+│            <─────┼──╌ here is the data  ╌────┼─────                    │
+└──────────────────┘    belonging to "mono"    └─────────────────────────┘
+```
+
+An application server then performs at least two functions:
+- Store a list of usernames and associated secrets, to be able to identify if a certain device belongs to a user.
+- Manage data for each user: send it to the device associated with a user when it is requested and update it when the user device sends new data.
+
+```
+  ┌──╌ Server ╌────────────────┐
+  │                            │
+  │     ┌╌ User accounts ╌┐    │
+  │     │                 │    │
+  │     │ - mono / 1234   │    │
+  │     │ - tom  / foo    │    │
+  │     │                 │    │
+  │     └─────────────────┘    │
+  │                            │
+  │     ┌╌ User data     ╌┐    │
+  │     │                 │    │
+  │     │ - mono: ...     │    │
+  │     │ - tom:  ...     │    │
+  │     │                 │    │
+  │     └─────────────────┘    │
+  │                            │
+  └────────────────────────────┘
+```
+
+**Very, very important side note**: *NEVER* store passwords directly on the server. Instead, store a [hash](https://en.wikipedia.org/wiki/Cryptographic_hash_function) of the password instead.
+
+Well, we've come a long way: we went from a simple app (the stopwatch) which stored no data and required no server or user accounts. Then we reviewed an app with data (the first version of the todo list) that didn't require a server or user accounts. Finally, we saw how adding a server and user accounts can greatly enhance the todo list app (and most apps).
+
+From now on, we will consider only apps that require data, servers and user accounts.
+
+We're now ready to dive into web applications! But before we jump into chapter 5, here's an (optional) aside, which explains other ways in which servers can make an app more useful.
+
+### Aside: servers for data not directly generated by the user
+
+If servers only existed to manage the data produced by an user interacting with an app, that would be enough to justify the existence of servers. But it turns out that servers enable the possibility of creating and managing many other types of data that, while not generated by the user herself/himself, can still be consumed by the user.
+
+These types of data fall into two categories:
+- Public (or semi-public) data. Examples: stock market data, weather data, digital media (books/music).
+- Data generated by other users: Example: one-to-one messages, public comments/posts.
+
+Servers thus enable two things: 1) access to public digital data; and 2) digital communication between users.
+
+In the case of public information, the data can either be stored on the applicatino server itself; or it can be stored in a different server, which is in communication with the application server.
+
+```
+If the stock data is stored directly on the app server:
+
+┌╌ Phone ╌──────┐                      ┌──╌ Server ╌────────┐
+│               │                      │                    │
+│  ┌─╌ App ╌─┐  │     What is          │  ┌─╌ Stock data╌─┐ │
+│  │    ─────│──┼───╌ the price  ╌─────┼──┼───>           │ │
+│  └─────────┘  │     of General       │  └───────────────┘ │
+│       ^       │     Motors' stock?   │           |        │
+│       |       │                      │           |        │
+└───────────────┘                      └────────────────────┘
+        |                                          |
+        ╰─────────────╌ 49.36 USD ╌────────────────╯
 
 
-Apps without data: stopwatch.
-
-Apps with data but without server: simple games in your phone (they register the high scores).
-
-Apps with data and server, but without user accounts: none. You need user accounts to use a server.
-
-Apps with data, server and user accounts: almost all the apps you use nowadays!
-
-### Aside: data not generated by the main user
-
-- storage/backup
-- data collection & crunching (stocks)
-- communication (could be seen as data collection)
+If the stock data is stored on a public data server
 
 
+┌╌ Phone ╌──────┐                     ┌─╌ Server ╌┐                    ┌──╌ Data Server ╌───┐
+│               │                     │           │                    │                    │
+│  ┌─╌ App ╌─┐  │     What is         │           │    What is         │  ┌─╌ Stock data╌─┐ │
+│  │    ─────│──┼───╌ the price  ╌────┼────>   ───│──╌ the price   ╌───┼──┼───>           │ │
+│  └─────────┘  │     of General      │           │    of General      │  └───────────────┘ │
+│       ^       │     Motors' stock?  │   ╭────╮  │    Motors' stock?  │           |        │
+│       |       │                     │   |    |  │                    │           |        │
+└───────────────┘                     └───────────┘                    └────────────────────┘
+        |                                 |    |                                   |
+        ╰─────────────╌ 49.36 USD ╌───────╯    ╰─────────╌ 49.36 USD ╌─────────────╯
+```
+
+
+### Chapter 5: introduction to web applications
 
 
 

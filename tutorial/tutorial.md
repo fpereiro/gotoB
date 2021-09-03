@@ -678,24 +678,23 @@ So far, we have been learning about applications in general. In this chapter, we
 
 Before web applications, only *native* applications existed. A native application, as we saw in chapter 2, is a program that runs on top of the combination of a device and its operative system.
 
-Most of the applications in your computer and your phone are native applications. They are written to be specifically tailored to your device and operative system.
-
-With the advent of the web in the early 1990s, a very particular native application appeared: the web browser. The web browser originally was meant to display pages with static content (such as text and images). Early web browsers were [Netscape Navigator](https://en.wikipedia.org/wiki/Netscape_Navigator) and [Internet Explorer](https://en.wikipedia.org/wiki/Internet_Explorer). Sometime later (circa 1995), browsers not only were useful for reviewing static content, but also for conducting online retail. While the browser became a massively popular type of application, its uses still were limited.
-
-In the early 2000s, quite unexpectedly, the browser became an **application platform**. This means that the browser started to be able to run applications in itself, rather than directly on the device + operative system.
-
 ```
-Native apps:
-
 ┌──╌ Device + OS  ╌───────────┐
 │                             │
 │  ┌─╌ Native application ╌─┐ │
 │  │                        │ │
 │  └────────────────────────┘ │
+│                             │
 └─────────────────────────────┘
+```
 
-Web apps:
+Most of the applications in your computer and your phone are native applications. They are written to be specifically tailored to your device and operative system.
 
+With the advent of the web in the early 1990s, a very particular native application appeared: the web browser. The web browser originally was meant to display pages with static content (such as text and images). Early web browsers were [Netscape Navigator](https://en.wikipedia.org/wiki/Netscape_Navigator) and [Internet Explorer](https://en.wikipedia.org/wiki/Internet_Explorer). Sometime later (circa 1995), browsers expanded their reach: not only were they useful for displaying static content, but also for conducting online retail. While the browser became a massively popular type of application, its uses were then limited.
+
+In the early 2000s, gradually and unexpectedly, the browser became an **application platform**. This means that the browser started to be able to run applications in itself, rather than directly on the device + operative system.
+
+```
 ┌──╌ User device + OS ╌────┐
 │                          │
 │  ┌──╌ Browser ╌───────┐  │
@@ -703,16 +702,48 @@ Web apps:
 │  │  ┌─╌ Web app  ╌─┐  │  │
 │  │  │              │  │  │
 │  │  └──────────────┘  │  │
+│  │                    │  │
 │  └────────────────────┘  │
+│                          │
 └──────────────────────────┘
 ```
 
-- Another nested box. More complexity! But what are the gains?
+At first sight, this looks more complicated than the previous diagram. Before, we only had two things: the combination of device+OS, and the native app itself. But now, we have three things: device+OS, browser and web app. Wouldn't this make them harder to build, since they have to keep track of more things?
+
+Actually, no: because a web browser offers a relatively consistent set of tools with which to implement apps, the apps don't really care on which user device+OS they are running. So, for web app developers, the graph looks like this:
+
+```
+┌──╌ Browser ╌─────┐
+│                  │
+│  ┌─╌ Web app ╌─┐ │
+│  │             │ │
+│  └─────────────┘ │
+│                  │
+└──────────────────┘
+```
+
+This looks like the first graph, only that we have replaced the user device + OS bundle for the browser. However, browsers are quite alike. With some (very annoying) exceptions, what works in a browser will work in another. This is becoming more and more the case as time goes by. So the graph above starts to look like this:
+
+```
+┌──╌ Any browser ╌─┐
+│                  │
+│  ┌─╌ Web app ╌─┐ │
+│  │             │ │
+│  └─────────────┘ │
+│                  │
+└──────────────────┘
+```
+
+Web applications are the first applications that can run on any device and OS, with the same code, as long as this device + OS has a (decent) web browser installed.
+
+This allows web apps to run almost anywhere, but without having to provide a specific version for each device+OS.
+
+Web apps have a second, perhaps greater advantage over native apps: you don't need to install them. All native apps come either pre-installed with the OS, or are installed by the user. For an app creator, this means that if your app is not bundled with the device+OS, your users must find it and install it on every device on which they want to use it.
+
+With web apps, all they have to do is to go to a certain URL, and the app will automatically load.
 
 
-
-
-
+- Limitations of web apps.
 
 
 

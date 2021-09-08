@@ -190,7 +190,7 @@ We venture to say that if a program has all three things (UI, logic and state) i
 
 The *UI* performs two functions:
 - Allows the user to **see** information: how much time has elapsed? Is the stopwatch running or not? What are the available operations?
-- Allows the user to **interact** with the app: start, pause and stop the stopwatch.
+- Allows the user to **interact** with the app: start, pause and stop the stopwatch. In that way, the user can change the information of the app (that is, to change the state of the app).
 
 The *logic* determines the UI and what is possible to do with it:
 - When the stopwatch is stopped, the logic only allows you to start the stopwatch.
@@ -690,9 +690,9 @@ Before web applications, only *native* applications existed. A native applicatio
 
 Most of the applications in your computer and your phone are native applications. They are written to be specifically tailored to your device and operative system.
 
-With the advent of the [World Wide Web](https://en.wikipedia.org/wiki/World_Wide_Web) in the early 1990s, a new and interesting native application made its appearance: **[the web browser](https://en.wikipedia.org/wiki/Web_browser)**. Both the World Wide Web (web, for short) and the web browser (browser, for short) were originally meant to display pages with static content (such as text and images). Sometime later (circa 1995), browsers expanded their reach: not only were they useful for displaying static content, but also for conducting online retail. While the browser became a massively popular type of application, its uses were then limited. Around this time, the two most popular browsers were [Netscape Navigator](https://en.wikipedia.org/wiki/Netscape_Navigator) and [Internet Explorer](https://en.wikipedia.org/wiki/Internet_Explorer).
+With the advent of the [World Wide Web](https://en.wikipedia.org/wiki/World_Wide_Web) in the early 1990s, a new and interesting native application made its appearance: **[the web browser](https://en.wikipedia.org/wiki/Web_browser)**. Both the World Wide Web (web, for short) and the web browser (browser, for short) were originally meant to display pages with static content (such as text and images). Sometime later (circa 1995), browsers expanded their reach: not only were they useful for displaying static content, but also for conducting online retail. While the browser became massively popular back then, its uses were still limited. Around this time, the two most popular browsers were [Netscape Navigator](https://en.wikipedia.org/wiki/Netscape_Navigator) and [Internet Explorer](https://en.wikipedia.org/wiki/Internet_Explorer).
 
-In the early 2000s, gradually and unexpectedly, the browser became an **application platform**. This means that the browser started to be able to run applications in itself! These applications working inside a browser are called *web applications* (webapps, for short).
+In the early 2000s, gradually and unexpectedly, the browser became an **application platform**. This means that the browser started to be able to run applications inside itself! These applications working inside a browser are called *web applications* (webapps, for short).
 
 ```
 ┌──╌ User device + OS ╌────┐
@@ -736,11 +736,50 @@ This looks like the first graph, only that we have replaced the user device + OS
 
 Webapps are the first applications that can run on any device and OS, with the same code, as long as this device + OS has a (decent) browser installed.
 
-This allows webapps to run almost anywhere, and with the app code not having to be tailored to a specific combination of device and OS. In a worrd, webapps are **portable** across devices & OSes.
+This allows webapps to run almost anywhere, and with the app code not having to be tailored to a specific combination of device and OS. In a word, webapps are **portable** across devices & OSes.
 
-Webapps have a second, perhaps greater advantage over native apps: you don't need to install them. All native apps come either pre-installed with the OS, or are installed by the user. For an app creator, this means that if your app is not bundled with the device+OS, your users must find it and install it on every device on which they want to use it.
+```
+┌──╌ Android phone  ╌──────┐      ┌──╌ Apple phone  ╌────────┐
+│                          │      │                          │
+│  ┌──╌ Any browser ╌───┐  │      │  ┌──╌ Any browser ╌───┐  │
+│  │                    │  │      │  │                    │  │
+│  │  ┌─╌ Webapp  ╌──┐  │  │      │  │  ┌─╌ Webapp  ╌──┐  │  │
+│  │  │              │  │  │      │  │  │              │  │  │
+│  │  └──────────────┘  │  │      │  │  └──────────────┘  │  │
+│  │                    │  │      │  │                    │  │
+│  └────────────────────┘  │      │  └────────────────────┘  │
+│                          │      │                          │
+└──────────────────────────┘      └──────────────────────────┘
+
+
+
+┌──╌ Computer + Windows ╌──┐      ┌──╌ Apple tablet ╌────────┐
+│                          │      │                          │
+│  ┌──╌ Any browser ╌───┐  │      │  ┌──╌ Any browser ╌───┐  │
+│  │                    │  │      │  │                    │  │
+│  │  ┌─╌ Webapp  ╌──┐  │  │      │  │  ┌─╌ Webapp  ╌──┐  │  │
+│  │  │              │  │  │      │  │  │              │  │  │
+│  │  └──────────────┘  │  │      │  │  └──────────────┘  │  │
+│  │                    │  │      │  │                    │  │
+│  └────────────────────┘  │      │  └────────────────────┘  │
+│                          │      │                          │
+└──────────────────────────┘      └──────────────────────────┘
+```
+
+Webapps have a second, perhaps greater advantage over native apps: you don't need to install them. All native apps come either pre-installed with the OS, or are installed by the user. For an app creator, this means that if your app is not pre-installed with the device+OS, your users must find it and install it on every device on which they want to use it.
 
 With webapps, all a prospective user has to do is to go to click on a link, and the app will automatically load in their browser. **No installation needed!**
+
+```
+ ┌──╌ Any browser ╌─┐                   ┌──╌ Any browser ╌─┐
+ │                  │                   │                  │
+ │                  │     click on      │  ┌─╌ Webapp ╌──┐ │
+ │           ───────┼───╌ link to ╌───> │  │             │ │
+ │                  │     coolapp.com   │  └─────────────┘ │
+ │                  │                   │                  │
+ └──────────────────┘                   └──────────────────┘
+```
+
 
 The third advantage of webapps is **the power of the browser as an application platform**. The browser is an extremely powerful native app that can do many things. To name a few:
 
@@ -753,7 +792,12 @@ Webapps leverage the browser's capabilities to implement complex functionality w
 
 The fourth and last advantage of webapps concerns governance. The web is **decentralized and based on open protocols**. In practice, this means that no single company or government controls the web and browsers. This is in sharp contrast with most devices and OS, which are controlled by specific companies. Because the web is decentralized, its survival and evolution is unconstrained and is not wholly dependent on the organization that controls it. This brings great power to both users and makers of webapps.
 
-To sum up: webapps are applications that run inside a browser. They have four advantages over native apps: 1) portability; 2) no install; 3) a powerful application platform (the browser); 4) decentralization and open protocols.
+To sum up: webapps are applications that run inside a browser. They have four advantages over native apps:
+
+1. Portability.
+2. No install required.
+3. A powerful application platform (the browser)
+4. Decentralization and open protocols.
 
 In the next chapter we'll start to understand how webapps work.
 
@@ -776,13 +820,13 @@ A webapp is not one program, but rather the combination of two programs:
 └──────────────────────────┘               └──────────────────────────┘
 ```
 
-A web development team needs to write both programs to develop a complete webapp.
+A web development team needs to write both programs to develop a complete webapp. This is true not just of webapps, but of any app which uses servers to provide more value to users.
 
-Both programs, the frontend and the backend, communicate through the web.
+Both programs that make the webapp, the frontend and the backend, communicate through the web.
 
 The main functions of the frontend are:
-- Show information to the user.
 - Provide a user interface.
+- Show information to the user.
 - Collect data provided by the user and send it to the backend.
 
 The main functions of the backend are:
@@ -797,7 +841,7 @@ It is a little mind-bending, but it really works that way: both the browser and 
 
 As we mentioned in the last chapter, the web works through *standards*. Standards are a way of doing things that follow certain rules. If you follow the rules of web standards, you can create a web app that can be part of the broader web, without requiring permission from any organization.
 
-Standards are pretty much like a language. To understand others and be understood, you need to speak their language. No one is forcing you to speak any specific language, but to speak to someone, you need to do so in a language they understand. Web standards are the language of the web.
+Standards are pretty much like a language. To understand others and be understood, you need to speak a common language. No one is forcing you to speak any specific language, but to speak to someone, you need to do so in a language they understand. Web standards are the language of the web. By using them, your app can be part of the conversation.
 
 The web is actually a collection of standards. The four most important ones are:
 
@@ -810,7 +854,7 @@ All of these standards, plus many others, make up the web.
 
 The web runs on top of the internet. And guess what? The internet itself is also powered by standards, such as [DNS](https://en.wikipedia.org/wiki/Domain_Name_System), [TCP/IP](https://en.wikipedia.org/wiki/Internet_protocol_suite), [WiFi](https://en.wikipedia.org/wiki/Wi-Fi) and [Ethernet](https://en.wikipedia.org/wiki/Ethernet).
 
-This is a good moment to explain the relationship between the internet and the web, in the context of webapps. The best way to understand it is through an analogy:
+This is a good moment to explain the relationship between the internet and the web, from the perspective of webapps. The best way to understand it is through an analogy:
 
 - The internet is the *highway system*.
 - The web is the *vehicles* that run on the highway.
@@ -818,15 +862,13 @@ This is a good moment to explain the relationship between the internet and the w
 
 Without a highway system (internet), the web cannot work. But once the highway is in place, the vehicles (web) can carry information from one location to the other.
 
+#### How is the frontend loaded?
 
+Loading the backend is simple: you copy the backend program to a server and run the backend using the runtime. The backend is a program that will run constantly and forever, until you stop it. Once you set it running, it will be listening to incoming requests.
 
+It is esential that your server should receive the requests directed to a given web domain. For example, if your app's domain is `myapp.com`, your server should be configured so that it receives all the requests sent to `myapp.com`. We won't go into details here, because this tutorial is focused on the frontend and this topic squarely belongs to the backend. The gist of it is that, from the perspective of the web, `myapp.com` should *point* to your server.
 
-
-### How is a webapp loaded?
-
-Loading the backend is easy: you put the entire program in the server and use the runtime to run it.it  The backend is a program that will run constantly and forever, until you stop it.
-
-The frontend, however, is different. When the user opens a new tab to go to a webapp, the frontend is not there yet. It must be *loaded* onto the browser first. How does this happen?
+The frontend, however, works differently than the frontend. When the user opens a new tab to go to a webapp, the frontend is not there yet. It must be *loaded* onto the browser first. How does this happen?
 
 ```
 Step 1:
@@ -845,12 +887,12 @@ Step 3:
 
 ┌──╌ Browser ╌─────────┐                     ┌──╌ Backend ╌─────────────┐
 │                 ─────┼──╌ request CSS ╌────┼─────>                    │
-└──────────────────────┘     & js files      └──────────────────────────┘
+└──────────────────────┘     & JS files      └──────────────────────────┘
 
 Step 4:
 
 ┌──╌ Browser ╌─────────┐                     ┌──╌ Backend ╌─────────────┐
-│                <─────┼──╌ CSS & js files ╌─┼─────                     │
+│                <─────┼──╌ CSS & JS files ╌─┼─────                     │
 └──────────────────────┘                     └──────────────────────────┘
 
 Step 5:
@@ -869,169 +911,83 @@ It is important to understand how this happens; the diagram above explains the m
    - The backend receives the request for the main HTML file. It finds the file and sends it back to the browser.
    - The browser receives the main HTML file.
 - Step 3:
-   - Almost always there will be links to CSS & js files within the main HTML file. For example, a `<link>` tag can request a certain CSS file; and a `<script>` tag can request a certain js file. The browser will compile a list of these necessary files that are referenced by the main HTML file. It will then request each of these files to the backend.
-   - The backend receives requests for CSS and js files.
+   - Almost always there will be links to CSS & JS files within the main HTML file. For example, a `<link>` tag can request a certain CSS file; and a `<script>` tag can request a certain JS file. The browser will compile a list of these necessary files that are referenced by the main HTML file. It will then request each of these files to the backend.
+   - The backend receives requests for CSS and JS files.
 - Step 4:
-   - The server replies to all the requests by the browser for additional CSS & js files.
+   - The server replies to all the requests by the browser for additional CSS & JS files.
    - The browser receives all these files and now has everything it needs to launch the frontend program.
 - Step 5: the frontend program is loaded!
 
-A frontend is a group of HTML, CSS & js files. Once all of these files are loaded onto the browser, the frontend is ready to run.
-
-This tutorial only covers the frontend aspect of webapp development. We will however learn how to make requests to the backend so that when you get around to write your server, your frontend will be ready for it!
-
-### How do the frontend and the backend communicate?
-
-The frontend and backend communicate through the [web](https://en.wikipedia.org/wiki/World_Wide_Web). The web is a way to exchange information that runs on top of the [internet](https://en.wikipedia.org/wiki/Internet). How are the web and the internet related? Think of it in this way:
-
-- The internet is the *highway system*.
-- The web is the *vehicles* that run on the highway.
-- The user device and the server are *locations* that can be connected through vehicles running in the highway.
+A frontend is a collection of HTML, CSS & JS files. Once all of these files are loaded onto the browser, the frontend is ready to run.
 
 The frontend always starts the conversation by making a *request* to the backend. The backend replies to the frontend's request with a *response*. (There are exceptions to this, but in general it holds true). The communication between frontend and backend is a sequence of requests and responses.
 
-### Why frontends use HTML, CSS and js?
+#### Why frontends use HTML, CSS and JS?
 
 Why web apps use three types of files instead of one? Each type of file has its specific uses:
 
 - [HTML](https://en.wikipedia.org/wiki/HTML) files are *markup*, which is what is shown on the page.
 - [CSS](https://en.wikipedia.org/wiki/CSS) files are *stylesheets*, which determine how the HTML looks.
-- [js](https://en.wikipedia.org/wiki/JavaScript) files are *code*, which can modify the HTML & CSS and communicate with the backend.
+- [JS](https://en.wikipedia.org/wiki/JavaScript) files are *code*, which can modify the HTML & CSS and communicate with the backend.
 
-Modern webapps - including those built with gotoв - are reliant on js. But they still use HTML & CSS. Even the most modern frontend frameworks still need to rely on HTML and CSS to create web apps.
+Modern webapps - including those built with gotoв - are reliant on JS. But they still use HTML & CSS. Even the most modern frontend frameworks still need to rely on HTML and CSS to create web apps.
 
-The HTML and CSS represent the actual content of the page. HTML is what is shown on the page, while the CSS changes the way that the HTML looks. js is usually there to produce some changes on the HTML and CSS, but it is not strictly necessary and it is actually possible to write webapps without js.
+The HTML and CSS represent the actual content of the page. HTML is what is shown on the page, while the CSS changes the way that the HTML looks. JS is usually there to produce some changes on the HTML and CSS, but it is not strictly necessary and it is actually possible to write webapps without JS.
 
-HTML, CSS and js are text files, really. They have to conform to certain rules (very strict ones in the case of js), but they are humanly readable and can be opened on any text editor.
+HTML, CSS and JS are text files, really. They have to conform to certain rules (very strict ones in the case of JS), but they are humanly readable and can be opened on any text editor.
 
-When you load a webpage, an HTML file (which is text that conforms to certain rules, nothing else) may contain further CSS or js inside of it. These CSS or js files are also text, also conforming to certain rules.
+When you load a webpage, an HTML file (which is text that conforms to certain rules, nothing else) may contain further CSS or JS inside of it. These CSS or JS files are also text, also conforming to certain rules.
 
-The browser, when receiving HTML, CSS and js, starts putting things on the screen - and that's what you see when the page is fully loaded.
+The browser, when receiving HTML, CSS and JS, starts putting things on the screen - and that's what you see when the page is fully loaded.
 
+#### Is it a webpage or is it a webapp?
 
-
-our example: step counter.
-
-views: cart and product pages
-
-pages are just webpages? Not really! The state
-
-The state: static
-
-The state: dynamic, the loop
-
-
-
-### Is it a webpage or is it a webapp?
-
-In the beginning of the web, we only had webpages. Webpages are easy to understand: each webpage is merely some HTML, CSS & js that gets loaded on the browser. Every time the user opens the page, that HTML, CSS & js gets loaded and the page is displayed. And, unless the owner of the webpage decides to change it, the webpage will be the same from here until the end of time.
+In the beginning of the web, we only had webpages. Webpages are easy to understand: each webpage is merely some HTML, CSS & JS that gets loaded on the browser. Every time the user opens the page, that HTML, CSS & JS gets loaded and the page is displayed. And, unless the owner of the webpage decides to change it, the webpage will be the same from here until the end of time.
 
 Because webpages are always the same (unless updated), we consider them to be **static**.
 
 An example of this is the homepage of a newspaper. Sure, it might be updated very often, but between updates, the page is the same for everyone. The newspaper is a set of documents, and each [Uniform Resource Locator (URL)](https://en.wikipedia.org/wiki/URL) gives you one document. The information flows in one way, from the webpage to the user.
 
-Webapps are a different game, because the HTML, CSS & js depend on **the state of the application**.
+Webapps are a different game, because the HTML, CSS & JS depend on **the state of the application**. If you remember what we covered in chapter 3, an app is made of an UI, state and logic. Webapps have all three, while webpages only have a UI.
 
-An example of a webapp is the inbox of your web email, such as Gmail or Outlook.com. It is still HTML, CSS & js, but it will depend on what emails you have in your inbox! Your inbox may have a single URL, but the information of your inbox will likely change because of user interaction. The information flows both ways, from the webapp to the user and from the user to the webapp.
+In a webapp, the UI will be expressed with HTML and CSS, while the logic and the state management of the app will be expressed with JS.
 
-```
-┌──╌ Webpage (static) ╌─────────┐
-│                               │
-│  ┌───────┐       ┌────────┐   │
-│  │  URL  │ ────> │  HTML  │   │
-│  └───────┘       └────────┘   │
-│                               │
-└───────────────────────────────┘
+Now that we have a general feel for how webapps work, we will see what are the two main tasks that are required to write a frontend.
 
-┌──╌ Webapp (dynamic) ╌─────────┐
-│                               │
-│  ┌───────┐                    │
-│  │  URL  │ ─╮                 │
-│  └───────┘  │    ┌────────┐   │
-│             ├──> │  HTML  │   │
-│  ┌───────┐  │    └────────┘   │
-│  │ state │ ─╯                 │
-│  └───────┘                    │
-│                               │
-└───────────────────────────────┘
-```
+### Chapter 7: the two tasks of the frontend
 
-In the case of an email application, the state would be comprised of the following things:
-- The name of the user.
-- The current view (Inbox, Sent, Drafts, Account, etc.).
-- The emails currently displayed.
-- Other user preferences, such as your preferred language.
+From the perspective of its implementation, the two main problems of a frontend are:
 
-(This is not an exhaustive list; there might be a lot more under the hood!)
-
-The state is *shared information* between the webapp and the user. In some webapps, only the user can change their own state. In others (like an email application), users can affect each others' mutual state. For example, if someone sends you an email, that affects the state of your inbox.
-
-The takeaway from this section (which is probably the hardest in the entire tutorial!) is that a webapp is about *state*, the shared information between the user and the app. If you understand this, all the following concepts will fall into place.
-
-### What is the purpose of the state?
-
-Why and how a state is central to a webapp? Before we explain, let's look at the following flow for an email webapp.
-
-1. A new user arrives to the app.
-2. Because the user has no account, the user sees a sign up page.
-3. The user fills the sign up form and sends the data.
-4. The account is created successfully!
-5. The user now sees her inbox. No emails yet!
-6. The user clicks on the "Compose" button to start an email.
-7. A textbox appears where the user can write her email.
-8. When the user clicks on "Send", the email is sent.
-9. The textbox with the composed email disappears.
-10. When the user goes to the "Sent" screen, the sent email appears there.
-11. Someone else sends the user an email.
-12. The user can now see the new email sent to her on the inbox.
-
-Let's now explore the changes in the state on the relevant steps.
-- On step 1: there's no state for the user yet! The app is a blank slate. At this point, everybody without an account will see the same thing: the sign up page.
-- On step 2: an empty form is created to hold the user sign up info. As the user starts filling the form, her data goes into the state of the webapp. This is where the state begins for the user. Notice that the state of any other user, at this stage, would already be different, since the personal info of each user is unique.
-- On step 3: the form is filled and sent. The state gets sent from the client (browser) to the server.
-- On step 4: there's now account information for the user in the state.
-- On step 6: a draft is created.
-- On step 8: a new email is created to another user and stored in the "Sent" folder of the current user.
-- On step 10: the user sets "Sent" as the current view of the webapp.
-- On step 11: a new email is added to the user's inbox.
-
-The state matters for two things:
-- It determines the interface.
-- It determines possible actions for the user.
-
-### What is an interface?
-
-The interface is the way in which a user interacts with the webapp. Through it, the user receives and gives information. In the same way that we cannot interact with the virtual world directly and we need webapps to do so, we need interfaces to interact with our webapps. Interfaces are the true windows to our digital world.
-
-The interface is the part of the frontend that the user can see.
-
-The interface has two main purposes: 1) see their state; 2) allow them to change the state.
-
-The interface is not static. It depends on the state!
-
-The flow of change always goes in one direction (the karmic wheel of the app):
-
-```
-initial state -> initial interface -> user picks an interaction -> state is updated -> interface is updated -> user picks another interaction
-
-create account  -> initial state -> draw initial version of the HTML -> this allows certain interactions -> user picks an interaction -> state changes -> HTML is updated -> user picks another interaction -> state changes -> ...
-```
-
-To summarize the pattern further: `state -> interface -> user interacts with the interface -> new state -> new interface`. This is the core cycle of any application with an interface.
-
-At any point in time, there's one state. All possible interactions of the user are determined by the state. Each interaction can create a change in the state. The state is the sum of all past interactions.
-
-The app holds state for *each user*.
-
-The state is stored both locally on the frontend and also on the backend. Most of the state is permanent, but some parts of it (usually stored in the frontend) may be lost if the user refreshes the page.
+- Templates.
+- State management.
 
 
 
+The two problems: templates & state management.
+Templates
+Specify fixed and changeable parts.
+Main patterns:
+Substitution.
+Conditionals.
+Iteration.
+Call another template.
+State management: update both the UI and perhaps other parts of the state on interactions. One change can affect multiple parts of the page (or none). Don’t update things that don’t need updating.
 
 
-TODO
 
-- Parallelism between clicking on a link on website and user interaction on a webapp!
+### Chapter 8: JS and web frameworks
+
+Oldest apps: every interaction generates a page refresh. Server makes HTML, serves it. JS only for small dynamic updates (you entered a wrong value on a field // or an animation)
+The breakthrough: ajax: JS communicating with server without page refresh. Advantages: performance, seamlessness of transitions, offline ability. (1999 initial, 2004 gmail).
+A new problem: JS must update the HTML. JS can update HTML sent by the server. Or it can *make* the HTML.
+Other extreme: after initial load of empty HTML page, JS puts all the HTML.
+The standards don’t care what you choose.
+Frameworks
+Libraries that solve common problems for web apps.
+Client side frameworks vs server side frameworks:
+Server side frameworks generate most or all the HTML in the server. (see previous video on thin clients). Examples: Ruby on Rails, Flask
+Client side frameworks generate most or all the HTML in the client. Examples: jQuery, Angular, React.
+
 
 
 
@@ -1096,13 +1052,6 @@ merge with the top
 Not design, implementation! This is core. Iteration, but not the same. We're concerned here with implementation.
 
 HTMC: html and perhaps some css. CSS also comes from external stylesheets.
-
-
-
-
-
-
-
 
 TODO
 - why js? apps without js.

@@ -1,6 +1,6 @@
 # Tutorial: so you want to write a frontend?
 
-If you are here, you probably want to develop a webapp, or you already are a webapp developer and want to get better at it. In this tutorial we will offer you as much *understanding* as possible. In our experience, the most daunting part about achieving mastery with webapps is understanding how it all fits together, and why certain things are done in a certain way.
+If you are here, you may want to develop your first webapp, or perhaps you already are a webapp developer and want to get better at it. In this tutorial we will offer you as much *understanding* as we possibly can. In our experience, the most daunting part about achieving mastery with webapps is understanding how it all fits together, and why certain things are done in a certain way.
 
 This tutorial replaces a more conventional format where we would just show how to develop webapps with gotoв. Instead of doing this, we first offer **a conceptual introduction** to webapps (*web applications*, in case you're not familiar with the abbreviation). After the main conceptual pieces are in place, we then cover **the basics of developing** the frontend of a webapp; gotoв appears on the scene only as the solution to certain problems that occur over and over.
 
@@ -85,8 +85,8 @@ Applications don't run directly on the device. Rather, they run on a piece of so
 │ │  ┌──╌ OS ╌───────┐ │               │  ┌──╌ OS ╌──────┐ │ │
 │ │  │               │ │               │  │              │ │ │
 │ │  │  ┌─╌ App ╌─┐  │ │               │  │  ┌─╌ App ╌─┐ │ │ │
-│ │  │  │  <──────┼──┼─┼────╌ web ╌────┼──┼──┼────>    │ │ │ │
-│ │  │  └─────────┘  │ │   (internet)  │  │  └─────────┘ │ │ │
+│ │  │  │    <────┼──┼─┼──╌ Internet ╌─┼──┼──┼────>    │ │ │ │
+│ │  │  └─────────┘  │ │    (network)  │  │  └─────────┘ │ │ │
 │ │  └───────────────┘ │               │  └──────────────┘ │ │
 │ └────────────────────┘               └───────────────────┘ │
 │                                                            │
@@ -815,12 +815,12 @@ A webapp is not one program, but rather the combination of two programs:
 │  │                    │  │               │  │                    │  │
 │  │  ┌─╌ Frontend ╌─┐  │  │               │  │  ┌─╌ Backend ╌─┐   │  │
 │  │  │       <──────┼──┼──┼────╌ web ╌────┼──┼──┼──────>      │   │  │
-│  │  └──────────────┘  │  │   (internet)  │  │  └─────────────┘   │  │
+│  │  └──────────────┘  │  │               │  │  └─────────────┘   │  │
 │  └────────────────────┘  │               │  └────────────────────┘  │
 └──────────────────────────┘               └──────────────────────────┘
 ```
 
-A web development team needs to write both programs to develop a complete webapp. This is true not just of webapps, but of any app which uses servers to provide more value to users.
+A web development team needs to write both programs to develop a complete webapp. This is true not just of webapps, but of any app which uses servers.
 
 Both programs that make the webapp, the frontend and the backend, communicate through the web.
 
@@ -864,18 +864,19 @@ Without a highway system (internet), the web cannot work. But once the highway i
 
 #### How is the frontend loaded?
 
-Loading the backend is simple: you copy the backend program to a server and run the backend using the runtime. The backend is a program that will run constantly and forever, until you stop it. Once you set it running, it will be listening to incoming requests.
+Getting the backend to run is simple: you copy the backend program to a server and run the backend using the runtime. The backend is a program that will run constantly and forever, until you stop it. Once you set it running, it will be listening to incoming requests.
 
 It is esential that your server should receive the requests directed to a given web domain. For example, if your app's domain is `myapp.com`, your server should be configured so that it receives all the requests sent to `myapp.com`. We won't go into details here, because this tutorial is focused on the frontend and this topic squarely belongs to the backend. The gist of it is that, from the perspective of the web, `myapp.com` should *point* to your server.
 
-The frontend, however, works differently than the frontend. When the user opens a new tab to go to a webapp, the frontend is not there yet. It must be *loaded* onto the browser first. How does this happen?
+The frontend works differently. When the user opens a new tab to go to a webapp, the frontend is not there yet. It must be *loaded* onto the browser first. How does this happen? The diagram above explains the main steps:
+
 
 ```
 Step 1:
 
 ┌──╌ Browser ╌─────────┐                     ┌──╌ Backend ╌─────────────┐
 │                 ─────┼──╌ request URL ╌────┼─────>                    │
-└──────────────────────┘                     └──────────────────────────┘
+└──────────────────────┘    (myapp.com)      └──────────────────────────┘
 
 Step 2:
 
@@ -901,8 +902,6 @@ Step 5:
 │  Frontend is loaded! │
 └──────────────────────┘
 ```
-
-It is important to understand how this happens; the diagram above explains the main steps:
 
 - Step 1:
    - The user opens a tab in their browser and navigates to an URL where the webapp is available. This URL can be written manually, or it can be followed through a link. The browser doesn't care.
@@ -948,29 +947,116 @@ Because webpages are always the same (unless updated), we consider them to be **
 
 An example of this is the homepage of a newspaper. Sure, it might be updated very often, but between updates, the page is the same for everyone. The newspaper is a set of documents, and each [Uniform Resource Locator (URL)](https://en.wikipedia.org/wiki/URL) gives you one document. The information flows in one way, from the webpage to the user.
 
-Webapps are a different game, because the HTML, CSS & JS depend on **the state of the application**. If you remember what we covered in chapter 3, an app is made of an UI, state and logic. Webapps have all three, while webpages only have a UI.
+Webapps are a different game, because they depend on **the state of the application**. If you remember what we covered in chapter 3, an app is made of an UI, state and logic. Webapps have all three, while webpages only have a UI. And in a webapp, information flows both ways, from the webapp to the user but also from the user to the webapp.
 
 In a webapp, the UI will be expressed with HTML and CSS, while the logic and the state management of the app will be expressed with JS.
 
-Now that we have a general feel for how webapps work, we will see what are the two main tasks that are required to write a frontend.
+Now that we have a general feel for how webapps work, we will explain two concepts that are essential to implement a webapp: templates & state management.
 
-### Chapter 7: the two tasks of the frontend
+### Chapter 7: templates & state management
 
-From the perspective of its implementation, the two main problems of a frontend are:
+As we saw earlier, a fundamental part of any webapp is the UI (user interface). The UI is made of multiple components that have both *fixed* and *changing* parts. Any webapp must be able to elegantly express the UI in a way that defines both the fixed and changing parts. The way to do this is through **templates**.
 
-- Templates.
-- State management.
+Being able to express how the UI should look at any moment is, however, not enough. Once the state changes, we also need to be able to update the UI so that it reflects the changes to the state. In other words, the UI needs to be updated when the state changes. This is solved by **state management**.
+
+We'll start by understanding templates. Let's go back to our stopwatch example.
+
+```
+┌──╌ Stopwatch app ╌─────────────────────────────┐
+│                                                │
+│                   Stopwatch                    │
+│                                                │
+│                    00:00:00                    │
+│                                                │
+│                  ┌─────────┐                   │
+│                  │  START  │                   │
+│                  └─────────┘                   │
+│                                                │
+└────────────────────────────────────────────────┘
+```
+
+Note we have added a simple "Stopwatch" title at the top of the app, but otherwise the app is unchanged from that of chapter 3.
+
+Let's first determine which elements are fixed and which are changeable:
+
+Fixed elements:
+- Title (`Stopwatch`)
+
+Changeable elements:
+- Clock (display elapsed time)
+- Buttons:
+   - Show `START` button if clock is stopped.
+   - Show `PAUSE` and `STOP` buttons if clock is running.
+   - Show `START` and `STOP` buttons if clock is paused.
+
+Templates allow us to express this combination of fixed and changeable elements:
+
+
+```
+┌──╌ Stopwatch app template ╌────────────────────┐
+│                                                │
+│                   Stopwatch                    │
+│                                                │
+│                 {ELAPSED_TIME}                 │
+│                                                │
+│             {IF CLOCK IS STOPPED}              │
+│                  ┌─────────┐                   │
+│                  │  START  │                   │
+│                  └─────────┘                   │
+│                                                │
+│             {IF CLOCK IS RUNNING}              │
+│          ┌─────────┐      ┌────────┐           │
+│          │  PAUSE  │      │  STOP  │           │
+│          └─────────┘      └────────┘           │
+│                                                │
+│             {IF CLOCK IS PAUSED}               │
+│          ┌─────────┐      ┌────────┐           │
+│          │  START  │      │  STOP  │           │
+│          └─────────┘      └────────┘           │
+│                                                │
+└────────────────────────────────────────────────┘
+```
+
+Note that in the template above, we have placed a few terms between curly braces (`{` and `}`). The curly braces are there to distinguish things that shouldn't go there as-is, but rather should be changed according to circumstance. And what is that circumstance? Well, it's the state of the application!
+
+In this application, the state can be summed up in the following two pieces of information:
+- Elapsed time.
+- State of the clock: stopped, running or paused.
+
+When a template is *rendered*, the app combines it with the state to create the current UI. The elements that are fixed (those not between curly braces) are placed as is. Other elements, however, are modified. Let's see how:
+
+- `{ELAPSED_TIME}` is a **variable**. When rendering the template, the app substitutes `{ELAPSED_TIME}` with the actual elapsed time stored by the state, for example: `00:00:00`.
+- The buttons are determined by a **conditional**. Depending on whether a part of the state fulfills a condition, certain buttons are shown. If the state of the clock were to be `paused`, for example, the UI would show the buttons for `START` and `STOP`, but not the buttons for `PAUSE` and `STOP`.
+
+*Variable substitution* and *conditional* are two of the three main patterns of templates. To explore the third one, *iteration*, let's revisit our todo list app.
+
+```
+  ┌──╌ Todo list app template ╌───────┐
+  │                                   │
+  │      ┌──────────────┐             │
+  │      │  {NEW TODO}  │             │
+  │      └──────────────┘             │
+  │      ┌───────────────┐            │
+  │      │  CREATE TODO  │            │
+  │      └───────────────┘            │
+  │                                   │
+  │      LIST OF TODOS:               │
+  │                                   │
+  │      {FOR EACH TODO}              │
+  │                        ┌────────┐ │
+  │      - {TODO}          │ DELETE │ │
+  │                        └────────┘ │
+  │                                   │
+  └───────────────────────────────────┘
+```
 
 
 
-The two problems: templates & state management.
-Templates
-Specify fixed and changeable parts.
-Main patterns:
-Substitution.
-Conditionals.
-Iteration.
-Call another template.
+The patterns can be combined.
+
+Hidden part: make sure that buttons do what they should. Sometimes, this is up to the templates.
+
+
 State management: update both the UI and perhaps other parts of the state on interactions. One change can affect multiple parts of the page (or none). Don’t update things that don’t need updating.
 
 

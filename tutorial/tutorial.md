@@ -1017,18 +1017,24 @@ Templates allow us to express this combination of fixed and changeable elements:
 └────────────────────────────────────────────────┘
 ```
 
-Note that in the template above, we have placed a few terms between curly braces (`{` and `}`). The curly braces are there to distinguish things that shouldn't go there as-is, but rather should be changed according to circumstance. And what is that circumstance? Well, it's the state of the application!
+Note that in the template above, we have placed a few terms between curly braces (`{` and `}`). The curly braces are there to distinguish things that shouldn't go there as-is, but rather should be changed according to circumstance. And what exactly is that circumstance? Well, it's the state of the application!
 
-In this application, the state can be summed up in the following two pieces of information:
+In this application, the state is comprised by two pieces of information:
 - Elapsed time.
 - State of the clock: stopped, running or paused.
 
-When a template is *rendered*, the app combines it with the state to create the current UI. The elements that are fixed (those not between curly braces) are placed as is. Other elements, however, are modified. Let's see how:
+When a template is *rendered*, the app combines it with the state to create the current UI. Rendering is the name given to the process that takes a template and the state to generate the UI.
+
+```
+Template + state = UI
+```
+
+The elements that are fixed (those not between curly braces) are placed as is. Other elements, however, are modified. Let's see how:
 
 - `{ELAPSED_TIME}` is a **variable**. When rendering the template, the app substitutes `{ELAPSED_TIME}` with the actual elapsed time stored by the state, for example: `00:00:00`.
 - The buttons are determined by a **conditional**. Depending on whether a part of the state fulfills a condition, certain buttons are shown. If the state of the clock were to be `paused`, for example, the UI would show the buttons for `START` and `STOP`, but not the buttons for `PAUSE` and `STOP`.
 
-*Variable substitution* and *conditional* are two of the three main patterns of templates. To explore the third one, *iteration*, let's revisit our todo list app.
+*Variable substitution* and *conditional* are two of the main patterns of templates. To explore the third one, *iteration*, let's revisit our todo list app.
 
 ```
   ┌──╌ Todo list app template ╌───────┐
@@ -1050,14 +1056,155 @@ When a template is *rendered*, the app combines it with the state to create the 
   └───────────────────────────────────┘
 ```
 
+Let's go through each of the parts of the template:
 
+- `{NEW TODO}` contains the value of the new todo.
+- `CREATE TODO` is a button that is always shown.
+- `LIST OF TODOS:` is a title that is always shown.
+- For each todo, we show the todo text (`{TODO}`) and the `DELETE` button that corresponds to it.
 
-The patterns can be combined.
+The last elements in the list above are the ones in the scope of the *iteration* pattern. Iteration means to go through a list of elements and do something with them. In this case, the list being iterated is the list of todos and each element is a todo. For each todo, we need to print it and place a `DELETE` button next to it.
 
-Hidden part: make sure that buttons do what they should. Sometimes, this is up to the templates.
+These three patterns, variable substitution, conditional and iteration are the meat and potatoes of templating. Through them, you can express rich and complex UIs. These patterns can be combined: for example, an iteration can contain in itself variable substitution (like in the example above, where `{TODO}` is replaced with the text of the actual todo), or a conditional can contain an iteration.
 
+In common programming parlance, conditionals are associated with the word `if`, whereas iteration is associated with the terms `loop`, `for` and `while` - the last two are types of loops. The words *loop* and *iteration* can be used interchangeably.
 
-State management: update both the UI and perhaps other parts of the state on interactions. One change can affect multiple parts of the page (or none). Don’t update things that don’t need updating.
+There's a fourth templating pattern that we've left for last: a template can use *function calls* for specific tasks. Function calls use a certain function that has been defined elsewhere and is able to generate part of the template. For example, if you have already defined a function for creating buttons (called `button_maker`), you could use it in the todo list app template like this:
+
+```
+  ┌──╌ Todo list app template ╌────────────┐
+  │                                        │
+  │      ┌──────────────┐                  │
+  │      │  {NEW TODO}  │                  │
+  │      └──────────────┘                  │
+  │                                        │
+  │    {button_maker ('CREATE TODO')}      │
+  │                                        │
+  │                                        │
+  │      LIST OF TODOS:                    │
+  │                                        │
+  │      {FOR EACH TODO}                   │
+  │                                        │
+  │      - {TODO} {button_maker ('DELETE')}│
+  │                                        │
+  │                                        │
+  └────────────────────────────────────────┘
+```
+
+The advantage of function calls are two:
+
+1. Reuse code and avoid repetition of common elements.
+2. Leverage the power of a programming language, which is more powerful than what templates use (variable substitution, conditionals, iteration); in other words, function calls get you out of the templating straightjacket and let you program whatever you want.
+
+One last point to mention before we move on to state management: while in the examples above it is clear what the buttons do, from an implementation perspective, it is necessary to make the buttons perform the appropriate actions when being clicked. This means that the templates need to place the correct *event handlers* inside buttons, so that when a button is clicked, the right operation is performed. While there are many ways to do this, a common way to do this is through function calls. For example:
+
+```
+┌──╌ Stopwatch app template ╌──────────────────────────────┐
+│                                                          │
+│                   Stopwatch                              │
+│                                                          │
+│                 {ELAPSED_TIME}                           │
+│                                                          │
+│             {IF CLOCK IS STOPPED}                        │
+│            ┌────────────────────────┐                    │
+│            │        START           │                    │
+│            │ {onclick: start_clock} │                    │
+│            └────────────────────────┘                    │
+│                                                          │
+│             {IF CLOCK IS RUNNING}                        │
+│  ┌────────────────────────┐   ┌───────────────────────┐  │
+│  │          PAUSE         │   │         STOP          │  │
+│  │ {onclick: pause_clock} │   │ {onclick: stop_clock} │  │
+│  └────────────────────────┘   └───────────────────────┘  │
+│                                                          │
+│             {IF CLOCK IS PAUSED}                         │
+│  ┌────────────────────────┐   ┌───────────────────────┐  │
+│  │          START         │   │         STOP          │  │
+│  │ {onclick: start_clock} │   │ {onclick: stop_clock} │  │
+│  └────────────────────────┘   └───────────────────────┘  │
+│                                                          │
+└──────────────────────────────────────────────────────────┘
+```
+
+In the example above, `onclick` is the event registered when the user clicks on the button. The event handler is the function associated with each `onclick`, for example: `start_clock`, `pause_clock` and `stop_clock`.
+
+If **templates** allow you to implement the *static* aspect of an UI (how the app looks at a given point in time), **state management** allows you to implement the *dynamic* aspect of an UI (how to change the UI to reflect a change in the state). State management, from the perspective of the UI, is the part of the app that has the responsibility of updating the UI when the state changes.
+
+At first sight, talkign about *state management* might sound overcomplicated. After all, one could simply update the entire UI whenever the state changes.
+
+```
+initial UI -> user interaction #1 -> state change #1 -> UI reflecting state #1
+```
+
+And you'd be right. If you update the entire UI whenever there's a change in the state, you wouldn't need state management. But this is usually not possible, for two reasons:
+
+1. Performance: updating the entire UI can take a long time in many apps with lots of components.
+2. User experience: with constant page renderings, some features become hard or even impossible to use, such as inputs or the scrollbar.
+
+For a simple application like the stopwatch, you can get away with updating the entire UI all the time. With a todo list app, probably not; with more complex and real apps, it will not be possible. That's where state management comes in, helping determine which parts of the page should be updated.
+
+Going back to the example of the stopwatch, let's recall what are the two elements of the state:
+
+- Elapsed time.
+- State of the clock: stopped, running or paused.
+
+The possible changes to the state of the stopwatch are:
+- Change in the elapsed time.
+- Change in the state of the clock.
+
+The elapsed time only affects the part of the stopwatch that shows the elapsed time, but not the buttons! Conversely, a change of the state of the clock changes which buttons are displayed, but not the elapsed time. If we add state management to our template, it could look like this:
+
+```
+┌╌ Stopwatch app template with state management ╌┐
+│                                                │
+│                   Stopwatch                    │
+│                                                │
+│    ┌──╌ Update when elapsed time changes ╌─┐   │
+│    │                                       │   │
+│    │           {ELAPSED_TIME}              │   │
+│    │                                       │   │
+│    └───────────────────────────────────────┘   │
+│                                                │
+│    ┌──╌ Update when state of clock changes ╌─┐ │
+│    │                                         │ │
+│    │         {IF CLOCK IS STOPPED}           │ │
+│    │              ┌─────────┐                │ │
+│    │              │  START  │                │ │
+│    │              └─────────┘                │ │
+│    │                                         │ │
+│    │         {IF CLOCK IS RUNNING}           │ │
+│    │      ┌─────────┐      ┌────────┐        │ │
+│    │      │  PAUSE  │      │  STOP  │        │ │
+│    │      └─────────┘      └────────┘        │ │
+│    │                                         │ │
+│    │         {IF CLOCK IS PAUSED}            │ │
+│    │      ┌─────────┐      ┌────────┐        │ │
+│    │      │  START  │      │  STOP  │        │ │
+│    │      └─────────┘      └────────┘        │ │
+│    └─────────────────────────────────────────┘ │
+│                                                │
+└────────────────────────────────────────────────┘
+```
+
+The ability to define parts of the UI as dependent on one or more parts of the state is critical to the building of UIs. By explicitly stating that a certain part of the app depends on a certain part of the state, two things are achieved:
+
+1. Clarity about when things are updated.
+2. Possibility of using an uniform approach for updating parts of the UI.
+
+The first advantage is self-explanatory, but not the second. By *an uniform approach*, we mean that an utility function, or perhaps a larger tool (like a library or framework) can be tasked with updating parts of the app when the state changes. This can make our code simpler and shorter.
+
+The alternative to an uniform approach is to define specific functions to update certain parts of the app, for example:
+- `update_clock`: updates the elapsed time.
+- `update_buttons`: updates the buttons.
+
+Whenever the elapsed time changes, `update_clock` is called. Whenever the state of the clock is changed, `update_buttons` is called. This approach requires us to do two things instead:
+
+1. Define a function for each part of the app that needs to change.
+2. Call that function whenever the relevant part of the state changes.
+
+Defining specific functions for specific parts of the app, and calling the right one when the state changes, can quickly become unmaintainable.
+
+TODO why
 
 
 

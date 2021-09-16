@@ -6,7 +6,7 @@ This tutorial replaces a more conventional format where we would just show how t
 
 The purpose of this tutorial is to give you as much conceptual and practical understanding as possible, so that you can become a better web developer.
 
-This tutorial requires only basic knowledge of HTML, javascript and programming. If you are just beginning and you want to understand the basic concepts of a webapp, you may find it useful. If you are a more experienced developer that is interested in reconsidering the concepts of the frontend from the ground up, you might be interested in it too.
+This tutorial requires only basic knowledge of HTML, JavaScript and programming. If you are just beginning and you want to understand the basic concepts of a webapp, you may find it useful. If you are a more experienced developer that is interested in reconsidering the concepts of the frontend from the ground up, you might be interested in it too.
 
 ## Part 1: a conceptual introduction to webapps
 
@@ -955,9 +955,9 @@ Now that we have a general feel for how webapps work, we will explain two concep
 
 ### Chapter 7: templates & state management
 
-As we saw earlier, a fundamental part of any webapp is the UI (user interface). The UI is made of multiple components that have both *fixed* and *changing* parts. Any webapp must be able to elegantly express the UI in a way that defines both the fixed and changing parts. The way to do this is through **templates**.
+As we saw earlier, a fundamental part of any webapp is the UI (user interface). The UI is made of multiple components that have both *fixed* and *changing* parts. Any webapp must be able to elegantly express the UI in a way that defines both the fixed and changing parts. This is done through **templates**.
 
-Being able to express how the UI should look at any moment is, however, not enough. Once the state changes, we also need to be able to update the UI so that it reflects the changes to the state. In other words, the UI needs to be updated when the state changes. This is solved by **state management**.
+Being able to express how the UI should look at any moment is, however, not enough. Once the state changes, we also need to be able to update the UI so that it reflects the changes to the state. In other words, the UI needs to be updated when the state changes. This is where **state management** comes in.
 
 We'll start by understanding templates. Let's go back to our stopwatch example.
 
@@ -983,7 +983,7 @@ Fixed elements:
 - Title (`Stopwatch`)
 
 Changeable elements:
-- Clock (display elapsed time)
+- Clock (displays elapsed time)
 - Buttons:
    - Show `START` button if clock is stopped.
    - Show `PAUSE` and `STOP` buttons if clock is running.
@@ -1019,14 +1019,16 @@ Templates allow us to express this combination of fixed and changeable elements:
 
 Note that in the template above, we have placed a few terms between curly braces (`{` and `}`). The curly braces are there to distinguish things that shouldn't go there as-is, but rather should be changed according to circumstance. And what exactly is that circumstance? Well, it's the state of the application!
 
-In this application, the state is comprised by two pieces of information:
+In the stopwatch app, the state is comprised by two pieces of information:
 - Elapsed time.
 - State of the clock: stopped, running or paused.
 
-When a template is *rendered*, the app combines it with the state to create the current UI. Rendering is the name given to the process that takes a template and the state to generate the UI.
+When a template is *rendered*, the app combines it with the state to create the current UI. *Rendering* is the name given to the process that *combines a template and the current state to generate the UI*.
 
 ```
-Template + state = UI
+ Template + state = UI
+\_____________________/
+       Rendering
 ```
 
 The elements that are fixed (those not between curly braces) are placed as is. Other elements, however, are modified. Let's see how:
@@ -1034,7 +1036,7 @@ The elements that are fixed (those not between curly braces) are placed as is. O
 - `{ELAPSED_TIME}` is a **variable**. When rendering the template, the app substitutes `{ELAPSED_TIME}` with the actual elapsed time stored by the state, for example: `00:00:00`.
 - The buttons are determined by a **conditional**. Depending on whether a part of the state fulfills a condition, certain buttons are shown. If the state of the clock were to be `paused`, for example, the UI would show the buttons for `START` and `STOP`, but not the buttons for `PAUSE` and `STOP`.
 
-*Variable substitution* and *conditional* are two of the main patterns of templates. To explore the third one, *iteration*, let's revisit our todo list app.
+*Variable substitution* and *conditional* are two main patterns of templates. To give an example of the third one, **iteration**, let's revisit our todo list app.
 
 ```
   ┌──╌ Todo list app template ╌───────┐
@@ -1063,13 +1065,13 @@ Let's go through each of the parts of the template:
 - `LIST OF TODOS:` is a title that is always shown.
 - For each todo, we show the todo text (`{TODO}`) and the `DELETE` button that corresponds to it.
 
-The last elements in the list above are the ones in the scope of the *iteration* pattern. Iteration means to go through a list of elements and do something with them. In this case, the list being iterated is the list of todos and each element is a todo. For each todo, we need to print it and place a `DELETE` button next to it.
+The last elements in the list above are the ones in the scope of the **iteration** pattern. Iteration means to go through a list of elements and do something with them. In this case, the list being iterated is the list of todos and each element is a todo. For each todo, we need to print it and place a `DELETE` button next to it.
 
 These three patterns, variable substitution, conditional and iteration are the meat and potatoes of templating. Through them, you can express rich and complex UIs. These patterns can be combined: for example, an iteration can contain in itself variable substitution (like in the example above, where `{TODO}` is replaced with the text of the actual todo), or a conditional can contain an iteration.
 
 In common programming parlance, conditionals are associated with the word `if`, whereas iteration is associated with the terms `loop`, `for` and `while` - the last two are types of loops. The words *loop* and *iteration* can be used interchangeably.
 
-There's a fourth templating pattern that we've left for last: a template can use *function calls* for specific tasks. Function calls use a certain function that has been defined elsewhere and is able to generate part of the template. For example, if you have already defined a function for creating buttons (called `button_maker`), you could use it in the todo list app template like this:
+There's a fourth templating pattern that we've left for last: a template can use **function calls** for specific tasks. Function calls use a certain function that has been defined elsewhere and is able to generate part of the template. For example, if you have already defined a function for creating buttons (called `button_maker`), you could use it in the todo list app template like this:
 
 ```
   ┌──╌ Todo list app template ╌────────────┐
@@ -1094,7 +1096,7 @@ There's a fourth templating pattern that we've left for last: a template can use
 The advantage of function calls are two:
 
 1. Reuse code and avoid repetition of common elements.
-2. Leverage the power of a programming language, which is more powerful than what templates use (variable substitution, conditionals, iteration); in other words, function calls get you out of the templating straightjacket and let you program whatever you want.
+2. Leverage the power of a programming language, which is more powerful than what templates have to offer (variable substitution, conditionals and iteration); in other words, function calls get you out of the limits of templating and let you program with more powerful abstractions offered by a programming language.
 
 One last point to mention before we move on to state management: while in the examples above it is clear what the buttons do, from an implementation perspective, it is necessary to make the buttons perform the appropriate actions when being clicked. This means that the templates need to place the correct *event handlers* inside buttons, so that when a button is clicked, the right operation is performed. While there are many ways to do this, a common way to do this is through function calls. For example:
 
@@ -1130,18 +1132,18 @@ In the example above, `onclick` is the event registered when the user clicks on 
 
 If **templates** allow you to implement the *static* aspect of an UI (how the app looks at a given point in time), **state management** allows you to implement the *dynamic* aspect of an UI (how to change the UI to reflect a change in the state). State management, from the perspective of the UI, is the part of the app that has the responsibility of updating the UI when the state changes.
 
-At first sight, talkign about *state management* might sound overcomplicated. After all, one could simply update the entire UI whenever the state changes.
+Talking about *state management* might sound overcomplicated. After all, one could simply update the entire UI whenever the state changes!
 
 ```
 initial UI -> user interaction #1 -> state change #1 -> UI reflecting state #1
 ```
 
-And you'd be right. If you update the entire UI whenever there's a change in the state, you wouldn't need state management. But this is usually not possible, for two reasons:
+And you'd be right. If you update the entire UI whenever there's a change in the state, you will not need state management. But this is usually not desirable, for two reasons:
 
 1. Performance: updating the entire UI can take a long time in many apps with lots of components.
 2. User experience: with constant page renderings, some features become hard or even impossible to use, such as inputs or the scrollbar.
 
-For a simple application like the stopwatch, you can get away with updating the entire UI all the time. With a todo list app, probably not; with more complex and real apps, it will not be possible. That's where state management comes in, helping determine which parts of the page should be updated.
+For a simple application like the stopwatch, you can get away with updating the entire UI every single time the state change. With a todo list app, probably not; with more complex and real apps, it will be impossible. That's where state management comes in, helping determine which parts of the page should be updated.
 
 Going back to the example of the stopwatch, let's recall what are the two elements of the state:
 
@@ -1191,7 +1193,7 @@ The ability to define parts of the UI as dependent on one or more parts of the s
 1. Clarity about when things are updated.
 2. Possibility of using an uniform approach for updating parts of the UI.
 
-The first advantage is self-explanatory, but not the second. By *an uniform approach*, we mean that an utility function, or perhaps a larger tool (like a library or framework) can be tasked with updating parts of the app when the state changes. This can make our code simpler and shorter.
+The first advantage allows for a greater understanding of the app by those who maintain it. The second advantage, *uniform approach*, means that an utility function, or perhaps a larger tool (like a library or framework) can be tasked with updating parts of the app when the state changes. This can make our code simpler and shorter.
 
 The alternative to an uniform approach is to define specific functions to update certain parts of the app, for example:
 - `update_clock`: updates the elapsed time.
@@ -1202,15 +1204,82 @@ Whenever the elapsed time changes, `update_clock` is called. Whenever the state 
 1. Define a function for each part of the app that needs to change.
 2. Call that function whenever the relevant part of the state changes.
 
-Defining specific functions for specific parts of the app, and calling the right one when the state changes, can quickly become unmaintainable.
+Defining specific functions for specific parts of the app, and calling the right one when the state changes, can quickly become unmaintainable. We'll see why in the second part of this tutorial, when we start developing an app.
 
-TODO why
-
-
+We're now almost done with the first part of this tutorial! The last chapter awaits. In it, we will explore the role of JavaScript in webapps.
 
 ### Chapter 8: JS and web frameworks
 
-Oldest apps: every interaction generates a page refresh. Server makes HTML, serves it. JS only for small dynamic updates (you entered a wrong value on a field // or an animation)
+JavaScript, most commonly known as JS, is a programming language. JS is available on practically every browser and is nowadays used by practically all webapps.
+
+In this chapter, we will understand how JS emerged, how it is useful in webapps, and how it is commonly used.
+
+The first browsers had no JS. They simply loaded HTML pages that were fully static. In these static HTML pages, the only interaction a user could do was to click on a link, which would then take them to another page.
+
+JS was developed in the mid-1990s as a [scripting language](https://en.wikipedia.org/wiki/Scripting_language) to add dynamic aspects to web pages. Initially developed for Netscape, JS soon found its way to Internet Explorer. Thus, JS became available in the two most popular browsers. In time, JS became a web standard and is today available on practically every browser.
+
+Early on, a typical function enabled by JS was validation of inputs in forms. If a page required you to enter an email (say), and you entered something that has no `@` sign, JS could add a nice message next to the field so that you could correct it before submitting the data.
+
+```
+┌╌ Form validation with JS ╌─────────────────┐
+│                                            │
+│                                            │
+│       Enter your email                     │
+│       to receive our newsletter!           │
+│                                            │
+│       ┌───────────────────┐                │
+│       │  my_email.com     │                │
+│       └───────────────────┘                │
+│                                            │
+│        Error: please enter                 │
+│        =====  a valid email address        │
+│                                            │
+│            ┌──────────┐                    │
+│            │  SUBMIT  │                    │
+│            └──────────┘                    │
+└────────────────────────────────────────────┘
+```
+
+JS became widely used in webpages for other purposes as well, such as animations and more complex user interactions. JS' breakthrough, however, happened only in the mid-2000s, with [Ajax](https://en.wikipedia.org/wiki/Ajax_(programming)).
+
+As we said above, the chief interaction a user could have with a static web page was to click on a link, which would take them to another page. Submitting a form was just a special case of the same thing. In short, every interaction the user had with the page triggered a *page refresh*, taking the user to another page. As useful as the web was back then, the constant page refreshes had three drawbacks:
+
+1. **Performance**: it took some time to retrieve the full page from the server (the internet was also much slower back then), and then some more time to re-render the page in the browser.
+2. **Abrupt transitions**: page transitions blanked the browser, especially if the connection was slow. Users had to wait for a while and hope that the webapp would come back after the page refresh.
+3. **Generic error page if the connection was lost**: if the connection was lost during a page refresh (which happened much more often back then), the browser would show a generic error page. If the page refresh was triggered by data sent by the user, this data would be lost. In other words, the webapp was completely gone if the connection had an issue.
+
+For all of these reasons, early webapps were rudimentary. But then Ajax came along, enabling modern webapps powered by JS. Boiled down to its essence, **Ajax** *is using JS to retrieve new data from the server and update the page **without requiring a page refresh**.*
+
+```
+Without Ajax:
+
+┌╌ Form page ╌───────────────────────────────┐
+│                                            │
+│                                            │
+│       Enter your email                     │
+│       to receive our newsletter!           │
+│                                            │
+│       ┌───────────────────┐                │
+│       │  my_email.com     │                │ ─────────>
+│       └───────────────────┘                │
+│                                            │
+│        Error: please enter                 │
+│        =====  a valid email address        │
+│                                            │
+│            ┌──────────┐                    │
+│            │  SUBMIT  │                    │
+│            └──────────┘                    │
+└────────────────────────────────────────────┘
+```
+
+
+
+
+
+First wave of frameworks: mid-2000s
+
+
+
 The breakthrough: ajax: JS communicating with server without page refresh. Advantages: performance, seamlessness of transitions, offline ability. (1999 initial, 2004 gmail).
 A new problem: JS must update the HTML. JS can update HTML sent by the server. Or it can *make* the HTML.
 Other extreme: after initial load of empty HTML page, JS puts all the HTML.

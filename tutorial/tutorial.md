@@ -213,7 +213,7 @@ Think of a mathematical function as a little box which, when receiving an input,
 function (x) -> y
 ```
 
-Notice that the input to the function is shown above between brackets. The result from passing `x` to the function goes after the arrow `->`.
+Notice that the input to the function is shown above between parentheses (`(` and `)`). The result obtained from passing `x` as input to the function goes after the arrow `->`.
 
 Let's take the example of the square-by-two function:
 
@@ -322,15 +322,15 @@ We've covered lots of ground in this chapter. The main takeaways are:
 - The state determines the UI.
 - Both the user and the logic can change the state.
 
-In the next chapter we will cover two more fundamental concepts: *users* and *servers*.
+In the next chapter we will cover three more fundamental concepts: *data*, *servers* and *user accounts*.
 
-### Chapter 4: data, servers and accounts
+### Chapter 4: data, servers and user accounts
 
 In this chapter we will review three concepts that will put you "on the other side" of this tutorial. If you understand these three pieces of the puzzle, it's a fair bet to say you'll be able to grasp the rest of the concepts in this tutorial quite easily.
 
 The concepts are three: *data*, *servers* and *user accounts*. From the perspective of applications, each of them creates the need for the following one. For example, without data, servers are not really necessary. Without servers, user accounts are mostly useless.
 
-But indeed, data is the lifeblood of the digital world. As a result, data, servers and accounts are fundamental concepts to be understood. So here we go!
+But indeed, data is the lifeblood of the digital world. As a result, data, servers and user accounts are fundamental concepts to be understood. So here we go!
 
 To follow along, we will change our example from the stopwatch app to a simple todo list app:
 
@@ -446,7 +446,7 @@ Notice that we entered `buy a t` in the input box of the app. If, however, we cl
 
 Now, where is the data stored? Since the app needs to "remember" the data, it must write the data somewhere, so that then it can read it back up when necessary.
 
-The most natural place to store data is in the device itself. All phones, tablets and computers have [storage media](https://en.wikipedia.org/wiki/Computer_data_storage) from which apps can read and write data.
+The most natural place to store data is *inside the device itself*. All phones, tablets and computers have [storage media](https://en.wikipedia.org/wiki/Computer_data_storage) from which apps can read and write data.
 
 Storing the data in your device, however, has two problems:
 
@@ -459,7 +459,7 @@ But for many other applications, you do care about not losing your data, and you
 
 Servers are the solution to this problem. But what is a server?
 
-A server is a device (more specifically, a computer), that is constantly on and connected to the internet. In other words, a computer that is always on and always connected. Unless a server is undergoing temporary maintenance, and assuming it doesn't crash, it will always be ready to operate.
+A server is a device (more specifically, a computer), that is constantly on and connected to the internet. In other words, it is a a computer that is always on and always connected. Unless it is undergoing temporary maintenance, and assuming it didn't malfunction, a server will always be ready to operate.
 
 An application can store its data on a server. Going back to our todo list example, whenever you add or remove an item from the list, the app can send the entire todo list to the server instructing it to keep a copy of the list.
 
@@ -489,7 +489,7 @@ Going back to the todo list app, imagine that we now have a server that is able 
 └──────────────────┘                   └─────────────────────────┘
 ```
 
-- If you use the app from more than one device, each device can have the last version of the list by synchronizing with the server.
+- If you use the app from more than one device, each device can have the last version of the list by synchronizing the list with the server.
 
 ```
 For example, you first update the list from your phone.
@@ -722,7 +722,7 @@ Actually, no: because a browser offers a relatively consistent set of tools with
 └──────────────────┘
 ```
 
-This looks like the first graph, only that we have replaced the user device + OS bundle for the browser. However, browsers are quite alike. With some (very annoying) exceptions, what works in a browser will work in another. While this was not very true in the mid-1990s, it is very much the true in the early 2020s. So the graph above starts to look like this:
+This looks like the first graph, only that we have replaced the user device + OS bundle for the browser. However, browsers are quite alike. With some (very annoying) exceptions, what works in a browser will work in another. While this was not very true in the mid-1990s, it is very much true in the early 2020s. So the graph above starts to look like this:
 
 ```
 ┌──╌ Any browser ╌─┐
@@ -732,6 +732,22 @@ This looks like the first graph, only that we have replaced the user device + OS
 │  └─────────────┘ │
 │                  │
 └──────────────────┘
+```
+
+And because practically all devices now come with at least one browser installed, the graph looks like this:
+
+```
+┌─╌ Any device + any OS ╌──┐
+│                          │
+│  ┌──╌ Any browser ╌───┐  │
+│  │                    │  │
+│  │  ┌─╌ Webapp  ╌──┐  │  │
+│  │  │              │  │  │
+│  │  └──────────────┘  │  │
+│  │                    │  │
+│  └────────────────────┘  │
+│                          │
+└──────────────────────────┘
 ```
 
 Webapps are the first applications that can run on any device and OS, with the same code, as long as this device + OS has a (decent) browser installed.
@@ -790,7 +806,7 @@ The third advantage of webapps is **the power of the browser as an application p
 
 Webapps leverage the browser's capabilities to implement complex functionality with relative ease, compared to native apps. While the browser is usually never the best platform for any given use case (except perhaps for showing static content), it *combines* multiple capabilities that are well implemented.
 
-The fourth and last advantage of webapps concerns governance. The web is **decentralized and based on open protocols**. In practice, this means that no single company or government controls the web and browsers. This is in sharp contrast with most devices and OS, which are controlled by specific companies. Because the web is decentralized, its survival and evolution is unconstrained and is not wholly dependent on the organization that controls it. This brings great power to both users and makers of webapps.
+The fourth and last advantage of webapps concerns governance. The web is **decentralized and based on open protocols**. In practice, this means that no single company or government controls the web and browsers. This is in sharp contrast with most devices and OS, which are controlled by specific companies. Because the web is decentralized, its survival and evolution is unconstrained and is not wholly dependent on the organization that controls it. This bestows great power to both users and makers of webapps.
 
 To sum up: webapps are applications that run inside a browser. They have four advantages over native apps:
 
@@ -931,7 +947,7 @@ Why web apps use three types of files instead of one? Each type of file has its 
 
 Modern webapps - including those built with gotoв - are reliant on JS. But they still use HTML & CSS. Even the most modern frontend frameworks still need to rely on HTML and CSS to create web apps.
 
-The HTML and CSS represent the actual content of the page. HTML is what is shown on the page, while the CSS changes the way that the HTML looks. JS is usually there to produce some changes on the HTML and CSS, but it is not strictly necessary and it is actually possible to write webapps without JS.
+The HTML and CSS represent the actual content of the page. HTML is what is shown on the page, while the CSS changes the way that the HTML looks. JS is usually there to produce some changes on the HTML and CSS, but it is not strictly necessary and it is actually possible (although nowadays rare) to write webapps without JS.
 
 HTML, CSS and JS are text files, really. They have to conform to certain rules (very strict ones in the case of JS), but they are humanly readable and can be opened on any text editor.
 
@@ -951,7 +967,7 @@ Webapps are a different game, because they depend on **the state of the applicat
 
 In a webapp, the UI will be expressed with HTML and CSS, while the logic and the state management of the app will be expressed with JS.
 
-Now that we have a general feel for how webapps work, we will explain two concepts that are essential to implement a webapp: templates & state management.
+Now that we have a general feel for how webapps work, we will explain two concepts that are fundamental to the frontend: templates & state management.
 
 ### Chapter 7: templates & state management
 
@@ -1093,12 +1109,14 @@ There's a fourth templating pattern that we've left for last: a template can use
   └────────────────────────────────────────┘
 ```
 
-The advantage of function calls are two:
+The two main advantages of function calls are:
 
 1. Reuse code and avoid repetition of common elements.
 2. Leverage the power of a programming language, which is more powerful than what templates have to offer (variable substitution, conditionals and iteration); in other words, function calls get you out of the limits of templating and let you program with more powerful abstractions offered by a programming language.
 
-One last point to mention before we move on to state management: while in the examples above it is clear what the buttons do, from an implementation perspective, it is necessary to make the buttons perform the appropriate actions when being clicked. This means that the templates need to place the correct *event handlers* inside buttons, so that when a button is clicked, the right operation is performed. While there are many ways to do this, a common way to do this is through function calls. For example:
+There are many templating engines, which are programs that take your templates and turn them into HTML. The specific way in which you write the templates will depend on the template engine you choose to use. Some template engines create the HTML on the server (this is called *server-side rendering*), whereas other template engines create the HTML directly on the browser (this is called *client-side rendering*). In either case, the general patterns of templates will be the same; and, no matter who renders them, the templates themselves belong to the frontend of the webapp.
+
+One last point to mention before we move on to state management: while in the examples above it is clear what the buttons do, from an implementation perspective, it is necessary to make the buttons perform the appropriate actions when being clicked. This means that the templates need to place the correct *event handlers* inside the buttons, so that when a button is clicked, the right operation is performed. While there are many ways to do this, a common way to do this is through function calls. For example:
 
 ```
 ┌──╌ Stopwatch app template ╌──────────────────────────────┐
@@ -1128,7 +1146,41 @@ One last point to mention before we move on to state management: while in the ex
 └──────────────────────────────────────────────────────────┘
 ```
 
-In the example above, `onclick` is the event registered when the user clicks on the button. The event handler is the function associated with each `onclick`, for example: `start_clock`, `pause_clock` and `stop_clock`.
+In the example above, `onclick` is the event registered when the user clicks on the button. The event handler is the function associated with each `onclick`, for example: `start_clock`, `pause_clock` and `stop_clock`. These will all be JS functions.
+
+An alternative way to do this is to simply add a link for each action you want to perform. In this way, each action will trigger a page refresh, and the server will be completely in charge of updating the application.
+l
+```
+┌──╌ Stopwatch app template, with links  ╌─────────────────┐
+│                                                          │
+│                   Stopwatch                              │
+│                                                          │
+│                 {ELAPSED_TIME}                           │
+│                                                          │
+│             {IF CLOCK IS STOPPED}                        │
+│            ┌───────────────────────────┐                 │
+│            │        START              │                 │
+│            │ {onclick: app.com/start}  │                 │
+│            └───────────────────────────┘                 │
+│                                                          │
+│             {IF CLOCK IS RUNNING}                        │
+│  ┌─────────────────────────┐   ┌────────────────────────┐│
+│  │          PAUSE          │   │         STOP           ││
+│  │ {onclick: app.com/pause}│   │ {onclick: app.com/stop}││
+│  └─────────────────────────┘   └────────────────────────┘│
+│                                                          │
+│             {IF CLOCK IS PAUSED}                         │
+│  ┌─────────────────────────┐   ┌────────────────────────┐│
+│  │          START          │   │         STOP           ││
+│  │ {onclick: app.com/start}│   │ {onclick: app.com/stop}││
+│  └─────────────────────────┘   └────────────────────────┘│
+│                                                          │
+└──────────────────────────────────────────────────────────┘
+```
+
+This is how the first webapps were implemented. To this day, some webapps have some actions that are implemented like this. When the user clicks on a button, the page is refreshed and the server returns a new HTML with the updated UI.
+
+Enough about templates. Let's go onto state management!
 
 If **templates** allow you to implement the *static* aspect of an UI (how the app looks at a given point in time), **state management** allows you to implement the *dynamic* aspect of an UI (how to change the UI to reflect a change in the state). State management, from the perspective of the UI, is the part of the app that has the responsibility of updating the UI when the state changes.
 
@@ -1141,9 +1193,9 @@ initial UI -> user interaction #1 -> state change #1 -> UI reflecting state #1
 And you'd be right. If you update the entire UI whenever there's a change in the state, you will not need state management. But this is usually not desirable, for two reasons:
 
 1. Performance: updating the entire UI can take a long time in many apps with lots of components.
-2. User experience: with constant page renderings, some features become hard or even impossible to use, such as inputs or the scrollbar.
+2. User experience: with constant page renderings, some features become hard or even impossible to use, such as inputs or the scrollbar, because each interaction freezes the app.
 
-For a simple application like the stopwatch, you can get away with updating the entire UI every single time the state change. With a todo list app, probably not; with more complex and real apps, it will be impossible. That's where state management comes in, helping determine which parts of the page should be updated.
+For a simple application like the stopwatch, you can get away with updating the entire UI every single time the state changes. With a todo list app, probably not; with more complex and real apps, it will be impossible. That's where state management comes in, helping determine which parts of the page should be updated.
 
 Going back to the example of the stopwatch, let's recall what are the two elements of the state:
 
@@ -1204,7 +1256,12 @@ Whenever the elapsed time changes, `update_clock` is called. Whenever the state 
 1. Define a function for each part of the app that needs to change.
 2. Call that function whenever the relevant part of the state changes.
 
-Defining specific functions for specific parts of the app, and calling the right one when the state changes, can quickly become unmaintainable. We'll see why in the second part of this tutorial, when we start developing an app.
+Defining specific functions for specific parts of the app, and calling the right one when the state changes, can quickly become unmaintainable, for two reasons:
+
+1. Components can have sub-components, each with its own data dependencies. This means that, to redraw things efficiently, you need one function per each subcomponent in your app.
+2. A part of the state can be modified by multiple interactions. Each interaction that modifies a certain part of the state must then be responsible for updating each component that depends on the state.
+
+We'll see an extended example of this in the second part of this tutorial, when we start developing an app.
 
 We're now almost done with the first part of this tutorial! The last chapter awaits. In it, we will explore the role of JavaScript in webapps.
 
@@ -1216,7 +1273,7 @@ In this chapter, we will understand how JS emerged, how it is useful in webapps,
 
 The first browsers had no JS. They simply loaded HTML pages that were fully static. In these static HTML pages, the only interaction a user could do was to click on a link, which would then take them to another page.
 
-JS was developed in the mid-1990s as a [scripting language](https://en.wikipedia.org/wiki/Scripting_language) to add dynamic aspects to web pages. Initially developed for Netscape, JS soon found its way to Internet Explorer. Thus, JS became available in the two most popular browsers. In time, JS became a web standard and is today available on practically every browser.
+JS was developed in the mid-1990s as a [scripting language](https://en.wikipedia.org/wiki/Scripting_language) to add dynamic aspects to web pages. Initially developed for Netscape, JS soon found its way to Internet Explorer. Thus, JS became available in the two most popular browsers of that time. Eventually, JS became a web standard and is today available on practically every browser.
 
 Early on, a typical function enabled by JS was validation of inputs in forms. If a page required you to enter an email (say), and you entered something that has no `@` sign, JS could add a nice message next to the field so that you could correct it before submitting the data.
 
@@ -1242,13 +1299,13 @@ Early on, a typical function enabled by JS was validation of inputs in forms. If
 
 JS became widely used in webpages for other purposes as well, such as animations and more complex user interactions. JS' breakthrough, however, happened only in the mid-2000s, with [Ajax](https://en.wikipedia.org/wiki/Ajax_(programming)).
 
-As we said above, the chief interaction a user could have with a static web page was to click on a link, which would take them to another page. Submitting a form was just a special case of the same thing. In short, every interaction the user had with the page triggered a *page refresh*, taking the user to another page. As useful as the web was back then, the constant page refreshes had three drawbacks:
+As we said above, the chief interaction a user could have with a static web page was to click on a link, which would take them to another page. Submitting a form was just a special case of the same phenomenon. In short, every interaction the user had with the page triggered a *page refresh*, taking the user to another page. As useful as the web was back then, the constant page refreshes had three drawbacks:
 
 1. **Performance**: it took some time to retrieve the full page from the server (the internet was also much slower back then), and then some more time to re-render the page in the browser.
 2. **Abrupt transitions**: page transitions blanked the browser, especially if the connection was slow. Users had to wait for a while and hope that the webapp would come back after the page refresh.
 3. **Generic error page if the connection was lost**: if the connection was lost during a page refresh (which happened much more often back then), the browser would show a generic error page. If the page refresh was triggered by data sent by the user, this data would be lost. In other words, the webapp was completely gone if the connection had an issue.
 
-For all of these reasons, early webapps were rudimentary. But then Ajax came along, enabling modern webapps powered by JS. Boiled down to its essence, **Ajax** *is using JS to retrieve new data from the server and update the page **without requiring a page refresh**.*
+For all of these reasons, early webapps were rudimentary. But then Ajax came along, enabling modern webapps powered by JS. Boiled down to its essence, **Ajax** *is the use of JS to retrieve new data from the server and update the UI **without requiring a page refresh**.*
 
 ```
 Without Ajax:
@@ -1260,27 +1317,173 @@ Without Ajax:
 │       to receive our newsletter!           │
 │                                            │
 │       ┌───────────────────┐                │
-│       │  my_email.com     │                │ ─────────>
+│       │  mono@email.com   │                │
 │       └───────────────────┘                │
 │                                            │
-│        Error: please enter                 │
-│        =====  a valid email address        │
 │                                            │
 │            ┌──────────┐                    │
 │            │  SUBMIT  │                    │
 │            └──────────┘                    │
 └────────────────────────────────────────────┘
+                   |
+                   |
+                   v
+┌╌ Blank page ╌──────────────────────────────┐
+│                                            │
+│                                            │
+│                                            │
+│                                            │
+│                                            │
+│                                            │
+│                                            │
+│                                            │
+│                                            │
+│                                            │
+└────────────────────────────────────────────┘
+                   |
+                   |
+                   v
+┌╌ Confirmation page ╌───────────────────────┐
+│                                            │
+│                                            │
+│       Thank you!                           │
+│                                            │
+│       You'll be receiving our newsletter   │
+│       very shortly.                        │
+│                                            │
+│                                            │
+│                                            │
+│                                            │
+│                                            │
+└────────────────────────────────────────────┘
+
+
+With Ajax:
+
+┌╌ Form page ╌───────────────────────────────┐
+│                                            │
+│                                            │
+│       Enter your email                     │
+│       to receive our newsletter!           │
+│                                            │
+│       ┌───────────────────┐                │
+│       │  mono@email.com   │                │
+│       └───────────────────┘                │
+│                                            │
+│                                            │
+│            ┌──────────┐                    │
+│            │  SUBMIT  │                    │
+│            └──────────┘                    │
+└────────────────────────────────────────────┘
+                   |
+                   |
+                   v
+┌╌ Confirmation page ╌───────────────────────┐
+│                                            │
+│                                            │
+│       Thank you!                           │
+│                                            │
+│       You'll be receiving our newsletter   │
+│       very shortly.                        │
+│                                            │
+│                                            │
+│                                            │
+│                                            │
+│                                            │
+└────────────────────────────────────────────┘
+```
+
+The three advantages of Ajax are precisely the reverse of the problems generated by page refreshes:
+
+1. **Performance**: if a page is already loaded, it is faster to retrieve new data and update it on the page than to retrieve the entire page (with all the associated HTML, CSS and JS) from the server.
+
+2. **Seamlessness of transitions**: page changes can be much smoother visually if only parts of the page change.
+
+3. **Offline ability**: if the network connection (or the server) is down, instead of losing all state, the page can hold its state, warn the user, and attempt to communicate with the server until the connection is restored. Also as important, the page can be saving state to the server constantly without the user having to submit data and waiting for a reload.
+
+While webapps were possible before Ajax, Ajax allowed webapps to start competing with native apps in terms of the user experience they offered, at least in certain domains. This tendency has kept on going over the past fifteen years, although much more in the desktop than in mobile devices (in mobile devices, native applications still hold considerable advantages over webapps).
+
+Ajax works thanks to a feature of JS that allows the browser to interchange data with the server without triggering a page request. Ajax, then, is fully dependent on JS. The usefulness of Ajax therefore required JS.
+
+Let's explore how this would work in our todo list app, when entering a new todo.
+
+```
+  ┌──╌ Todo list app ╌────────────────┐
+  │                                   │
+  │         ┌──────────────┐          │
+  │         │ Explain Ajax │          │
+  │         └──────────────┘          │
+  │      ┌───────────────┐            │
+  │      │  CREATE TODO  │            │
+  │      └───────────────┘            │
+  │                                   │
+  │      LIST OF TODOS:               │
+  │                        ┌────────┐ │
+  │      - Write tutorial  │ DELETE │ │
+  │                        └────────┘ │
+  │                                   │
+  │                        ┌────────┐ │
+  │      - Bake birthday   │ DELETE │ │
+  │        cake            └────────┘ │
+  │                                   │
+  │                                   │
+  └───────────────────────────────────┘
+```
+
+In the example above, there are already two todos present, and we're about to enter a third one, `Explain Ajax`. At this point, we need to send the new todo from the client to the server. Without Ajax, this would happen through submitting data and a subsequent page refresh. But with Ajax, it can be done like this:
+
+```
+  ┌──╌ Todo list app ╌────────────────┐
+  │                                   │
+  │         ┌──────────────┐          │
+  │         │ Explain Ajax │          │
+  │         └──────────────┘          │
+  │      ┌───────────────┐            │
+  │      │  CREATE TODO  │            │
+  │      └───────────────┘            │
+  │                                   │
+  │      LIST OF TODOS:               │
+  │                        ┌────────┐ │
+  │      - Write tutorial  │ DELETE │ │
+  │                        └────────┘ │
+  │                                   │
+  │                        ┌────────┐ │
+  │      - Bake birthday   │ DELETE │ │
+  │        cake            └────────┘ │
+  │                                   │
+  │                                   │
+  └───────────────────────────────────┘
+                  |
+                  |
+                  v
+          A JS function in the
+          client sends the new
+          todo item to the server
+                  |
+                  |
+                  |
+                  v
+          Server acknowledges
+          the receipt of the
+          new todo item
+                  |
+                  |
+                  |
+                  v
+          JS updates the UI
+                  |
+                  |
+                  |
+                  v
+
 ```
 
 
-
+With its great power, Ajax also required great responsibility.
 
 
 First wave of frameworks: mid-2000s
 
-
-
-The breakthrough: ajax: JS communicating with server without page refresh. Advantages: performance, seamlessness of transitions, offline ability. (1999 initial, 2004 gmail).
 A new problem: JS must update the HTML. JS can update HTML sent by the server. Or it can *make* the HTML.
 Other extreme: after initial load of empty HTML page, JS puts all the HTML.
 The standards don’t care what you choose.

@@ -243,23 +243,6 @@ stopwatch (clock is at 00:00:00 and clock is stopped)
 
 
 
-stopwatch (clock is 02:00:00 and clock is stopped)
-                       |
-                       |
-                       v
-  ┌──╌ Stopwatch app ╌─────────────────────────────┐
-  │                                                │
-  │                                                │
-  │                    02:00:00                    │
-  │                                                │
-  │                  ┌─────────┐                   │
-  │                  │  START  │                   │
-  │                  └─────────┘                   │
-  │                                                │
-  └────────────────────────────────────────────────┘
-
-
-
 stopwatch (clock is at 02:00:00 and clock is running)
                        |
                        |
@@ -338,7 +321,7 @@ To follow along, we will change our example from the stopwatch app to a simple t
   ┌──╌ Todo list app ╌────────────────┐
   │                                   │
   │         ┌─────────┐               │
-  │         │ ....... │<-- input box  │
+  │         │ |       │<-- input box  │
   │         └─────────┘               │
   │      ┌───────────────┐            │
   │      │  CREATE TODO  │            │
@@ -362,7 +345,7 @@ If we add a couple of todos, the app will look like this:
   ┌──╌ Todo list app ╌────────────────┐
   │                                   │
   │         ┌─────────┐               │
-  │         │ ....... │               │
+  │         │ |       │               │
   │         └─────────┘               │
   │      ┌───────────────┐            │
   │      │  CREATE TODO  │            │
@@ -1267,15 +1250,15 @@ We're now almost done with the first part of this tutorial! The last chapter awa
 
 ### Chapter 8: JS and web frameworks
 
-JavaScript, most commonly known as JS, is a programming language. JS is available on practically every browser and is nowadays used by practically all webapps.
+JavaScript, most commonly known as JS, is a programming language. JS is available on almost every browser and is nowadays used by practically all webapps.
 
 In this chapter, we will understand how JS emerged, how it is useful in webapps, and how it is commonly used.
 
 The first browsers had no JS. They simply loaded HTML pages that were fully static. In these static HTML pages, the only interaction a user could do was to click on a link, which would then take them to another page.
 
-JS was developed in the mid-1990s as a [scripting language](https://en.wikipedia.org/wiki/Scripting_language) to add dynamic aspects to web pages. Initially developed for Netscape, JS soon found its way to Internet Explorer. Thus, JS became available in the two most popular browsers of that time. Eventually, JS became a web standard and is today available on practically every browser.
+JS was developed in the mid-1990s as a [scripting language](https://en.wikipedia.org/wiki/Scripting_language) to add dynamic aspects to web pages. Initially developed for Netscape, JS soon found its way to Internet Explorer. Thus, JS became available in the two most popular browsers of that time. Eventually, JS became a web standard and is today available on almost every browser.
 
-Early on, a typical function enabled by JS was validation of inputs in forms. If a page required you to enter an email (say), and you entered something that has no `@` sign, JS could add a nice message next to the field so that you could correct it before submitting the data.
+Early on, a typical feature enabled by JS was validation of inputs in forms. If a page required you to enter an email (for example), and you entered an address that has no `@` sign, JS could add a nice message next to the field so that you could correct it before submitting the data.
 
 ```
 ┌╌ Form validation with JS ╌─────────────────┐
@@ -1303,12 +1286,12 @@ As we said above, the chief interaction a user could have with a static web page
 
 1. **Performance**: it took some time to retrieve the full page from the server (the internet was also much slower back then), and then some more time to re-render the page in the browser.
 2. **Abrupt transitions**: page transitions blanked the browser, especially if the connection was slow. Users had to wait for a while and hope that the webapp would come back after the page refresh.
-3. **Generic error page if the connection was lost**: if the connection was lost during a page refresh (which happened much more often back then), the browser would show a generic error page. If the page refresh was triggered by data sent by the user, this data would be lost. In other words, the webapp was completely gone if the connection had an issue.
+3. **Generic error page if the connection was lost**: if the connection was lost during a page refresh (which happened much more often back then), the browser would show a generic error page (such as "Connection Error - The Page You Requested Is Unavailable"). If the page refresh was triggered by submitting a form, this data would be lost. In short, the webapp was completely gone if the connection had an issue.
 
-For all of these reasons, early webapps were rudimentary. But then Ajax came along, enabling modern webapps powered by JS. Boiled down to its essence, **Ajax** *is the use of JS to retrieve new data from the server and update the UI **without requiring a page refresh**.*
+For all of these reasons, early webapps were rudimentary. But then Ajax came along, enabling modern webapps powered by JS. Boiled down to its essence, **Ajax** is *the use of JS to retrieve new data from the server and update the UI **without requiring a page refresh**.*
 
 ```
-Without Ajax:
+Without Ajax, successful submission:
 
 ┌╌ Form page ╌───────────────────────────────┐
 │                                            │
@@ -1358,7 +1341,7 @@ Without Ajax:
 └────────────────────────────────────────────┘
 
 
-With Ajax:
+With Ajax, successful submission:
 
 ┌╌ Form page ╌───────────────────────────────┐
 │                                            │
@@ -1391,11 +1374,48 @@ With Ajax:
 │                                            │
 │                                            │
 └────────────────────────────────────────────┘
+
+
+Without Ajax, in case of an error:
+
+┌╌ Error page ╌──────────────────────────────┐
+│                                            │
+│                                            │
+│                                            │
+│             CONNECTION LOST                │
+│        The page you requested is           │
+│                unavailable                 │
+│                                            │
+│                                            │
+│                                            │
+│                                            │
+└────────────────────────────────────────────┘
+
+Without Ajax, in case of an error:
+
+┌╌ Error page within the app  ╌──────────────┐
+│                                            │
+│                                            │
+│       Enter your email                     │
+│       to receive our newsletter!           │
+│                                            │
+│       ┌───────────────────┐                │
+│       │  mono@email.com   │                │
+│       └───────────────────┘                │
+│                                            │
+│        Error: an issue occurred.           │
+│        =====  Could you try again?         │
+│                                            │
+│            ┌──────────┐                    │
+│            │  SUBMIT  │                    │
+│            └──────────┘                    │
+└────────────────────────────────────────────┘
+
 ```
 
-The three advantages of Ajax are precisely the reverse of the problems generated by page refreshes:
+The three advantages of Ajax are precisely the lack of the problems generated by page refreshes:
 
-1. **Performance**: if a page is already loaded, it is faster to retrieve new data and update it on the page than to retrieve the entire page (with all the associated HTML, CSS and JS) from the server.
+1. **Better performance**: if a page is already loaded, it is faster to retrieve new data and update it on the page than to retrieve the entire page (with all the associated HTML, CSS and JS) from the server.
 
 2. **Seamlessness of transitions**: page changes can be much smoother visually if only parts of the page change.
 
@@ -1403,7 +1423,7 @@ The three advantages of Ajax are precisely the reverse of the problems generated
 
 While webapps were possible before Ajax, Ajax allowed webapps to start competing with native apps in terms of the user experience they offered, at least in certain domains. This tendency has kept on going over the past fifteen years, although much more in the desktop than in mobile devices (in mobile devices, native applications still hold considerable advantages over webapps).
 
-Ajax works thanks to a feature of JS that allows the browser to interchange data with the server without triggering a page request. Ajax, then, is fully dependent on JS. The usefulness of Ajax therefore required JS.
+Ajax works thanks to a feature of JS that allows the browser to interchange data with the server without triggering a page request. Ajax, then, is fully dependent on JS.
 
 Let's explore how this would work in our todo list app, when entering a new todo.
 
@@ -1463,7 +1483,7 @@ In the example above, there are already two todos present, and we're about to en
                   |
                   |
                   v
-          Server acknowledges
+          The server acknowledges
           the receipt of the
           new todo item
                   |
@@ -1476,164 +1496,88 @@ In the example above, there are already two todos present, and we're about to en
                   |
                   v
 
+  ┌──╌ Todo list app ╌────────────────┐
+  │                                   │
+  │         ┌──────────────┐          │
+  │         │ |            │          │
+  │         └──────────────┘          │
+  │      ┌───────────────┐            │
+  │      │  CREATE TODO  │            │
+  │      └───────────────┘            │
+  │                                   │
+  │      LIST OF TODOS:               │
+  │                        ┌────────┐ │
+  │      - Write tutorial  │ DELETE │ │
+  │                        └────────┘ │
+  │                                   │
+  │                        ┌────────┐ │
+  │      - Bake birthday   │ DELETE │ │
+  │        cake            └────────┘ │
+  │                                   │
+  │                        ┌────────┐ │
+  │      - Explain Ajax    │ DELETE │ │
+  │                        └────────┘ │
+  │                                   │
+  └───────────────────────────────────┘
 ```
 
+With its new power, Ajax also required new responsibility. Here's the things that JS must do to implement an interaction without a page refresh:
 
-With its great power, Ajax also required great responsibility.
+1. Send a request to the server.
+2. Receive a response from the server and process it (for example: everything went well, or was there an error?).
+3. Update the HTML to reflect the change in the state.
 
+Before Ajax, none of these tasks were necessary. The browser submitted the data as an HTML form and refreshed the page; it was then the server's responsibility to determine whether everything went OK or not, and to create the new HTML page from scratch.
 
-First wave of frameworks: mid-2000s
+The extra complexity of the client, however, was worth the quantum leap in user experience. And so Ajax became widespread. In its wake, a group of JS frameworks made its appearance. These frameworks, fully written in JS, provided functions to simplify communication with the server and update the UI by updating the HTML on the page. These frameworks also provided cross-browser compatibility, at a time where there were still very large incompatibilities among major browsers.
 
-A new problem: JS must update the HTML. JS can update HTML sent by the server. Or it can *make* the HTML.
-Other extreme: after initial load of empty HTML page, JS puts all the HTML.
-The standards don’t care what you choose.
-Frameworks
-Libraries that solve common problems for web apps.
-Client side frameworks vs server side frameworks:
-Server side frameworks generate most or all the HTML in the server. (see previous video on thin clients). Examples: Ruby on Rails, Flask
-Client side frameworks generate most or all the HTML in the client. Examples: jQuery, Angular, React.
+Interestingly enough, to include one of these JS frameworks is as easy as adding a JS script before the script with the client code.
 
+```
+<script src="jquery.js"></script>
+<script src="frontend.js"></script>
+```
 
+In the example above, [jQuery](https://en.wikipedia.org/wiki/jQuery), one of the first JS frameworks and still one of the most popular ones, is loaded. After that, the frontend code of the app is loaded in the file `frontend.js`.
 
+Nowadays, there are more powerful (and complex) ways of loading JS libraries. However, they still boil down to JS files being loaded by the browser.
 
-### The birth of templates
+JS, Ajax and the first generation of JS frameworks grew hand in hand in the second half of the 2000s. Some webapps already started to boast complex and high-quality UIs. For many teams, however, the complexity of the client became problematic. Most of the problems were related to two basic concerns:
 
+1. **Generating HTML to update the page**: as we said above, after an Ajax interaction, the page usually needs to be updated. This requires us to generate HTML that reflects the updated page. HTML is text, so it is possible to create HTML by putting together strings. But this is time consuming and error-prone, because it doesn't use templates or other abstractions that can better express how the HTML should be produced.
+2. **Updating certain the page**: after an Ajax interaction, some parts of the page have to be updated. To decide which parts should be updated, and based on which information, is also something that becomes complex if implemented on a case-by-case basis.
 
-With documents, repeating parts or whatever it's just all there. A few documents there. A lot of websites perfectly happy to be done by hand.
+The two basic concerns might sound quite familiar to you. Indeed, we have covered them in chapter 7! They are **templating** and **state management**. To deal with them, web frameworks emerged in the late 2000s and early 2010s. These frameworks offered their own solution to these two concerns. Some of these frameworks were **server-side**, which means that all the templating and some of the state management happened in the server. In practice, this means that the updated parts of the page are generated in the server and then put in place by JS. These frameworks are powered by other programming languages, such as PHP, Ruby or Python.
 
-You have now user data, and put that within somewhere (you're not just sending the raw data).
+Other frameworks, in contrast, were **client-side**. This means that these frameworks are 1) written in JS; and 2) perform their operations in the browser, not the server. Client-side frameworks appeared to solve these two main concerns strictly in the client. The first framework of this kind was [Angular](https://en.wikipedia.org/wiki/AngularJS), developed by Google and first released in 2010. It was followed by [React](https://en.wikipedia.org/wiki/React_(JavaScript_Library)), developed by Facebook and first released in 2013. Both frameworks are widely used and others have followed in their steps.
 
-This structure is called template!
+Server-side and client-side web frameworks continue to exist and evolve to the present day. Yet, no matter how it is implemented, almost all contemporary webapps are powered by Ajax and JS.
 
-Server code takes data (from the browser or stored on the database), fills the template and sends it to the user!
+This chapter concludes our conceptual introduction to web applications. If you've made it this far, congratulations!
 
-template is a function! receives parameters/arguments.
+In the second part of the tutorial, we switch to a hands-on approach and start building a few simple webapps. Through those examples, we'll learn common and recurring patterns of web development.
 
-Types of replacement:
-- variable replacement.
-- conditionals.
-- iteration.
-- call another template.
+## Part 2: developing webapps from scratch
 
-### The ascent of js
+Originally, this part of the tutorial was going to be about how to develop a frontend with gotoв. But eventually we decided instead to start developing a frontend with no tools at all, to understand the raw problems we're against. We then slowly introduce gotoв to solve some of these problems for us. In this way, we can illustrate how gotoв emerges as the solution to some common problems, rather than "the way" in which things should be done. We also hope this makes both the tutorial and gotoв itself far easier to understand and remember.
 
-js was meant originally to create small animations that would make HTML and CSS look a bit niftier. It was also there to help validating user-submitted forms. Over time it grew in importance and nowadays it is essential for the creation of webapps. It is important to understand why.
+### Chapter 1: setting up the frontend
 
-Webpages are static and don't change after they are loaded in a browser. After the page is loaded, a user can click on a link and go to another page, which will also be loaded. It is possible to create applications by loading a new page after each user operation, but the experience was not comparable to those of existing native applications.
-
-Page refreshes affect user experience negatively in two ways: first, they slow down the user's interaction with the application. Second, they get rid of valuable state that is either lost or has to be painstakingly reproduced (for example, how far down a user has scrolled down a list).
-
-Around 2005, it became possible for js to retrieve information from the server and update the page without a *page refresh*. For many, including me, this marks the birth of true webapps, since the redrawing of the same page without triggering a full refresh completely changed the quality of the users' experience. This allowed webapps to compete with native applications.
-
-The role of js is essential: it both retrieves information from the server *in the background* (i.e.: without triggering a page refresh) and updates the HTML (and perhaps the CSS) in the page.
-
-Small modifications like shopping cart get harder.
-
-Most webapps today are dependent on js for both retrieving information and updating the page. Some still rely on the server sending most of the HTML and CSS, only using js for visual effects.
-
-send templates & data to client, let the client draw it with js!
-
-gotoв takes a once radical, but today quite mainstream approach: it relies 100% on js to *create and update* all of the HTML and CSS. This means that gotoв is 100% reliant on js.
-
-### Why js and not HTML & CSS?
-
-js is a powerful programming language. In it, you can define any logic you need in a short and expressive way. HTML and CSS, in contrast, are not programming languages - they are *markup languages*.
-
-Markup languages tell you what's there - it is akin to a roll call: *A, then B, then C...*. Markup languages don't have the power of a programming language. A markup language cannot do things like *do something depending on a condition* (conditional), *repeat something a certain number of times* (iteration) or *replacing something with something else* (variables/interpolation).
-
-To write any non-trivial webapp, you will need logic to modify the HTML on the screen. This is, in my view, the first central problem of webapps: *how to generate HTML (and perhaps some CSS) using a programming language*.
-
-The traditional solution to this problem is HTML templates. A template is a chunk of HTML where certain parts get updated. Historically, the code responsible to "fill in" the HTML templates was executed by the *server*, which then served the HTML page to the browser. Many apps are still built in this way.
-
-Over time another approach emerged, which is to use js on the client (that is, on the browser itself) to fill in the template for the user. In this scenario, the client asks the server for the templates plus the user data, and then cooks up the HTML without having to trouble the server.
-
-gotoв takes a further step on this direction: it generates (almost) all its HTML and CSS using js itself, on the client, and with no templates! We will see how very soon. Because gotoв uses js to generate its HTML and CSS, it is 100% reliant on js.
-
-A webapp powered by gotoв only requests data from the server, but almost no HTML or CSS.
-
-## The name of the game
-
-merge with the top
-Not design, implementation! This is core. Iteration, but not the same. We're concerned here with implementation.
-
-HTMC: html and perhaps some css. CSS also comes from external stylesheets.
-
-TODO
-- why js? apps without js.
-- templates
-   - replacement, conditional, iteration
-   - in the backend vs in the frontend
-- events
-   - two sources of events: user interactions and responders
-   - responders don't call responders; they only call events!
-
-
-data + templates = the page!
-the two parts of the page.
-things that are related to how things are seen, and then things that go in!
-
-variable replacement.
-conditional (hide/show, for example, or different color).
-iteration.
-template replacement: call one template from the other to avoid repetition.
-
-The browser doesn't care: it's all HTMC to it!
-
-data continuum: more and less durable. Also a decision, usually not all durable, and you need durable.
-Why not in pages? No user input!
-
-User accesses & changes data. This perhaps defines the application! Rethink what I said above about no page refresh.
-
-changes in data must be reflected in the page.
-and elements in the page trigger changes in data. This is the eternal loop.
-
-Typical pattern: change data, refresh the page.
-Refresh partially, through browser mechanism.
-
-
-
-
-
-
-
-
-
-## Part 2: developing apps with gotoв
-
-Through examples!
-
-Understand not just how to do it in gotoв, but how you would do it without it and see what gotoв does for you.
-
-counter: full HTML version, update reads from HTML; second version: value in js, update from there. third version: gotoB.
-
-todo list: localstorage. responders.
-
-shopping cart: two views.
-
-crud: fake server. navigation based on being logged or not.
-
-
-on top of vanilla, we'll use gotoB!
-
-To make you lose fear of code - in case you have any - we're going to create together a webapp from scratch! You only need the following:
+Let's start by setting up the basics. You only need the following:
 
 - A computer.
 - A text editor.
 - A web browser.
 
-### Step 1-1: create a folder to contain the files of your application
+#### Step 1-1: create a folder to contain the files of your application
 
 You can call it `app` - put this folder somewhere where you can easily find it later.
 
-### Step 1-2: create a base HTML file
+#### Step 1-2: create a base HTML file
 
-Wait! Didn't we say that gotoв is pure js? Well, almost! Before starting to *draw* our application, we need to create a page that our browser will open to get things started. Remember that web browsers still open HTML pages - this is how all webapps (even the most sophisticated ones) get loaded.
+As we saw in chapter 6 of part 1, all webapps start with a single HTML file that is loaded by the browser. We will now write this base HTML file.
 
-Side note: what does the term *drawing* mean? It means 1) generating HTML; and 2) putting it on the page so that the user can see it.
-
-Let's now create a base HTML file that will set up the ground to get our application running.
-
-With your text editor, create a new file named `index.html` within the work folder you created on Step 1-1. In it, place the following content:
+With your text editor, create a new file named `app.html` within the work folder you created on Step 1-1. In it, place the following content:
 
 ```html
 <!DOCTYPE HTML>
@@ -1644,7 +1588,6 @@ With your text editor, create a new file named `index.html` within the work fold
       <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css">
    </head>
    <body>
-      <script src="https://cdn.jsdelivr.net/gh/fpereiro/gotob@/gotoB.min.js"></script>
       <script src="app.js"></script>
    </body>
 </html>
@@ -1656,24 +1599,97 @@ Let's break this down:
 2. `<html>` and `</html>` delimit the entire contents of the page.
 3. `<head>` and `</head>` delimit the head of the page.
 4. `<body>` and `</body>` delimit the body of the page.
-5. Inside the head there are two `<meta>` elements. The first one allows to cleanly display non-[ASCII](https://en.wikipedia.org/wiki/ASCII) characters, which is something essential. The second one allows for creating applications that will look good on mobile devices.
-6. Inside the head there's a `<link>` element which an loads an external CSS file called [Normalize.css](https://necolas.github.io/normalize.css). While this is not strictly necessary, it is extremely useful because it makes CSS behavior more consistent across different browsers.
-7. Inside the body there's two `<script>` elements. The first one loads an external js file which contains gotoв, the library itself. The second `<script>` is our application, also a js file!
+5. Inside the head there are two `<meta>` tags. The first one allows to cleanly display non-[ASCII](https://en.wikipedia.org/wiki/ASCII) characters, which is something essential. The second one allows for creating applications that will look good on mobile devices.
+6. Inside the head there's a `<link>` tag which an loads an external CSS file called [Normalize.css](https://necolas.github.io/normalize.css). While this is not strictly necessary, it is extremely useful because it makes CSS behavior more consistent across different browsers.
+7. Inside the body there's a `<script>` tag. This tag loads our application, which is a JS file.
 
-This HTML will load three files in total:
-- A CSS stylesheet (Normalize.css).
-- A js library (gotoв).
-- A js file containing the code of the application.
+This HTML will load two files in total:
+- A CSS stylesheet (Normalize.css), hosted by [Cloudflare](https://cloudflare.com).
+- A js file containing the code of the application. Unlike the CSS file above, this file is stored in your disk and loaded from disk by the browser.
 
-Side note: all three files loaded above are all text files (the first being CSS, the last two being js). Remember: they're all just text files, interpreted in a certain way by the browser.
+Remember: all of these files are just text files, interpreted in a certain way by the browser.
 
 ### Step 1-3: create a js file to contain the code for the application
 
-In the same folder, create an empty file named `app.js`.
+In the same folder, create an empty file named `app.js`. All our application logic will go here.
 
 ### Step 1-4: start your app!
 
-After this is done, open the HTML file in your browser. You should see an empty page . Keep this page open! Every time we complete a step, you can go back to the page, refresh it, and see your changes.
+After this is done, open the HTML file in your browser. You can do this by right clicking the HTML file on the file manager and opening it with your browser. You should see an empty page. Keep this page open! Every time we complete a step, you can go back to the page, refresh it, and see your changes.
+
+### Step 1-5: put a greeting on the screen with HTML
+
+If you want to add a simple greeting, the simplest way to do it is in the HTML. Open `app.html` and change the `<body>` tag to the following:
+
+```html
+   <body>
+      <h1>Hello world!</h1>
+      <script src="app.js"></script>
+   </body>
+```
+
+After refreshing the page, you should see the message `Hello world!`.
+
+### Step 1-6 put a greeting on the screen with JS
+
+Adding elements in the HTML file can be handy for fixed elements. But for dynamic elements, it can become burdensome pretty quickly. A more convoluted, yet ultimately more elegant way of modifying the page, is through JS. This is the approach we will take from now on.
+
+Using this approach, all the changes to the HTML are done from within JS. The HTML file you wrote will stay the same, but the *live* HTML shown on the page will be changed by JS.
+
+To print a greeting using JS, first restore the `<body>` tag to what it was in step 1-4:
+
+```html
+   <body>
+      <script src="app.js"></script>
+   </body>
+```
+
+And then add the following at the top of `app.js`:
+
+```javascript
+document.body.insertAdjacentHTML ('afterbegin', '<h1>Hello world!</h1>');
+```
+
+Let's break down that line:
+- `document.body` is the `<body>` tag (or rather, element) of the page.
+- `insertAdjacentHTML` is a function that inserts an HTML string into an element.
+- `'afterbegin'` is a parameter that indicates that we want this HTML to be inserted at the top of the body.
+- `'<h1>Hello world!</h1>'` is a string containing HTML. More precisely, it contains an `<h1>` tag with contents `Hello world!`. Notice we have to close the `<h1>` tag with `</h1>`.
+
+From now on, `app.html` will remain always the same, and all our modifications will be done on `app.js`.
+
+It's time to create an application that will do more than just showing a greeting. In the next chapter, we will encounter the Counter.
+
+### Chapter 2: the Counter
+
+TODO
+
+- h1
+- current value of counter
+- button to increase it
+
+
+- enter lith
+- enter storing value in js variable
+
+
+
+
+Through examples!
+
+counter: full HTML version, update reads from HTML; second version: value in js, update from there. third version: gotoB.
+
+todo list: localstorage. responders.
+
+shopping cart: two views.
+
+crud: fake server. navigation based on being logged or not.
+
+- events
+   - two sources of events: user interactions and responders
+   - responders don't call responders; they only call events!
+
+on top of vanilla, we'll use gotoB!
 
 ## Chapter 2 - the counter app
 

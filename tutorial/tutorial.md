@@ -1,8 +1,8 @@
 # Tutorial: so you want to write a frontend?
 
-If you are here, you may want to develop your first webapp, or perhaps you already are a webapp developer and want to get better at it. In this tutorial we will offer you as much *understanding* as we possibly can. In our experience, the most daunting part about achieving mastery with webapps is understanding how it all fits together, and why certain things are done in a certain way.
+If you are here, you may want to develop your first webapp, or perhaps you already are a webapp developer and want to get better at it. In this tutorial we will offer you as much *understanding* as we possibly can. In our experience, the most daunting part about achieving mastery with webapps is understanding how it all fits together, and why things are done in a certain way.
 
-This tutorial replaces a more conventional format where we would just show how to develop webapps with gotoв. Instead of doing this, we first offer **a conceptual introduction** to webapps (*web applications*, in case you're not familiar with the abbreviation). After the main conceptual pieces are in place, we then cover **the basics of developing** the frontend of a webapp; gotoв appears on the scene only as the solution to certain problems that occur over and over.
+This tutorial replaces a more conventional tutorial format that merely shows how to develop webapps with gotoв. Instead of this, we first offer **a conceptual introduction** to webapps (*web applications*, in case you're not familiar with the abbreviation). After the main conceptual pieces are in place, we then cover **the basics of developing** the frontend of a webapp; gotoв appears on the scene only as the solution to certain problems that occur over and over when implementing a webapp.
 
 The purpose of this tutorial is to give you as much conceptual and practical understanding as possible, so that you can become a better web developer.
 
@@ -1559,7 +1559,7 @@ In the second part of the tutorial, we switch to a hands-on approach and start b
 
 ## Part 2: developing webapps from scratch
 
-Originally, this part of the tutorial was going to be about how to develop a frontend with gotoв. But eventually we decided instead to start developing a frontend with no tools at all, to understand the raw problems we're against. We then slowly introduce gotoв to solve some of these problems for us. In this way, we can illustrate how gotoв emerges as the solution to some common problems, rather than "the way" in which things should be done. We also hope this makes both the tutorial and gotoв itself far easier to understand and remember.
+Originally, this part of the tutorial was going to be about how to develop a frontend with gotoв. But eventually we decided instead to start developing a frontend with no tools at all, to understand the raw problems we're facing when implementing a rontend. We then slowly introduce gotoв to solve some of these problems for us. In this way, we can illustrate how gotoв emerges as the solution to some common problems, rather than "the way" in which things should be done. We also hope this approach will make both the tutorial and gotoв itself far easier to understand and remember.
 
 ### Chapter 1: setting up the frontend
 
@@ -1617,9 +1617,9 @@ In the same folder, create an empty file named `app.js`. All our application log
 
 After this is done, open the HTML file in your browser. You can do this by right clicking the HTML file on the file manager and opening it with your browser. You should see an empty page. Keep this page open! Every time we complete a step, you can go back to the page, refresh it, and see your changes.
 
-### Step 1-5: put a greeting on the screen with HTML
+### Step 1-5: Hello World
 
-If you want to add a simple greeting, the simplest way to do it is in the HTML. Open `app.html` and change the `<body>` tag to the following:
+If you want to add a simple greeting, the simplest way to do it is by modifying the HTML file. Open `app.html` and change the `<body>` tag to the following:
 
 ```html
    <body>
@@ -1630,50 +1630,147 @@ If you want to add a simple greeting, the simplest way to do it is in the HTML. 
 
 After refreshing the page, you should see the message `Hello world!`.
 
-### Step 1-6 put a greeting on the screen with JS
+Note we still haven't done anything with our JS file. In the next chapter, we will start using JS to modify the interface, when we create our next application: the counter.
 
-Adding elements in the HTML file can be handy for fixed elements. But for dynamic elements, it can become burdensome pretty quickly. A more convoluted, yet ultimately more elegant way of modifying the page, is through JS. This is the approach we will take from now on.
+### Chapter 2: the counter
 
-Using this approach, all the changes to the HTML are done from within JS. The HTML file you wrote will stay the same, but the *live* HTML shown on the page will be changed by JS.
+The counter app is perhaps the simplest application that can be conceived (our Hello World example in the previous chapter cannot really be considered an application, it's just too simple!). The counter is composed of two elements:
 
-To print a greeting using JS, first restore the `<body>` tag to what it was in step 1-4:
+1. A counter that shows a number.
+2. A button that, when pressed, increases the counter by one.
+
+Simple as it is, there are interesting things to be learned and noticed when we implement this app.
+
+### Step 2-1: placing the elements in HTML
+
+Let's start with the HTML structure. We want three elements:
+
+1. A title that says "Counter". We can put it in a `<h1>` tag.
+2. A text that shows the current value of the counter. We can put it in a `<p>` tag.
+3. A button that increases the counter. For this, we will use a `<button>`.
+
+Here's how the HTML will look:
 
 ```html
-   <body>
-      <script src="app.js"></script>
-   </body>
+<h1>Counter</h1>
+<p>Counter is 0</p>
+<button>Increase counter</button>
 ```
 
-And then add the following at the top of `app.js`:
+We will now open `app.html` and add those three tags to the `<body>`, before the `<script>` tag. In case you were wondering, we will always place all the `<script>` tags at the bottom of the `<body>`.
+
+If you refresh the page, you'll see that all three elements will be already there. However, you may quickly notice that the "Increase counter" button doesn't do anything when we click on it. We indeed to implement the logic that increases the value in the counter. For this, we will use JS.
+
+### Step 2-2: increasing the counter, design
+
+Increasing the counter is a three step process:
+
+- Figure out what the current value of the counter.
+- Add one to that value.
+- Update the HTML to show the updated value of the counter.
+
+Since HTML is not a programming language, it doesn't give us the ability to write logic of any sort. For this reason, all of these steps will take place in JS.
+
+We will define a function `incrementCounter` that will contain this logic. For now, it will be an empty function:
 
 ```javascript
-document.body.insertAdjacentHTML ('afterbegin', '<h1>Hello world!</h1>');
+var increaseCounter = function () {
+}
 ```
 
-Let's break down that line:
-- `document.body` is the `<body>` tag (or rather, element) of the page.
-- `insertAdjacentHTML` is a function that inserts an HTML string into an element.
-- `'afterbegin'` is a parameter that indicates that we want this HTML to be inserted at the top of the body.
-- `'<h1>Hello world!</h1>'` is a string containing HTML. More precisely, it contains an `<h1>` tag with contents `Hello world!`. Notice we have to close the `<h1>` tag with `</h1>`.
+We also need to call this function when the `<button>` is clicked. We will modify the `<button>` in the HTML file to the following:
 
-From now on, `app.html` will remain always the same, and all our modifications will be done on `app.js`.
+```html
+<button onclick="increaseCounter ()">Increase counter</button>
+```
 
-It's time to create an application that will do more than just showing a greeting. In the next chapter, we will encounter the Counter.
+Note that the only change we did was to add an `onclick` handler. The `onclick` handler contains the logic that will be executed when the button is clicked. In this case, it merely invokes the function `increaseCounter`, which we just defined as an empty function.
 
-### Chapter 2: the Counter
+### Step 2-3: increasing the counter, extraction
+
+JS needs first to *extract* the current value of the counter from HTML. JS can find the value inside the `<p>` element. For example, at the beginning, the `<p>` will have as text `Counter is 0`. We're only interested in the last part of this text, the `0`.
+
+First, let's retrieve the contents of `<p>` and place it in a variable. To find the `<p>` element, we use the function `document.getElementsByTagName`. This function will bring *all* the `<p>` elements; but since we only have one `<p>` in our app, we can easily find it.
+
+Add the following lines to `app.js`, inside `increaseCounter`:
+
+```javascript
+var p = document.getElementsByTagName ('p');
+p = p [0];
+```
+
+In the first line, we will put a list of all the `<p>` elements into a variable named `p`. In the second line, we will set `p` to the *first* element of that list only - this can only be the only `<p>` contained in the document.
+
+Now, we will extract the contents of `<p>` with the `innerHTML` function. Add the following line to `app.js`:
+
+```javascript
+var counterText = p.innerHTML;
+```
+
+Now, `counterText` will be a string that says `'Counter is 0'`. You can check this by printing `counterText` to the developer console, by adding the line `console.log (counterText);`. When you open the [developer console](https://developer.chrome.com/docs/devtools/open/) of your browser, you'll see the text being printed.
+
+Side note: printing the values of variables to the console is an essential tool when developing programs, since it gives you feedback and the ability to know if you're onto the right track.
+
+We now need to extract the `0` from the string. There are many ways to do this, but we'll choose the following one: split the text into words using the `split` function, then getting the third word.
+
+```javascript
+var words = counterText.split (' ');
+var counterValue = words [2];
+```
+
+If you add these two lines to `app.js`, the `counterValue` variable will contain just a `'0'`. The first line splits the text into three words (`'Counter'`, `'is'` and `'0'`); the second one simply takes the third one into a new variable `counterValue`. Notice that since in JS the first element of a list has an index of `0`, the third one has an index of `2` - otherwise, we would have written `words [3]` instead of `words [2]`.
+
+### Step 2-4: increasing the counter, sum
+
+Before we add one to `counterValue`, we need to transform it into a number. Right now, while it looks a lot like a number, it is still a string. For transforming it into a number, we use the `parseInt` function.
+
+```javascript
+counterValue = parseInt (counterValue);
+```
+
+We can now add one to it.
+
+```javascript
+counterValue = counterValue + 1;
+```
+
+### Step 2-5: increasing the counter, updating the HTML
+
+Now that we have the updated value of the counter in `counterValue`, we need to update the value in the `<p>` element. We can do this by updating the `innerHTML` property of `<p>`.
+
+```javascript
+p.innerHTML = 'Counter is ' + counterValue;
+```
+
+And voilà! We have now a fully functioning counter application. Give it a try by clicking the button and seeing how the value goes up.
+
+### Step 2-6: simplifying our logic
+
+You might have noticed that extracting the current value from the counter was the thing that required the most of the effort of the implementation. Out of the eight lines in our function, six were related to this!
+
+A simpler and cleaner implementation can rely on storing the value for the counter in JS as well as in HTML. To do this, you can define a `counterValue` variable outside the `increaseCounter` function.
+
+```javascript
+var counterValue = 0;
+
+var increaseCounter = function () {
+   var p = document.getElementsByTagName ('p');
+   p = p [0];
+   counterValue = counterValue + 1;
+   p.innerHTML = 'Counter is ' + counterValue;
+}
+```
+
+Note that we first set `counterValue` to 0. `increaseCounter` then only needs to add one to `counterValue`, and then update the HTML. We still need to find the `<p>` element in order to update its value. Still, `increaseCounter` now is 50% shorter than our original version.
+
+As a general rule, it is wise to move the state of the application from HTML to JS. Because we will use JS to update the page, it is only natural to let it store and manage the state of the application. From now on, we will do exactly this.
+
+
+
+
+
 
 TODO
-
-- h1
-- current value of counter
-- button to increase it
-
-
-- enter lith
-- enter storing value in js variable
-
-
-
 
 Through examples!
 

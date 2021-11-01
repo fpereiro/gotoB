@@ -59,7 +59,7 @@ The author wishes to thank [Browserstack](https://browserstack.com) for providin
 - [License](#license)
 - [Appendix: A brief history of the frontend](#a-brief-history-of-the-frontend)
 - [Appendix: Lessons from the quest for IE6 compatibility](#lessons-from-the-quest-for-ie6-compatibility)
-- [Appendix: Tutorial: so you want to write a frontend?](#tutorial-so-you-want-to-write-a-frontend)
+- [Appendix: Tutorial: So you want to write a frontend?](#tutorial-so-you-want-to-write-a-frontend)
 
 ## Examples
 
@@ -4581,6 +4581,6 @@ Why even bother with making gotoв compatible on old browsers that nobody uses a
 
 To restate the first point: it is remarkable that a modern web framework can be at all implemented in browsers that are (as of 2021) 20 years old. This is not a testament to gotoв's prowess, but rather to the prowess of js as a language, and that of the browser as an application platform. Even if their ES3 implementations have aged badly, their fundamentals have aged extremely well.
 
-### So you want to write a frontend?
+### Tutorial: So you want to write a frontend?
 
 [Here you can find](tutorial/tutorial.md) a tutorial consisting of a conceptual introduction to webapps, followed by a gentle introduction on how to implement the frontend of a webapp. The tutorial requires only basic knowledge of HTML, javascript and programming. If you are just beginning and you want to understand the basic concepts of a webapp, you may find it useful. If you are a more experienced developer that is interested in reconsidering the concepts of the frontend from the ground up, you might be interested in it too.

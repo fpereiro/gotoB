@@ -1609,15 +1609,15 @@ This HTML will load two files in total:
 
 Remember: all of these files are just text files, interpreted in a certain way by the browser.
 
-### Step 1-3: create a js file to contain the code for the application
+#### Step 1-3: create a js file to contain the code for the application
 
 In the same folder, create an empty file named `app.js`. All our application logic will go here.
 
-### Step 1-4: start your app!
+#### Step 1-4: start your app!
 
 After this is done, open the HTML file in your browser. You can do this by right clicking the HTML file on the file manager and opening it with your browser. You should see an empty page. Keep this page open! Every time we complete a step, you can go back to the page, refresh it, and see your changes.
 
-### Step 1-5: Hello World
+#### Step 1-5: Hello World
 
 If you want to add a simple greeting, the simplest way to do it is by modifying the HTML file. Open `app.html` and change the `<body>` tag to the following:
 
@@ -1641,7 +1641,7 @@ The counter app is perhaps the simplest application that can be conceived (our H
 
 Simple as it is, there are interesting things to be learned and noticed when we implement this app.
 
-### Step 2-1: placing the elements in HTML
+#### Step 2-1: placing the elements in HTML
 
 Let's start with the HTML structure. We want three elements:
 
@@ -1661,7 +1661,7 @@ We will now open `app.html` and add those three tags to the `<body>`, before the
 
 If you refresh the page, you'll see that all three elements will be already there. However, you may quickly notice that the "Increase counter" button doesn't do anything when we click on it. We indeed to implement the logic that increases the value in the counter. For this, we will use JS.
 
-### Step 2-2: increasing the counter, design
+#### Step 2-2: increasing the counter, design
 
 Increasing the counter is a three step process:
 
@@ -1671,7 +1671,7 @@ Increasing the counter is a three step process:
 
 Since HTML is not a programming language, it doesn't give us the ability to write logic of any sort. For this reason, all of these steps will take place in JS.
 
-We will define a function `incrementCounter` that will contain this logic. For now, it will be an empty function:
+We will define a function `increaseCounter` that will contain this logic. For now, it will be an empty function:
 
 ```javascript
 var increaseCounter = function () {
@@ -1686,7 +1686,7 @@ We also need to call this function when the `<button>` is clicked. We will modif
 
 Note that the only change we did was to add an `onclick` handler. The `onclick` handler contains the logic that will be executed when the button is clicked. In this case, it merely invokes the function `increaseCounter`, which we just defined as an empty function.
 
-### Step 2-3: increasing the counter, extraction
+#### Step 2-3: increasing the counter, extraction
 
 JS needs first to *extract* the current value of the counter from HTML. JS can find the value inside the `<p>` element. For example, at the beginning, the `<p>` will have as text `Counter is 0`. We're only interested in the last part of this text, the `0`.
 
@@ -1709,7 +1709,7 @@ var counterText = p.innerHTML;
 
 Now, `counterText` will be a string that says `'Counter is 0'`. You can check this by printing `counterText` to the developer console, by adding the line `console.log (counterText);`. When you open the [developer console](https://developer.chrome.com/docs/devtools/open/) of your browser, you'll see the text being printed.
 
-Side note: printing the values of variables to the console is an essential tool when developing programs, since it gives you feedback and the ability to know if you're onto the right track.
+**Side note**: printing the values of variables to the console is an essential tool when developing programs, since it gives you feedback and the ability to know if you're onto the right track.
 
 We now need to extract the `0` from the string. There are many ways to do this, but we'll choose the following one: split the text into words using the `split` function, then getting the third word.
 
@@ -1720,7 +1720,7 @@ var counterValue = words [2];
 
 If you add these two lines to `app.js`, the `counterValue` variable will contain just a `'0'`. The first line splits the text into three words (`'Counter'`, `'is'` and `'0'`); the second one simply takes the third one into a new variable `counterValue`. Notice that since in JS the first element of a list has an index of `0`, the third one has an index of `2` - otherwise, we would have written `words [3]` instead of `words [2]`.
 
-### Step 2-4: increasing the counter, sum
+#### Step 2-4: increasing the counter, sum
 
 Before we add one to `counterValue`, we need to transform it into a number. Right now, while it looks a lot like a number, it is still a string. For transforming it into a number, we use the `parseInt` function.
 
@@ -1734,7 +1734,7 @@ We can now add one to it.
 counterValue = counterValue + 1;
 ```
 
-### Step 2-5: increasing the counter, updating the HTML
+#### Step 2-5: increasing the counter, updating the HTML
 
 Now that we have the updated value of the counter in `counterValue`, we need to update the value in the `<p>` element. We can do this by updating the `innerHTML` property of `<p>`.
 
@@ -1744,7 +1744,7 @@ p.innerHTML = 'Counter is ' + counterValue;
 
 And voilà! We have now a fully functioning counter application. Give it a try by clicking the button and seeing how the value goes up.
 
-### Step 2-6: simplifying our logic
+#### Step 2-6: simplifying our logic
 
 You might have noticed that extracting the current value from the counter was the thing that required the most of the effort of the implementation. Out of the eight lines in our function, six were related to this!
 
@@ -1765,18 +1765,59 @@ Note that we first set `counterValue` to 0. `increaseCounter` then only needs to
 
 As a general rule, it is wise to move the state of the application from HTML to JS. Because we will use JS to update the page, it is only natural to let it store and manage the state of the application. From now on, we will do exactly this.
 
+#### Step 2-7: taking stock
 
+Simple as it is, the counter app exposed us to several fundamental concepts of the frontend:
 
+- We initialized a view in HTML: in this case, it was composed of a title, a paragraph and a button.
+- We bound an HTML element (the button) to a function (`increaseCounter`) through an *event handler*.
+- We defined a function that extracted information from the HTML, processed it, and modified the HTML.
+- We simplified that function by storing data on JS itself, rather than on HTML.
 
+We'll now move on to a more complex app, a todo list!
 
+### Chapter 3: the todo list
 
-TODO
+In this chapter we will explore how to build a simple todo list app. This app will bring two new challenges:
 
-Through examples!
+1. Create HTML using JS.
+2. Storing and retrieving data in the browser's [local storage](https://en.wikipedia.org/wiki/Web_storage#Local_and_session_storage), so that the todos persist after refreshing the page.
 
-counter: full HTML version, update reads from HTML; second version: value in js, update from there. third version: gotoB.
+##### Step 3-1: placing the elements in HTML
 
-todo list: localstorage. responders.
+As with the counter, let's start by placing the HTML structure. We want three elements:
+
+1. A title that says "Todo list". We can put it in a `<h1>` tag.
+2. The todo items themselves. We can put each of them in a `<p>` tag. We will also want a `<button>` next to each of them, to mark them as complete and remove them from the list.
+
+Here's how the HTML will look:
+
+```html
+<h1>Todo list</h1>
+<p>Write tutorial</p><button>Mark as complete</button>
+<p>Play civ2</p><button>Mark as complete</button>
+```
+
+You may note however that there's something different in this app. Namely, that the todo items are dynamic and will change. Not only we don't know what the todo text will be, we don't even know *how many* todos can be present at one time. For this reason, we cannot put the todos in `app.html`. The only part we can put is the title. The items themselves must be placed there by our JS code.
+
+We will set up a `<div>` to contain the todos that will be created by JS. To make it easier to locate, we will set an `id` attribute on the `<div>`. For now, this `<div>` will be empty.
+
+```html
+<h1>Todo list</h1>
+<div id="todos"></div>
+```
+
+#### Step 3-2: creating a todo list
+
+Taking a page from the last chapter, we will directly place our list of todos in JS itself. We can conceive of each todo as a single string, containing the description of the todo itself. To store a list of todos, we can simply use an array with strings. For example:
+
+```javascript
+var todoList = ['Write tutorial', 'Play civ2'];
+```
+
+Eventually we will want to load and save this list so that it persists when the page is refreshed. But for now, we will just keep it there in JS, until we figure out how to place these items on the HTML itself.
+
+### TODO
 
 shopping cart: two views.
 
@@ -1786,304 +1827,12 @@ crud: fake server. navigation based on being logged or not.
    - two sources of events: user interactions and responders
    - responders don't call responders; they only call events!
 
-on top of vanilla, we'll use gotoB!
-
-## Chapter 2 - the counter app
-
-Rather than hurrying to show you how to build apps with gotoв, my goal in this tutorial is to explain the essential concepts that are needed to build the frontend of a webapp.
-
-We will start building the simplest possible webapp - a counter! My hope is that by going slowly and surely, not only you will understand the library, but all the underlying concepts of any webapp, so that you can then build them with clarity and utmost confidence.
-
-### Step 2-1: specifying a counter
-
-We are going to build a counter app with pure js (also called [vanilla js](http://vanilla-js.com/)). We won't use gotoв yet. The only restriction we have is that we're doing everything from js, instead of adding elements to the HTML file we created on step 1-2.
-
-Here's the specification for our counter:
-
-- There should be a `<p>` (paragraph) element telling us what's the value of the counter.
-- The counter value should start at 0.
-- There should be a button that increments the counter by 1 every time we click it.
-
-Simple as it is, this app has most of the core patterns of a frontend, namely:
-
-- Some information (the counter value) that affects what the user sees.
-- A place where that information is displayed (the `<p>` element).
-- A button where a user interaction (`click`) changes the counter value and hence the `<p>` that displays it.
-
-### Step 2-2: adding an element on the page
-
-Let's start by adding a paragraph element that will tell the user what's the current value of the counter. It could look something lke this:
-
-```javascript
-var paragraph = '<p>Counter is 0</p>';
-```
-
-Note that inside `<p>` (the opening tag of the paragraph) and `</p>` (the closing tag of the paragraph), there is the text `Counter is 0`.
-
-It's time to **RTP** (refresh the page, please)! What do you see? Wait, it's blank!
-
-The reason that the page is blank is the following: while we created an HTML string, we didn't put it anywhere within the page. For HTML to be visible, we need to put it somewhere within the page. A good place to do it is in the `<body>` of the document.
-
-```javascript
-var paragraph = '<p>Counter is 0</p>';
-
-document.body.innerHTML = paragraph;
-```
-
-*RTP*, and you should see the text `Counter is 0`, just as expected.
-
-Side note: If you're using any modern browser, you will have access to the browser's developer tools, which can show you what elements are drawn on the page. The easiest way to open the developer tools is to right-click on an element of the page (in our case it could be on the paragraph element we just created) and select the option that says either `Inspect Element` or simply `Inspect`.
-
-### Step 2-3: adding a button
-
-We now need to add a button that will increase the value of the counter when we click it. This could look something like this:
-
-```javascript
-var paragraph = '<p>Counter is 0</p>';
-
-var button = '<button>Increment counter</button>';
-
-document.body.innerHTML = paragraph + button;
-```
-
-RTP. You'll now see a button that says `Increment counter` but doesn't do a thing when we click it. Let's fix that by adding an *event handler*.
-
-```javascript
-var paragraph = '<p>Counter is 0</p>';
-
-var button = '<button onclick="increment ()">Increment counter</button>';
-
-document.body.innerHTML = paragraph + button;
-```
-
-The string `increment ()` will now be executed when clicking on the button.
-
-RTP. When you click on this button, nothing will happen. If you open the developer console, you'll see an error that says something along the lines of `increment is not defined`. This is because we need to define a function that will actually increment the counter!
-
-Side note: annoying as they may be, error messages are very useful because they can help you figure out where your code is going wrong. Resist the temptation to ignore them!
-
-### Step 2-4: figuring out how to increment the counter
-
-Before we write the code for `increment` (which will be our first function), let's think about what it should do:
-
-1. Figure out what's the current value of the counter.
-2. Add 1 to it.
-3. Update the paragraph to reflect the new value of the counter.
-
-### Step 2-5: extracting a value from the paragraph
-
-Let's first try to make our `increment` function get the value of the counter, which currently is contained within the text of the paragraph.
-
-```javascript
-var paragraph = '<p>Counter is 0</p>';
-
-var button = '<button onclick="increment ()">Increment counter</button>';
-
-document.body.innerHTML = paragraph + button;
-
-var increment = function () {
-   var paragraphs = document.body.getElementsByTagName ('p');
-   var paragraph = paragraphs [0];
-   var value = paragraph.innerHTML;
-   alert (value);
-}
-```
-
-Well, that's quite a bit. Let's see what the function does, line by line:
-
-- Get all the `<p>` elements from the body.
-- Select the first paragraph from this list of elements.
-- Get the contents (`innerHTML`) of this paragraph.
-- Fire a popup window with the contents of the paragraph.
-
-RTP and click the button. You should see a popup that says `Counter is 0`. We're on the right track!
-
-Side note: in case you're wondering, the variable `paragraph` we defined within `increment` is independent from the variable `paragraph` we defined at the beginning of the script. The `paragraph` variable inside the function can only be accessed from within that function.
-
-This solution has a couple of problems:
-
-- If we add more paragraphs to the app (which may perfectly happen as we add functionality or improve its interface), we need to know exactly what paragraph is the one with the counter information.
-- We still need to extract the counter value from the entire message contained in the paragraph.
-
-A way to solve the first problem is to add an `id` attribute to the paragraph, to make it easier to find.
-
-```javascript
-var paragraph = '<p id="counter">Counter is 0</p>';
-
-var button = '<button onclick="increment ()">Increment counter</button>';
-
-document.body.innerHTML = paragraph + button;
-
-var increment = function () {
-   var paragraph = document.getElementById ('counter');
-   var value = paragraph.innerHTML;
-   alert (value);
-}
-```
-
-RTP and check that this still works.
-
-We still need to extract the counter value from the paragraph. One way to do it is like this:
-
-```javascript
-var paragraph = '<p id="counter">Counter is 0</p>';
-
-var button = '<button onclick="increment ()">Increment counter</button>';
-
-document.body.innerHTML = paragraph + button;
-
-var increment = function () {
-   var paragraph = document.getElementById ('counter');
-   var value = paragraph.innerHTML.replace ('Counter is ', '');
-   alert (value);
-}
-```
-
-Notice that on the second line of the function we replace the string `Counter is ` with an empty string, to get rid of everything except for the number.
-
-RTP and click on the button. You'll see only the value `0` being printed. We're making progress!
-
-Let's now try adding 1 to this value.
-
-```javascript
-var paragraph = '<p id="counter">Counter is 0</p>';
-
-var button = '<button onclick="increment ()">Increment counter</button>';
-
-document.body.innerHTML = paragraph + button;
-
-var increment = function () {
-   var paragraph = document.getElementById ('counter');
-   var value = paragraph.innerHTML.replace ('Counter is ', '');
-   value = value + 1;
-   alert (value);
-}
-```
-
-RTP and click on the button. We see the value `01` printed, instead of `1`! This happens because the `0` we extracted from the paragraph is a string (text), and not a number. Let's fix that.
-
-```javascript
-var paragraph = '<p id="counter">Counter is 0</p>';
-
-var button = '<button onclick="increment ()">Increment counter</button>';
-
-document.body.innerHTML = paragraph + button;
-
-var increment = function () {
-   var paragraph = document.getElementById ('counter');
-   var value = paragraph.innerHTML.replace ('Counter is ', '');
-   value = parseInt (value) + 1;
-   alert (value);
-}
-```
-
-RTP. We now print the value `1`. Hurray!
-
-### Step 2-6: update the paragraph
-
-Instead of showing the message in an alert box, let's now update the paragraph instead.
-
-```javascript
-var paragraph = '<p id="counter">Counter is 0</p>';
-
-var button = '<button onclick="increment ()">Increment counter</button>';
-
-document.body.innerHTML = paragraph + button;
-
-var increment = function () {
-   var paragraph = document.getElementById ('counter');
-   var value = paragraph.innerHTML.replace ('Counter is ', '');
-   value = parseInt (value) + 1;
-   paragraph.innerHTML = 'Counter is ' + value;
-}
-```
-
-RTP. And wouldn't you know it, we have a functioning counter app!
-
-### Step 2-7: store the value in js, not HTML
-
-You might be thinking: that's quite a bit of code to get this thing working! I'm with you. There's also the problem that if you change the text of the paragraph, but forget to update the `increment` function, our code will break!
-
-There's actually a way to simplify the code and also make it more resilient to errors. This change requires us to *store the value of the counter in js, instead of within an HTML element*. How would this work in practice?
-
-```javascript
-var value = 0;
-
-var paragraph = '<p id="counter">Counter is ' + value + '</p>';
-
-var button = '<button onclick="increment ()">Increment counter</button>';
-
-document.body.innerHTML = paragraph + button;
-
-var increment = function () {
-   var paragraph = document.getElementById ('counter');
-   value = value + 1;
-   paragraph.innerHTML = 'Counter is ' + value;
-}
-```
-
-RTP to see that this will still yield the same result.
-
-Notice a few changes:
-- We define a `value` variable at the top, which holds the current value of the counter.
-- We reference this value when constructing `paragraph` the first time.
-- `increment` is much simpler, since it merely references `value` instead of having to extract it from some text and convert it to a number. This is because `value` already is available as a js variable.
-
-### Step 2-8: seeing the overall pattern of the app
-
-This app, simple as it may be, contains a great deal of the elements you'll encounter later when creating more complex apps. Let's add some comments to the code to see what the counter app can teach us about apps in general:
-
-```javascript
-// Here we define values that will be used in the HTML and also updated by js.
-var value = 0;
-
-// Here we create HTML strings that we'll put into the page.
-var paragraph = '<p id="counter">Counter is ' + value + '</p>';
-
-var button = '<button onclick="increment ()">Increment counter</button>';
-
-// Here we put the HTML strings into the page so that they can be seen.
-document.body.innerHTML = paragraph + button;
-
-// Here we define an event handler that will 1) update a value; 2) update the HTML.
-var increment = function () {
-   var paragraph = document.getElementById ('counter');
-   value = value + 1;
-   paragraph.innerHTML = 'Counter is ' + value;
-}
-```
-
-If we were to abstract this to see the general pattern, we could put it like this:
-
-- Define an **initial state**: we set `value` to 0. Note we do this in js after what we learned in step 2-7.
-- Define an **initial view**: we create HTML for both the `paragraph` and the `button`. The button has an **event handler** which calls `increment`, a **listener** (see below).
-- **Draw** the initial view: we take the initial view and put it inside the page so that the user can see it.
-- Define a **listener to perform operations**: the function `increment` contains logic for both updating the **state** and updating the **view**. Notice that this listener is referenced by `button`.
-- When the user clicks on `button`, the listener is **executed** and both the **state** and the **view** are **updated**.
-
-This is a bunch, so let's break it down even more:
-
-- **State**: data that lives in js and is required to display accurate information.
-- **View**: all the HTML & CSS that is in the page and is seen by the user.
-- **Listener**: a function that updates both the state and the view.
-- **Event handler**: something that connects a user action on a certain element (like clicking or inputting text) with a listener.
-
-The above are the fantastic four! State, view, listener and event handler.
-
-In section 2-7 we saw that it is convenient to separate the state and the view, so that why we have two things instead of one. Think of these two things, state and view, as pure data. One is usually numbers and text. The other one is always HTML and CSS. That's it!
-
-As for the other two, they represent the dynamic aspect of the app. A listener is a function that changes the state and the view. Why both? If you only change the state, the view would be out of sync with the data! And if the view was changed but not the data, then the data would be out of sync with the view! State and view can change, but they must do so consistently. This consistency requirement is essential.
-
 Move it to the front, start with the end in mind: HTML & CSS. Change it. That's the starting point!
+
 changes: by the user and by the server!! start with the end in mind!!
-
-The button (in HTML, with an event) calls `increment`. `increment` increases the value, then updates the HTML. That's the cycle!
-
-Note: string references increment. That's how the circle is closed! Text diagram here!
 
 - Using the same data in multiple places.
 - Having two different sources for the info.
-
 - Two way data binding: if something can be modified from more than one place.
 - Efficient long list updating: example of long list with scroll?
 - Make up unique names for update functions, or have them global?
@@ -2091,42 +1840,7 @@ Note: string references increment. That's how the circle is closed! Text diagram
 - HTML generation & escaping it.
 - Having a boundary around the element. But wouldn't it be eough to write it in one place? You want disambiguated names anyway!
 
-
-
-
-
-
-
-
-```javascript
-var B = window.B;
-
-var view = function () {
-   return B.view ('counter', function (counter) {
-      if (counter === undefined) counter = 0;
-      return ['div', [
-         ['p', ['Counter is: ', counter]],
-         ['button', {onclick: B.ev ('set', 'counter', counter + 1)}, 'Increment counter']
-      ]];
-   });
-}
-
-B.mount ('body', view);
-```
-
-### Step 3: a shopping cart!
-
-Let's now do something more interesting:
-
-
-
-
-
-
-
 other events: still modify the store, or modify the server! perhaps some transitions, things not stored? the third are pure side effects :).
-
-
 
 pure functions: views! don't receive x and don't call events. why this? to not trigger redraws while we're in the middle of one! mechanism will still queue. what are the implications? depending on what you do, if it's dangling it will stop everything. gotoB non-prod will make sure it doesn't break anything. so it is conceptual.
 if it receives an x, it can say things.

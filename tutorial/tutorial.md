@@ -1817,6 +1817,175 @@ var todoList = ['Write tutorial', 'Play civ2'];
 
 Eventually we will want to load and save this list so that it persists when the page is refreshed. But for now, we will just keep it there in JS, until we figure out how to place these items on the HTML itself.
 
+#### Step 3-3: putting the todos in the page with JS
+
+Because the list of todos will change, we need to add the todo items to the page using JS. We cannot do this in HTML because HTML doesn't have logic, and hence cannot implement the notion of "creating one element per todo in the list".
+
+To place the todos in the page, we first need to decide what the HTML for a given todo element should be. Earlier on step 3-1, we decided to show each todo as a combination of a `<p>` and a `<button>`. We can place this logic into a function that will return the HTML for a given todo.
+
+```javascript
+var makeTodo = function (task) {
+   return '<p>' + task + '</p><button>Mark as complete</button>';
+}
+```
+
+`makeTodo` returns a string containing HTML. Note how this function takes a single argument, `task`, which is the description of the todo. We use this argument (which should be a string) and put it inside the `<p>` element. The `<button>`, for now, does nothing.
+
+We can go through each of the elements of the list to make an HTML string for all the todos. Let's see how.
+
+```javascript
+var allTodos = '';
+
+todoList.map (function (task) {
+   allTodos = allTodos + makeTodo (task);
+});
+```
+
+We start by first creating an empty string, `allTodos`, which will contain the HTML string with all the todos. We then use the `map` function to go through each of the elements in `todoList`. For each of them, we get their corresponding HTML by calling `makeTodo`; we then add the result of calling `makeTodo` to the end of the `allTodos` string.
+
+By now, `allTodos` will be `<p>Write tutorial</p><button>Mark as complete</button><p>Play civ2</p><button>Mark as complete</button>`. Not very pretty, but if we put it in the `<div>` we created to hold the todos, we can see what it looks like!
+
+```javascript
+document.getElementById ('todos').innerHTML = allTodos;
+```
+
+To find the `<div>` where we want to put the todos, we used the `getElementById` function. Then, we set the `innerHTML` property of it to `allTodos`. As a result, we now see the two todos on the screen, with their corresponding buttons.
+
+#### Step 3-4: improving HTML generation
+
+Let's suppose now that we had a different set of todos:
+
+```javascript
+var todoList = ['Write tutorial', 'Play civ2', 'Improve <button> look in todo app'];
+```
+
+If you open the page, you'll see that the HTML for the third todo looks odd. The reason is that the `<button>` text inside the third task was actually interpreted as HTML!
+
+```html
+<p>Improve <button> look in todo app</p><button>Mark as complete</button>
+```
+
+To actually display `<button>` as text, rather than an HTML element, the opening and closing angle brackets (`<` and `>`) must be *escaped* - that is, replaced by other characters that, when put in the page, will be shown as angle brackets.
+
+To escape special characters (such as angle brackets) properly, we need to create a function to do that. However, here we will use one of gotoв's dependencies, lith, to create the HTML for us. Besides escaping special characters, lith does two more things for us:
+
+- Closes only those HTML tags that need closing. So far, all the tags we've seen require a closing tag (for example, `<button>` is closed with `</button>`). However, tags that are often used, such as `<img>` or `<input>`, should not be closed.
+- It prevents string concatenation from getting too hairy. lith allows us to express HTML using arrays (which are lists of elements). This allows for both cleaner and less error-prone code.
+
+To add lith, we need first to require gotoв. To do this, we can simply add the following line to the HTML:
+
+```html
+<script src="../gotoB.min.js"></script>
+```
+
+Note that we're requesting the file `gotoB.min.js` which is one folder above the tutorial's folder. If your gotoв file is somewhere else, the `src` attribute should point there instead.
+
+The `<body>` of the HTML will now look like this:
+
+```html
+<body>
+   <h1>Todo list</h1>
+   <div id="todos"></div>
+   <script src="../gotoB.min.js"></script>
+   <script src="app.js"></script>
+</body>
+```
+
+If everything goes well, the global variable `lith` will now contain the entire lith library. We can now modify `makeTodo` as follows:
+
+```javascript
+var makeTodo = function (task) {
+   return lith.g ([
+      ['p', task],
+      ['button', 'Mark as complete']
+   ]);
+}
+```
+
+We use the function `lith.g` to *g*enerate the HTML string for us. Note we pass to it an array with two elements: `['p', task]`, and `['button', 'Mark as complete']`. As you might have guessed, each of these stands for an HTML tag. The first element of each is the tag itself (`'p'` and `'button'`), the second one is its contents.
+
+#### Step 3-5: adding todo items
+
+We're now in a position to add items to the todo list! When adding a todo, we need to be sure to update both `todoList` *and* the HTML inside the `<div>`.
+
+We'll start with a simple (and somewhat ugly) way of requesting the user for a todo: with a native `prompt`. We'll put the logic in a function called `addTodo`.
+
+```javascript
+var addTodo = function () {
+   var todo = prompt ('What do you want to do?');
+   todoList.push (todo);
+
+   var allTodos = '';
+
+   todoList.map (function (task) {
+      allTodos = allTodos + makeTodo (task);
+   });
+
+   document.getElementById ('todos').innerHTML = allTodos;
+}
+```
+
+The first two lines of the function are new. The first one asks the user to submit a todo. The second one puts the todo on the `todoList`. The rest of the lines, however, repeat the logic we wrote previously to create an HTML string with all the todos and then place it inside the `<div>`.
+
+We could do better by grouping the logic for placing the HTML for the todos inside another function, `placeTodos`. Here's how the entire `app.js` would look like:
+
+```javascript
+var todoList = ['Write tutorial', 'Play civ2', 'Improve <button> look in todo app'];
+
+var makeTodo = function (task) {
+   return lith.g ([
+      ['p', task],
+      ['button', 'Mark as complete']
+   ]);
+}
+
+var placeTodos = function () {
+   var allTodos = '';
+
+   todoList.map (function (task) {
+      allTodos = allTodos + makeTodo (task);
+   });
+
+   document.getElementById ('todos').innerHTML = allTodos;
+}
+
+var addTodo = function () {
+   var todo = prompt ('What do you want to do?');
+   todoList.push (todo);
+   placeTodos ();
+}
+
+placeTodos ();
+```
+
+Note how the last line of `app.js` is a call to `placeTodos`. This ensures that the todos will be shown when the page is loaded. Note also how `placeTodos` is called at the end of `addTodo`, to update the todos shown in the page.
+
+We now only need to add a button to add a todo on the HTML page:
+
+```html
+      <button onclick="addTodo ()">Add todo</button>
+```
+
+This button, when clicked, will execute the `addTodo` function, which in turn will ask the user for the text of a new todo.
+
+We can now successfully add todo items! Let's implement now the logic for removing them.
+
+#### Step 3-6: deleting todo items
+
+As you may have guessed, we'll define now a `removeTodo` function to remove a todo from the list.
+
+```javascript
+var removeTodo = function (task) {
+   todoList.splice (todoList.indexOf (task), 1);
+   placeTodos ();
+}
+```
+
+The way the function works is by finding the first occurrence of a given todo inside `todoList`. Then, it removes it from `todoList`.
+
+TBC
+
+
 ### TODO
 
 shopping cart: two views.

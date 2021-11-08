@@ -1573,7 +1573,7 @@ Let's start by setting up the basics. You only need the following:
 
 You can call it `app` - put this folder somewhere where you can easily find it later.
 
-#### Step 1-2: create a base HTML file
+#### Step 1-2: create a base HTML file ([HTML file](1-2.app.html))
 
 As we saw in chapter 6 of part 1, all webapps start with a single HTML file that is loaded by the browser. We will now write this base HTML file.
 
@@ -1609,7 +1609,7 @@ This HTML will load two files in total:
 
 Remember: all of these files are just text files, interpreted in a certain way by the browser.
 
-#### Step 1-3: create a js file to contain the code for the application
+#### Step 1-3: create a js file to contain the code for the application ([HTML file](1-3.app.html) [JS file](1-3.app.js))
 
 In the same folder, create an empty file named `app.js`. All our application logic will go here.
 
@@ -1617,7 +1617,7 @@ In the same folder, create an empty file named `app.js`. All our application log
 
 After this is done, open the HTML file in your browser. You can do this by right clicking the HTML file on the file manager and opening it with your browser. You should see an empty page. Keep this page open! Every time we complete a step, you can go back to the page, refresh it, and see your changes.
 
-#### Step 1-5: Hello World
+#### Step 1-5: Hello World ([HTML file](1-5.app.html))
 
 If you want to add a simple greeting, the simplest way to do it is by modifying the HTML file. Open `app.html` and change the `<body>` tag to the following:
 
@@ -1641,7 +1641,7 @@ The counter app is perhaps the simplest application that can be conceived (our H
 
 Simple as it is, there are interesting things to be learned and noticed when we implement this app.
 
-#### Step 2-1: placing the elements in HTML
+#### Step 2-1: placing the elements in HTML ([HTML file](2-1.app.html))
 
 Let's start with the HTML structure. We want three elements:
 
@@ -1661,7 +1661,7 @@ We will now open `app.html` and add those three tags to the `<body>`, before the
 
 If you refresh the page, you'll see that all three elements will be already there. However, you may quickly notice that the "Increase counter" button doesn't do anything when we click on it. We indeed to implement the logic that increases the value in the counter. For this, we will use JS.
 
-#### Step 2-2: increasing the counter, design
+#### Step 2-2: increasing the counter, design ([HTML file](2-1.app.html) [JS file](2-2.app.js))
 
 Increasing the counter is a three step process:
 
@@ -1798,9 +1798,9 @@ Here's how the HTML will look:
 <p>Play civ2</p><button>Mark as complete</button>
 ```
 
-You may note however that there's something different in this app. Namely, that the todo items are dynamic and will change. Not only we don't know what the todo text will be, we don't even know *how many* todos can be present at one time. For this reason, we cannot put the todos in `app.html`. The only part we can put is the title. The items themselves must be placed there by our JS code.
+You may note however that there's something different in this app. Namely, that the todo items are dynamic and will change. Not only we don't know what the todo text will be, we don't even know *how many* todos can be present at one time. For this reason, we cannot put the todos directly in `app.html`. The only part we can put is the title. The items themselves must be placed there by our JS code.
 
-We will set up a `<div>` to contain the todos that will be created by JS. To make it easier to locate, we will set an `id` attribute on the `<div>`. For now, this `<div>` will be empty.
+We will set up a `<div>` to contain the todos that will be created by JS. To make it easier to locate, we will set an `id` attribute on the `<div>`. For now, this `<div>` will be empty. Here's then the elements we'll add to the HTML `<body>`:
 
 ```html
 <h1>Todo list</h1>
@@ -1843,7 +1843,7 @@ todoList.map (function (task) {
 
 We start by first creating an empty string, `allTodos`, which will contain the HTML string with all the todos. We then use the `map` function to go through each of the elements in `todoList`. For each of them, we get their corresponding HTML by calling `makeTodo`; we then add the result of calling `makeTodo` to the end of the `allTodos` string.
 
-By now, `allTodos` will be `<p>Write tutorial</p><button>Mark as complete</button><p>Play civ2</p><button>Mark as complete</button>`. Not very pretty, but if we put it in the `<div>` we created to hold the todos, we can see what it looks like!
+By now, `allTodos` will be a string with the following HTML: `'<p>Write tutorial</p><button>Mark as complete</button><p>Play civ2</p><button>Mark as complete</button>'`. Not very pretty, but if we put it in the `<div>` we created to hold the todos, we can see what it looks like!
 
 ```javascript
 document.getElementById ('todos').innerHTML = allTodos;
@@ -1981,9 +1981,118 @@ var removeTodo = function (task) {
 }
 ```
 
-The way the function works is by finding the first occurrence of a given todo inside `todoList`. Then, it removes it from `todoList`.
+The way the function works is by finding the index of the first occurrence of a given todo inside `todoList`, using the `indexOf` function. Then, it removes it from `todoList`, passing the index to `splice`.
 
-TBC
+We now need to modify `makeTodo` so that when a button belonging to a todo is clicked, that todo is deleted. The way to do this is by putting `removeTodo` in the `onclick` handler of each `<button>`.
+
+```javascript
+var makeTodo = function (task) {
+   var onclickHandler = 'removeTodo (' + JSON.stringify (task) + ')';
+
+   return lith.g ([
+      ['p', task],
+      ['button', {onclick: onclickHandler}, 'Mark as complete']
+   ]);
+}
+```
+
+There's a lot going on here! First we create an `onclickHandler` variable, containing the string `'removeTodo ('`. As we did with `addTodo` earlier, we are creating the onclick handler to remove the todo. However, notice that instead of calling `removeTodo` without any arguments (`'removeTodo ()'`), we do need to pass the task itself, so that `removeTodo` will know *which* todo to remove!
+
+Rather than concatenating `task` directly, we first use `JSON.stringify` on it. This is a function that makes sure that any double quotes within `task` will be escaped. For example, if `task` were to be `'Remove all " characters from code'`, `JSON.stringify` will convert it to `'"Remove all \\" characters from code"'`. This is necessary, since otherwise our button functionality will be broken for this particular todo.
+
+We close the `onclickHandler` by closing the parenthesis.
+
+Let's now jump to the `<button>`. Note that in between `'button'` and `'Mark as complete'`, we've added the following object: `{onclick: onclickHandler}`. When lith receives an object in between the tag and the contents, it considers it to be a list of attributes. In this case, the `onclick` attribute of the `<button>` element will have `onclickHandler` as its value. This will make the button actually work. Give it a try!
+
+By now we have a fully functional todo app, where we can add and remove todos to our heart's content. The only problem left with this is that if we close or refresh the page, we will lose all the todos! In the next section, we'll implement functions for saving and loading todos onto the browser's local storage.
+
+#### Step 3-7: loading and saving todos [js](3-7.app.js)
+
+For loading and saving, we will create two functions, `loadTodos` and `saveTodos`.
+
+```javascript
+var todoList = [];
+
+var loadTodos = function () {
+   var loadedTodos = localStorage.getItem ('todos');
+   if (loadedTodos) todoList = JSON.parse (loadedTodos);
+}
+```
+
+We start by setting `todoList` to an empty array, instead of pre-filling it with some arbitrary todos. Then, we define `loadTodos`, which gets a key `'todos'` from the browser's local storage and places it onto `loadedTodos`. If the key already exists, we parse it with `JSON.parse` and place the resulting list of todos into `todoList`.
+
+Finally, we invoke `placeTodos` to put the todos in the page.
+
+Now, why do we use `JSON.parse` to get the list of todos? The reason is that local storage only allows to store *strings*, so if we store an array of todos, we need to convert it to a string first. Conversely, when loading the list, we need to convert the string back into an array of strings. This will become more clear when we see `saveTodos`:
+
+```javascript
+var saveTodos = function () {
+   localStorage.setItem ('todos', JSON.stringify (todoList));
+}
+```
+
+This function takes `todoList`, invokes `JSON.stringify` on it to make it into a string, and then sets the result onto the `todos` key. For these functions to work properly, we need to do
+
+1. Invoke `saveTodos` at the bottom of `addTodo` and `removeTodo`. This ensures that every modification will be stored in local storage.
+2. Invoke `loadTodos` just before `placeTodos`.
+
+Here's how the entire `app.js` looks like:
+
+```javascript
+var todoList = [];
+
+var makeTodo = function (task) {
+   var onclickHandler = 'removeTodo (' + JSON.stringify (task) + ')';
+
+   return lith.g ([
+      ['p', task],
+      ['button', {onclick: onclickHandler}, 'Mark as complete']
+   ]);
+}
+
+var placeTodos = function () {
+   var allTodos = '';
+
+   todoList.map (function (task) {
+      allTodos = allTodos + makeTodo (task);
+   });
+
+   document.getElementById ('todos').innerHTML = allTodos;
+}
+
+var addTodo = function () {
+   var todo = prompt ('What do you want to do?');
+   todoList.push (todo);
+   placeTodos ();
+   saveTodos ();
+}
+
+var removeTodo = function (task) {
+   todoList.splice (todoList.indexOf (task), 1);
+   placeTodos ();
+   saveTodos ();
+}
+
+var loadTodos = function () {
+   var loadedTodos = localStorage.getItem ('todos');
+   if (loadedTodos) todoList = JSON.parse (loadedTodos);
+}
+
+var saveTodos = function () {
+   localStorage.setItem ('todos', JSON.stringify (todoList));
+}
+
+loadTodos ();
+placeTodos ();
+```
+
+So there it is! In six functions, we have enabled an entire todo list app that will retain its information upon refreshing. While this is still yet too simple to be a real app, it's starting to be quite close to one.
+
+You might have noticed that a lot of the functions now need to call each other. For example `addTodo` and `removeTodo` both invoke `placeTodos` and `saveTodos`. For now, this is manageable, but in a more complex app this will become harder to implement and to follow. The essential problem is that of making sure that any changes are reflected both in the page and in the storage of todos. We'll see more of this problem in the chapters that follow.
+
+For now it's time to celebrate the completion of our todo app and move to our next app, the shopping cart!
+
+
 
 
 ### TODO

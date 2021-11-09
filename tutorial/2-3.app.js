@@ -4,7 +4,4 @@ var increaseCounter = function () {
    var counterText = p.innerHTML;
    var words = counterText.split (' ');
    var counterValue = words [2];
-
-   counterValue = parseInt (counterValue);
-   counterValue = counterValue + 1;
 }

@@ -1686,7 +1686,7 @@ We also need to call this function when the `<button>` is clicked. We will modif
 
 Note that the only change we did was to add an `onclick` handler. The `onclick` handler contains the logic that will be executed when the button is clicked. In this case, it merely invokes the function `increaseCounter`, which we just defined as an empty function.
 
-#### Step 2-3: increasing the counter, extraction ([HTML file](2-1.app.html) [JS file](2-3.app.html))
+#### Step 2-3: increasing the counter, extraction ([HTML file](2-3.app.html) [JS file](2-3.app.html))
 
 JS needs first to *extract* the current value of the counter from HTML. JS can find the value inside the `<p>` element. For example, at the beginning, the `<p>` will have as text `Counter is 0`. We're only interested in the last part of this text, the `0`.
 
@@ -1720,7 +1720,7 @@ var counterValue = words [2];
 
 If you add these two lines to `app.js`, the `counterValue` variable will contain just a `'0'`. The first line splits the text into three words (`'Counter'`, `'is'` and `'0'`); the second one simply takes the third one into a new variable `counterValue`. Notice that since in JS the first element of a list has an index of `0`, the third one has an index of `2` - otherwise, we would have written `words [3]` instead of `words [2]`.
 
-#### Step 2-4: increasing the counter, sum ([HTML file](2-4.app.html) [JS file](2-4.app.html))
+#### Step 2-4: increasing the counter, sum ([HTML file](2-4.app.html) [JS file](2-4.app.js))
 
 Before we add one to `counterValue`, we need to transform it into a number. Right now, while it looks a lot like a number, it is still a string. For transforming it into a number, we use the `parseInt` function.
 
@@ -1734,7 +1734,7 @@ We can now add one to it.
 counterValue = counterValue + 1;
 ```
 
-#### Step 2-5: increasing the counter, updating the HTML ([HTML file](2-5.app.html) [JS file](2-5.app.html))
+#### Step 2-5: increasing the counter, updating the HTML ([HTML file](2-5.app.html) [JS file](2-5.app.js))
 
 Now that we have the updated value of the counter in `counterValue`, we need to update the value in the `<p>` element. We can do this by updating the `innerHTML` property of `<p>`.
 
@@ -1744,7 +1744,7 @@ p.innerHTML = 'Counter is ' + counterValue;
 
 And voilà! We have now a fully functioning counter application. Give it a try by clicking the button and seeing how the value goes up.
 
-#### Step 2-6: simplifying our logic ([HTML file](2-6.app.html) [JS file](2-6.app.html))
+#### Step 2-6: simplifying our logic ([HTML file](2-6.app.html) [JS file](2-6.app.js))
 
 You might have noticed that extracting the current value from the counter was the thing that required the most of the effort of the implementation. Out of the eight lines in our function, six were related to this!
 
@@ -1783,7 +1783,7 @@ In this chapter we will explore how to build a simple todo list app. This app wi
 1. Create HTML using JS.
 2. Storing and retrieving data in the browser's [local storage](https://en.wikipedia.org/wiki/Web_storage#Local_and_session_storage), so that the todos persist after refreshing the page.
 
-##### Step 3-1: placing the elements in HTML ([HTML file](3-1.app.html) [JS file](3-1.app.html))
+##### Step 3-1: placing the elements in HTML ([HTML file](3-1.app.html) [JS file](3-1.app.js))
 
 As with the counter, let's start by placing the HTML structure. We want three elements:
 
@@ -1807,7 +1807,7 @@ We will set up a `<div>` to contain the todos that will be created by JS. To mak
 <div id="todos"></div>
 ```
 
-#### Step 3-2: creating a todo list ([HTML file](3-2.app.html) [JS file](3-2.app.html))
+#### Step 3-2: creating a todo list ([HTML file](3-2.app.html) [JS file](3-2.app.js))
 
 Taking a page from the last chapter, we will directly place our list of todos in JS itself. We can conceive of each todo as a single string, containing the description of the todo itself. To store a list of todos, we can simply use an array with strings. For example:
 
@@ -1817,7 +1817,7 @@ var todoList = ['Write tutorial', 'Play civ2'];
 
 Eventually we will want to load and save this list so that it persists when the page is refreshed. But for now, we will just keep it there in JS, until we figure out how to place these items on the HTML itself.
 
-#### Step 3-3: putting the todos in the page with JS ([HTML file](3-3.app.html) [JS file](3-3.app.html))
+#### Step 3-3: putting the todos in the page with JS ([HTML file](3-3.app.html) [JS file](3-3.app.js))
 
 Because the list of todos will change, we need to add the todo items to the page using JS. We cannot do this in HTML because HTML doesn't have logic, and hence cannot implement the notion of "creating one element per todo in the list".
 
@@ -1851,7 +1851,7 @@ document.getElementById ('todos').innerHTML = allTodos;
 
 To find the `<div>` where we want to put the todos, we used the `getElementById` function. Then, we set the `innerHTML` property of it to `allTodos`. As a result, we now see the two todos on the screen, with their corresponding buttons.
 
-#### Step 3-4: improving HTML generation ([HTML file](3-4.app.html) [JS file](3-4.app.html))
+#### Step 3-4: improving HTML generation ([HTML file](3-4.app.html) [JS file](3-4.app.js))
 
 Let's suppose now that we had a different set of todos:
 
@@ -1904,7 +1904,7 @@ var makeTodo = function (task) {
 
 We use the function `lith.g` to *g*enerate the HTML string for us. Note we pass to it an array with two elements: `['p', task]`, and `['button', 'Mark as complete']`. As you might have guessed, each of these stands for an HTML tag. The first element of each is the tag itself (`'p'` and `'button'`), the second one is its contents.
 
-#### Step 3-5: adding todo items ([HTML file](3-5.app.html) [JS file](3-5.app.html))
+#### Step 3-5: adding todo items ([HTML file](3-5.app.html) [JS file](3-5.app.js))
 
 We're now in a position to add items to the todo list! When adding a todo, we need to be sure to update both `todoList` *and* the HTML inside the `<div>`.
 
@@ -1970,7 +1970,7 @@ This button, when clicked, will execute the `addTodo` function, which in turn wi
 
 We can now successfully add todo items! Let's implement now the logic for removing them.
 
-#### Step 3-6: deleting todo items ([HTML file](3-6.app.html) [JS file](3-6.app.html))
+#### Step 3-6: deleting todo items ([HTML file](3-6.app.html) [JS file](3-6.app.js))
 
 As you may have guessed, we'll define now a `removeTodo` function to remove a todo from the list.
 
@@ -2006,7 +2006,7 @@ Let's now jump to the `<button>`. Note that in between `'button'` and `'Mark as 
 
 By now we have a fully functional todo app, where we can add and remove todos to our heart's content. The only problem left with this is that if we close or refresh the page, we will lose all the todos! In the next section, we'll implement functions for saving and loading todos onto the browser's local storage.
 
-#### Step 3-7: loading and saving todos ([HTML file](3-7.app.html) [JS file](3-7.app.html))
+#### Step 3-7: loading and saving todos ([HTML file](3-7.app.html) [JS file](3-7.app.js))
 
 For loading and saving, we will create two functions, `loadTodos` and `saveTodos`.
 

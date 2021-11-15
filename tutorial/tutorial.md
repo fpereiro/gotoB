@@ -1783,7 +1783,7 @@ In this chapter we will explore how to build a simple todo list app. This app wi
 1. Create HTML using JS.
 2. Storing and retrieving data in the browser's [local storage](https://en.wikipedia.org/wiki/Web_storage#Local_and_session_storage), so that the todos persist after refreshing the page.
 
-##### Step 3-1: placing the elements in HTML ([HTML file](3-1.app.html) [JS file](3-1.app.js))
+#### Step 3-1: placing the elements in HTML ([HTML file](3-1.app.html) [JS file](3-1.app.js))
 
 As with the counter, let's start by placing the HTML structure. We want three elements:
 
@@ -2092,31 +2092,48 @@ You might have noticed that a lot of the functions now need to call each other. 
 
 For now it's time to celebrate the completion of our todo app and move to our next app, the shopping cart!
 
+### Chapter 4: the shopping cart
 
+In this chapter we will explore how to build a shopping cart. This app will bring the following challenges:
 
+1. Retrieving information asynchronously.
+2. Switching between two views: main view & product detail.
+3. Handling multiple user inputs.
 
 ### TODO
 
-shopping cart: two views.
+shopping cart: navigation.
 
 crud: fake server. navigation based on being logged or not.
 
+- manage state & redraw page. think of view as another function that is updated when its inputs change.
+
+- Modifying the same data in two places (either on UI or coming from the server): need to update views.
+- Parts of the view that rely on a computed value also have to be updated.
+- Update functions need to know what depends on the data and update those views, or even call handlers.
+- Against blank slate:
+   - Loss of state of dropdowns/scroll on general redraw.
+   - Inefficient long list updating.
+- Loose functions and loose variables.
+
 - events
    - two sources of events: user interactions and responders
-   - responders don't call responders; they only call events!
+   - responders don't call responders; they only call events.
+- views
+   - pure functions: don't receive x and don't call events. why this? to not trigger redraws while we're in the middle of one. redrawing happens at the end of each cycle. each change is given a chance to propagate. redraws happen one at a time.
+   - if it receives an x, like responders, it can say things.
+- general patterns
+   - navigation & views
+   - inputs, dropdowns, checkboxes
+   - ajax
 
-changes: by the user and by the server!! start with the end in mind!!
-
-- Using the same data in multiple places.
-- Having two different sources for the info.
-- Two way data binding: if something can be modified from more than one place.
-- Efficient long list updating: example of long list with scroll?
-- Make up unique names for update functions, or have them global?
-- Update functions need to know what depends on the view. with state, it's the other way around!
-- HTML generation & escaping it.
-- Having a boundary around the element. But wouldn't it be eough to write it in one place? You want disambiguated names anyway!
-
-other events: still modify the store, or modify the server! perhaps some transitions, things not stored? the third are pure side effects :).
-
-pure functions: views! don't receive x and don't call events. why this? to not trigger redraws while we're in the middle of one! mechanism will still queue. what are the implications? depending on what you do, if it's dangling it will stop everything. gotoB non-prod will make sure it doesn't break anything. so it is conceptual.
-if it receives an x, it can say things.
+Overview:
+- Move HTML generation to JS and keep base HTML as a springboard.
+- Move state to JS and make HTML reflect it.
+- Bind DOM elements to trigger functions.
+- Divide functions by type: 1) update view; 2) update state (through user input or not); 3) communicate (load or save) state to server (or localstorage). Order of calls:
+   - update view comes always after update of state (but some state changes don't update views necessarily).
+   - communication can come before updating of state (load) or after (save).
+- The innovation: responder/listener. Allow a function to be called by a system that detects when its inputs change. Used for views. But also for computed state (state that depends on other state). But what's an example of computed state? With logic in the vfuns, it doesn't seem to be necessary. in a spreadsheet it would! // What do you save? Express views directly as responders. Also functions for saving state. For loading state, you write a normal function.
+- Must recycle parts of the HTML/DOM.
+- Group state in one place.

@@ -2088,7 +2088,7 @@ placeTodos ();
 
 So there it is! In six functions, we have enabled an entire todo list app that will retain its information upon refreshing. While this is still yet too simple to be a real app, it's starting to get quite close to being one.
 
-You might have noticed that a lot of the functions now need to call each other. For example `addTodo` and `removeTodo` both invoke `placeTodos` and `saveTodos`. For now, this is manageable, but in a more complex app this will become harder to implement and to follow. The essential problem is that of making sure that any changes are reflected both in the page and in the storage of todos. We'll see more of this problem in the chapters that follow.
+You might have noticed that a lot of the functions now need to call each other. For example `addTodo` and `removeTodo` both invoke `placeTodos` and `saveTodos`. For now, this is manageable, but in a more complex app this will become harder to implement and to understand. The essential problem is that of making sure that any changes are reflected both in the page and in the storage of todos. We'll see more of this problem in the chapters that follow.
 
 For now it's time to celebrate the completion of our todo app and move to our next app, the shopping cart!
 
@@ -2100,11 +2100,85 @@ In this chapter we will explore how to build a shopping cart. This app will brin
 2. Switching between two views: main view & product detail.
 3. Handling multiple user inputs.
 
+#### Step 4-1: placing the elements in HTML ([HTML file](4-1.app.html) [JS file](4-1.app.js))
+
+In this app we will need two views:
+
+1. One for listing all the products and showing the cart itself.
+2. Another view for showing the details of a particular product.
+
+There's two ways to structure the HTML to implement a couple of views:
+
+1. We can create one `<div>` per view and hide the `<div>` that corresponds to the non-active view. When the view changes, we hide the visible `<div>` and show the hidden one.
+2. We can just have a single `<div>` and only put the active view inside it. When the view changes, we eliminate its contents and replace them with that of the new view.
+
+We'll take the second approach, simply because it makes for a simpler HTML structure (one `<div>` instead of two).
+
+The HTML body will contain the following element:
+
+```
+<div id="main"></div>
+```
+
+Notice we put an `id` of `main` to the `<div>` so that we can easily find it and change its contents when needed.
+
+#### Step 4-2: the (fake) server ([HTML file](4-2.app.html) [JS file](4-2.app.js))
+
+In the interest of getting as close to reality as possible, we will write a (fake) server that will return a list of products. In addition to providing product information, this server will also store our shopping cart. In reality, the list of products will be hardcoded in a JS file, and the shopping cart will be stored in the browser's local storage.
+
+However artificial, this server allows us to interact with functions that both load and save data through an asynchronous process, which is exactly how it happens in real life webapps.
+
+The fake server will expose two routes: `GET /products` and `POST /cart`, one for retrieving products, the other one for saving the cart.
+
+The fake server will be reached through a `server` function that takes a `method` (either `GET` or `POST`), a `path` (either `/products` or `/cart`), an optional `body` and a `callback`. The callback is a function that will be executed when we get a response from the server. Let's see a couple of examples:
+
+```javascript
+// To get products
+server ('GET', '/products', function (error, products) {
+   if (error) return alert ('There was an error communicating with the server!');
+
+   // If there's no error, `products` is the list of products. You can do something with it here.
+});
+
+// To save an (empty) cart
+var cart = {};
+server ('POST', '/cart', cart, function (error) {
+   if (error) return alert ('There was an error saving your cart!');
+
+   // If there's no error, the cart is saved successfully in the server.
+});
+```
+
+In both examples above, the logic for what to do after the server responds is contained in the `callback` function. You might have noticed that the function always takes an `error` as its first argument: this is essential, because errors when communicating with a server are fairly common and must be accounted for. Callbacks are *asynchronous* (that is, you must wait for them) and they are a fact of life in real-life JS. Some abstractions, like [promises](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise), help simplify them somewhat, but not completely. What you cannot do (unfortunately) is something like this:
+
+```javascript
+var products = server ('GET', '/products');
+// Do something with `products` here.
+```
+
+That would be much simpler, but not possible with plain JS.
+
+However, programming with callbacks can be quite manageable. We'll explore how as we build our shopping cart.
+
+For now, we'll define two functions:
+
+```javascript
+var loadProducts = function (cb) {
+   server ('GET', '/products', cb);
+}
+
+var saveCart = function (cart, cb) {
+   server ('POST', '/cart', cart, cb);
+});
+```
+
+TODO: explanation
+
+**Note**: the source code for the fake server will be at the top of the JS file for each section, if you are curious and you wnat to take a look at it.
+
 ### TODO
 
-shopping cart: navigation.
-
-crud: fake server. navigation based on being logged or not.
+crud with auth
 
 - manage state & redraw page. think of view as another function that is updated when its inputs change.
 
@@ -2132,7 +2206,7 @@ Overview:
 - Move state to JS and make HTML reflect it.
 - Bind DOM elements to trigger functions.
 - Divide functions by type: 1) update view; 2) update state (through user input or not); 3) communicate (load or save) state to server (or localstorage). Order of calls:
-   - update view comes always after update of state (but some state changes don't update views necessarily).
+   - update view comes always after update of state (but some state changes don't update views necessarily). But view change does imply state change.
    - communication can come before updating of state (load) or after (save).
 - The innovation: responder/listener. Allow a function to be called by a system that detects when its inputs change. Used for views. But also for computed state (state that depends on other state). But what's an example of computed state? With logic in the vfuns, it doesn't seem to be necessary. in a spreadsheet it would! // What do you save? Express views directly as responders. Also functions for saving state. For loading state, you write a normal function.
 - Must recycle parts of the HTML/DOM.

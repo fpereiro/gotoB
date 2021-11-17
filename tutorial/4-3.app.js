@@ -21,7 +21,7 @@ var server = function (method, path) {
          {id: 2, name: 'book',   image: 'book.png',   price: 5},
          {id: 3, name: 'car',    image: 'car.png',    price: 80},
          {id: 4, name: 'table',  image: 'table.png',  price: 25},
-         {id: 5, name: 'tree',   image: 'banana.png', price: 40},
+         {id: 5, name: 'tree',   image: 'tree.png',   price: 40},
       ]);
    }
 
@@ -51,3 +51,36 @@ var saveCart = function (cart, cb) {
 var loadCart = function (cb) {
    server ('GET', '/cart', cb);
 }
+
+var showProducts = function () {
+   loadProducts (function (error, products) {
+      if (error) return alert (error);
+
+      var style = ['div.product', {'margin-top': 5}, [
+         ['p, img', {
+            float: 'left',
+            'margin-left': 20,
+            'line-height': 3
+         }],
+         ['p', {width: 40}],
+         ['img', {width: 30}],
+      ]];
+
+      var html = [
+         ['style', style],
+         ['h3', 'List of products'],
+         products.map (function (product) {
+            return ['div', {class: 'product'}, [
+               ['p', product.name],
+               ['img', {src: product.image}],
+               ['p', '$' + product.price],
+               ['br'], ['br'],
+            ]];
+         })
+      ];
+
+      document.getElementById ('main').innerHTML = lith.g (html);
+   });
+}
+
+showProducts ();

@@ -2128,7 +2128,7 @@ In the interest of getting as close to reality as possible, we will write a (fak
 
 However artificial, this server allows us to interact with functions that both load and save data through an asynchronous process, which is exactly how it happens in real life webapps.
 
-The fake server will expose two routes: `GET /products` and `POST /cart`, one for retrieving products, the other one for saving the cart.
+The fake server will expose three routes: `GET /products`, `POST /cart` and `GET /cart`, one for retrieving products, the other two for saving and loading the cart.
 
 The fake server will be reached through a `server` function that takes a `method` (either `GET` or `POST`), a `path` (either `/products` or `/cart`), an optional `body` and a `callback`. The callback is a function that will be executed when we get a response from the server. Let's see a couple of examples:
 
@@ -2147,9 +2147,16 @@ server ('POST', '/cart', cart, function (error) {
 
    // If there's no error, the cart is saved successfully in the server.
 });
+
+// To load the cart
+server ('GET', '/cart', cart, function (error, cart) {
+   if (error) return alert ('There was an error loading your cart!');
+
+   // If there's no error, `cart` will contain the latest version of the cart.
+});
 ```
 
-In both examples above, the logic for what to do after the server responds is contained in the `callback` function. You might have noticed that the function always takes an `error` as its first argument: this is essential, because errors when communicating with a server are fairly common and must be accounted for. Callbacks are *asynchronous* (that is, you must wait for them) and they are a fact of life in real-life JS. Some abstractions, like [promises](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise), help simplify them somewhat, but not completely. What you cannot do (unfortunately) is something like this:
+In all three examples above, the logic for what to do after the server responds is contained in the `callback` function. You might have noticed that the function always takes an `error` as its first argument: this is essential, because errors when communicating with a server are fairly common and must be accounted for. Callbacks are executed *asynchronously* - this means that you must wait for them to be executed. Callbacks are a fact of life in real-life JS. Some abstractions, like [promises](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise), help simplify them somewhat, but not completely. What you cannot do (unfortunately) is something like this:
 
 ```javascript
 var products = server ('GET', '/products');
@@ -2160,7 +2167,7 @@ That would be much simpler, but not possible with plain JS.
 
 However, programming with callbacks can be quite manageable. We'll explore how as we build our shopping cart.
 
-For now, we'll define two functions:
+For now, we'll define three functions:
 
 ```javascript
 var loadProducts = function (cb) {
@@ -2169,19 +2176,50 @@ var loadProducts = function (cb) {
 
 var saveCart = function (cart, cb) {
    server ('POST', '/cart', cart, cb);
-});
+}
+
+var loadCart = function (cb) {
+   server ('GET', '/cart', cb);
+}
 ```
 
-TODO: explanation
+As you can see, all three functions invoke the `server` function - this is to be expected, since each function involves our fake server. More interestingly, all the functions take a callback as their last argument (in the code, we have named this argument as `cb`, which is short for *callback*). This means that the logic that will be executed *after* the server responds will have to be contained in the callback.
+
+This has been a challenging part of the tutorial, so please don't be discouraged if you struggled to follow the explanation. If something is unclear, you can always [let me know](https://github.com/fpereiro/gotoB/issues) and I'll improve the explanation.
 
 **Note**: the source code for the fake server will be at the top of the JS file for each section, if you are curious and you wnat to take a look at it.
 
+#### Step 4-3: showing the products ([HTML file](4-3.app.html) [JS file](4-3.app.js))
+
+We will now use the product list brought by `loadProducts` and show the products on the page. For this, we will create a `showProducts` function.
+
+```javascript
+var showProducts = function () {
+   loadProducts (function (error, products) {
+      if (error) return alert (error);
+
+      var html = products.map (function (product) {
+         return ['div', [
+            ['strong', product.name],
+            ['img', {src: product.image}],
+            ['p', '$' + product.price]
+         ]];
+      });
+
+      document.getElementById ('main').innerHTML = html;
+   });
+}
+
+showProducts ();
+```
+
+TODO explanation
+
 ### TODO
 
-crud with auth
+Chapter 5: crud with auth
 
 - manage state & redraw page. think of view as another function that is updated when its inputs change.
-
 - Modifying the same data in two places (either on UI or coming from the server): need to update views.
 - Parts of the view that rely on a computed value also have to be updated.
 - Update functions need to know what depends on the data and update those views, or even call handlers.
@@ -2189,6 +2227,8 @@ crud with auth
    - Loss of state of dropdowns/scroll on general redraw.
    - Inefficient long list updating.
 - Loose functions and loose variables.
+
+- why event? so you don't have to involve all the logic of a change into one handler. allows you 1 to n call. example: if price changes, this affects both the products list and the cart.
 
 - events
    - two sources of events: user interactions and responders
@@ -2208,6 +2248,6 @@ Overview:
 - Divide functions by type: 1) update view; 2) update state (through user input or not); 3) communicate (load or save) state to server (or localstorage). Order of calls:
    - update view comes always after update of state (but some state changes don't update views necessarily). But view change does imply state change.
    - communication can come before updating of state (load) or after (save).
-- The innovation: responder/listener. Allow a function to be called by a system that detects when its inputs change. Used for views. But also for computed state (state that depends on other state). But what's an example of computed state? With logic in the vfuns, it doesn't seem to be necessary. in a spreadsheet it would! // What do you save? Express views directly as responders. Also functions for saving state. For loading state, you write a normal function.
+- The innovation: responder/listener. Allow a function to be called by a system that detects when its inputs change. Used for views. But also for computed state (state that depends on other state). But what's an example of computed state? With logic in the vfuns, it doesn't seem to be necessary. in a spreadsheet it would! Besides computed state, a much more common thing: when one thing happens, another should happen as well. This could be considered as computed state as well. // What do you save? Express views directly as responders. Also functions for saving state. For loading state, you write a normal function.
 - Must recycle parts of the HTML/DOM.
 - Group state in one place.

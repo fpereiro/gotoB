@@ -6,7 +6,7 @@ gotoв is a framework for making the frontend of a web application (henceforth *
 
 ## Current status of the project
 
-The current version of gotoв, v2.1.1, is considered to be *mostly stable* and *mostly complete*. [Suggestions](https://github.com/fpereiro/gotoB/issues) and [patches](https://github.com/fpereiro/gotoB/pulls) are welcome. Besides bug fixes, and the completion of the tutorial in one of the appendixes, there are no changes planned.
+The current version of gotoв, v2.1.1, is considered to be *mostly stable* and *complete*. [Suggestions](https://github.com/fpereiro/gotoB/issues) and [patches](https://github.com/fpereiro/gotoB/pulls) are welcome. Besides bug fixes, and the completion of the tutorial in one of the appendixes, there are no changes planned.
 
 gotoв is part of the [ustack](https://github.com/fpereiro/ustack), a set of libraries to build webapps which aims to be fully understandable by those who use it.
 
@@ -160,22 +160,22 @@ Let's see each of these in turn:
 gotoв uses [js object literals](https://github.com/fpereiro/lith) to generate HTML. Object literals are mere arrays (`[...]`) and objects (`{...}`) that conform to certain shapes. We call these literals `liths`. Let's see a few examples of some liths and their corresponding HTML:
 
 - `['p', 'Hello'] -> <p>Hello</p>`
-- `['div', {class: 'nice'}, 'Cool'] -> <div class="nice">Cool</div>`.
-- `['div', ['p', {id: 'nested'}, 'Turtles']] -> <div><p id="nested">Turtles</p></div>`.
+- `['div', {class: 'nice'}, 'Cool'] -> <div class="nice">Cool</div>`
+- `['div', ['p', {id: 'nested'}, 'Turtles']] -> <div><p id="nested">Turtles</p></div>`
 
 In general, a lith is an array with one to three elements. The first element is a string indicating the `tag`. There can be a second element for specifying attributes, which is an object. Finally, you can add `contents` to the lith; these contents can be a string, a number or another lith.
 
 Besides liths, we also can write an array containing multiple liths, which is affectionally called *lithbag*. For example:
 
-- `<p></p><p></p>`: `[['p'], ['p']]`.
+- `[['p'], ['p']] -> <p></p><p></p>`
 
 A lithbag can also be a collection of text and number fragments. For example:
 
-- `i ama1337lithbag`: `['i am', 'a', 1337, 'lithbag']`.
+- `['i am', 'a', 1337, 'lithbag'] -> i ama1337lithbag`
 
 You can put a lithbag as the contents to another lith:
 
-- `<div>Some text</div>`: `['div', ['Some', ' ', 'text']]`.
+- `['div', ['Some', ' ', 'text']] -> <div>Some text</div>`
 
 Rather than writing standalone liths or lithbags, gotoв expects you to write **functions that return liths or lithbags**. For example, this function returns HTML for a `hello world` page:
 
@@ -220,11 +220,11 @@ The following are examples of what can (and should!) be contained on the store:
 
 gotoв structures all operations [through events](https://github.com/fpereiro/recalc). All actions to be performed on the webapp can be modeled as events. This includes updating `B.store`, which is updated by gotoв's event system instead of being modified directly.
 
-The function for **triggering** an event is `B.call`. We prefer the term *call* instead of other terms normally used with events (such as *trigger* or *fire*) because we see events as a process of communication. An event is a call to one or more parts of your code that might in turn *respond* to that call.
+The function for **triggering** an event is `B.call`. We prefer the term *call* instead of other terms normally used with events (such as *trigger* or *fire*) because we see events as a form of communication. An event is a *call* to one or more parts of your code that might in turn *respond* to that call.
 
-Going back to `B.call`, it receives as arguments a `verb`, a `path` and optional extra `arguments`.
+`B.call` receives as arguments a `verb`, a `path` and optional extra `arguments`.
 
-Events are not much use unless another part of the program *responds* to them. Traditionally, these are called *event listeners* but we call these *responders*, since they respond to an event being called. To create `responders`, we will use the function `B.respond`, which we'll cover in a later section. For now, all you need to know is that `responders` are defined with a `verb` and a `path` (exactly like events) and are *matched* (triggered) by events with matching `verbs` and `paths`.
+Events are useless until another part of the program *responds* to them. Traditionally, these are called *event listeners* but we call these *responders*, since they *respond* to an event being called. To create `responders`, we will use the function `B.respond`, which we'll cover in a later section. For now, all you need to know is that `responders` are defined with a `verb` and a `path` (exactly like events) and are *matched* (triggered) by events with matching `verbs` and `paths`.
 
 gotoв provides three built-in `responders` for modifying `B.store`: `set`, `add` and `rem`. These responders are already created and allow you to modify the store. Let's see them through examples:
 
@@ -389,7 +389,7 @@ And, of course, gotoв must be very useful for building a real webapp.
 
 ### What does gotoв care about?
 
-- **Ease of use**: 90% of the functionality you need is contained in four functions (one for calling an event (`B.call`), one for setting event responders (`B.respond`), one for stringifying an event call into a DOM attribute (`B.ev`) and one for creating dynamic elements which are updated when the store changes (`B.view`)). There's also three more events for performing data changes that you'll use often. But that's pretty much it.
+- **Ease of use**: 90% of the functionality you need is contained in four functions (one for calling an event (`B.call`), one for setting up event responders (`B.respond`), one for stringifying an event call into a DOM attribute (`B.ev`) and one for creating dynamic DOM elements which are updated when the store changes (`B.view`)). There's also three more events for performing data changes that you'll use often. But that's pretty much it.
 - **Fast reload**: the edit-reload cycle should take under two seconds. No need to wait until no bundle is completed.
 - **Smallness**: gotoв and its dependencies are < 2048 lines of consistent, annotated javascript. In other words, it is less than 2048 lines on top of [vanilla.js](http://vanilla-js.com/).
 - **Batteries included**: the core functionality for building a webapp is all provided. Whatever libraries you add on top will probably be for specific things (nice CSS, a calendar widget, etc.)
@@ -1381,9 +1381,9 @@ If one of gotoв's functions is invoked with invalid arguments, gotoв will call
 
 Not using the console to show errors has some advantages: errors are more visible if they're shown in the main view rather than in the console; the table shown gives you quite more info than the immedaite error; and this also works on mobile browsers, where you don't have access to a development console.
 
-If you set `B.prod` to `true`, you'll turn on *production mode*. When production mode is on, gotoв's functions will stop validating inputs and `B.error` will never be invoked. This will make your application faster, but if any of these functions is invoked with invalid arguments, you will either experience silent errors or your application will throw an exception. It is recommended that you only set this variable on a production environment only once your application has been thoroughly debugged.
+If you set `B.prod` to `true`, you'll turn on *production mode*. When production mode is on, gotoв's functions will stop validating inputs and `B.error` will never be invoked. This will make your application faster, but if any of these functions is invoked with invalid arguments, you will either experience silent errors or your application will throw an exception. It is recommended that you only set this variable on a production environment only when your application has been thoroughly debugged.
 
-With `B.prod` enabled, gotoв will be faster to create liths (since it will stop validating them) but the functions for diffing views and applying changes to the DOM will run at the same speed. By default, after 200ms gotoв gives up on performing diffs between the old and the new version of a view. To override this, you can set `B.internal.timeout` to another value. If gotoв spends more than that amount of time applying the diff algorithm, it gives up and instead creates a new set of DOM elements to replace the old ones. This is called *trampling*.
+With `B.prod` enabled, gotoв will be faster to create liths (since it will stop validating them) but the functions for diffing views and applying changes to the DOM will run at the same speed. By default, after 200 milliseconds gotoв gives up on performing diffs between the old and the new version of a view. To override this, you can set `B.internal.timeout` to another value. If gotoв spends more than that amount of time applying the diff algorithm, it gives up and instead creates a new set of DOM elements to replace the old ones. This is called *trampling*.
 
 Every gotoв redraw calls an event with verb `redraw` and a `path` that is the same of that of the redrawn view. These events contain performance information, namely: how much time it took to `create` the lith, how much time it took to `prediff` it (an intermediate processing step), how much the actual `diff` computation took, how much time it took to apply the changes to the `DOM`, and a `total` amount of time. You can inspect these through `B.eventlog`. The event also informs the length of the `diff`, and how many edits the diff required (the more edits, the more different were the old and the new view, and the longer the diff takes to computed and to be applied to the DOM).
 
@@ -1608,7 +1608,7 @@ Once `B.redraw` goes forth with a particular redraw required by a `rfun`, it doe
 
 `B.diff` is an implementation of the [Myers' diff algorithm](http://www.xmailserver.org/diff2.pdf) that takes the flattened liths outputted by `B.prediff` and produces a shortest edit script. The function gives us a minimal amount of changes that we need to perform on the DOM to go from the first array of strings to the second.
 
-`B.diff` runs synchronously and blocks any other redraws (or any other js code running, really). Most of the time it runs quite quickly, but if the liths are very large, or they are very dissimilar to each other, the function will take too long to run. For this reason, after a certain amount of time, if the diff is not done, `B.diff` bails and declares that it cannot finish the diff in a reasonable amount of time. In this case, `B.redraw` will *trample* the old DOM element and create a new one from scratch that completely replaces it. By default, this happens after 200ms of running `B.diff`. *Tramples* are undesirable and can usually be eliminated by either reducing the sizes of liths by paginating long lists of items.
+`B.diff` runs synchronously and blocks any other redraws (or any other js code running, really). Most of the time it runs quite quickly, but if the liths are very large, or they are very dissimilar to each other, the function will take too long to run. For this reason, after a certain amount of time, if the diff is not done, `B.diff` bails and declares that it cannot finish the diff in a reasonable amount of time. In this case, `B.redraw` will *trample* the old DOM element and create a new one from scratch that completely replaces it. By default, this happens after 200 milliseconds of running `B.diff`. *Tramples* are undesirable and can usually be eliminated by either reducing the sizes of liths by paginating long lists of items.
 
 Most times, `B.diff` will produce a diff in time that can be then applied to the DOM. This task is picked up by `B.applyDiff`. For each element in the diff, it either `keeps` it, `adds` it or `removes` it. The types of elements are normal DOM elements, opaque elements (DOM elements that are treated as opaque entities) and literal elements (text). `B.applyDiff` performs the following operations:
 - Do an entire pass on the diff to figure out the positions of the current DOM elements on the *old* lith.
@@ -1618,7 +1618,7 @@ Most times, `B.diff` will produce a diff in time that can be then applied to the
 
 gotoв is fully deterministic:
 
-- The ids of responders and reactive views are generated with a counter, so that if the app code is also deterministic, the same responders and views will have the same ids when re-running the app. This is very helpful for debugging.
+- The ids of responders and reactive views are generated with a counter that gets incremented by one each time a reactive view is created, so that if the app code is also deterministic, the same responders and views will have the same ids when re-running the app. This is very helpful for debugging.
 - The entire redraw flow (including the diff) is deterministic as well and will generate the same result, through the same operations, when re-running the app.
 
 To quickly detect which DOM elements belong to reactive views, gotoв marks their id with the letter `в` followed by a number. This allows `B.unmount` to eliminate the responders of deleted views and `B.prediff` to know when to reference the lith of a nested reactive view.

@@ -1,6 +1,7 @@
 var server = function (method, path) {
    var body = arguments.length === 4 ? arguments [2] : undefined;
    var cb   = arguments.length === 4 ? arguments [3] : arguments [2];
+   if (! cb) cb = function () {};
 
    var reply = function (code, body) {
       setTimeout (function () {

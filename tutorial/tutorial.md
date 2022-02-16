@@ -10,8 +10,6 @@ This tutorial requires only basic knowledge of HTML, JavaScript and programming.
 
 ## Part 1: a conceptual introduction to webapps
 
-This entire part is also contained in a [set of videos](TODO ADD LINK) with the same content. If you prefer to learn with videos, you can check them out now!
-
 In the first part of the tutorial, we present a *conceptual* introduction to webapps. Before even seeing a line of code, it can be extremely helpful to understand the basic concepts that explain the why, how and what of webapps. We will cover concepts such as *the virtual world*, *devices*, *application*, *user interface*, *logic*, *server*, *user*, *frontend*, *backend*, *HTML*, *JavaScript* and *framework*. By the end of this part, you should have a high-level understanding of how they all fit together.
 
 After all of this makes sense, it will be *far easier* to understand the details of how to implement a frontend. New knowledge can only be created as connections to knowledge you already have; our hope is that by giving you a short, yet rich web of concepts to understand webapps, the implementation details will become easier to understand, connect and remember.
@@ -928,11 +926,11 @@ Why web apps use three types of files instead of one? Each type of file has its 
 - [CSS](https://en.wikipedia.org/wiki/CSS) files are *stylesheets*, which determine how the HTML looks.
 - [JS](https://en.wikipedia.org/wiki/JavaScript) files are *code*, which can modify the HTML & CSS and communicate with the backend.
 
-Modern webapps - including those built with gotoв - are reliant on JS. But they still use HTML & CSS. Even the most modern frontend frameworks still need to rely on HTML and CSS to create web apps.
+Modern webapps - including those built with gotoв - are reliant on JS. But they still use HTML & CSS. Even the most modern frontend frameworks still rely on HTML and CSS to create web apps.
 
 The HTML and CSS represent the actual content of the page. HTML is what is shown on the page, while the CSS changes the way that the HTML looks. JS is usually there to produce some changes on the HTML and CSS, but it is not strictly necessary and it is actually possible (although nowadays rare) to write webapps without JS.
 
-HTML, CSS and JS are text files, really. They have to conform to certain rules (very strict ones in the case of JS), but they are humanly readable and can be opened on any text editor.
+HTML, CSS and JS files are text files, really. They have to conform to certain rules (very strict ones in the case of JS), but they are humanly readable and can be opened on any text editor.
 
 When you load a webpage, an HTML file (which is text that conforms to certain rules, nothing else) may contain further CSS or JS inside of it. These CSS or JS files are also text, also conforming to certain rules.
 
@@ -1035,7 +1033,7 @@ The elements that are fixed (those not between curly braces) are placed as is. O
 - `{ELAPSED_TIME}` is a **variable**. When rendering the template, the app substitutes `{ELAPSED_TIME}` with the actual elapsed time stored by the state, for example: `00:00:00`.
 - The buttons are determined by a **conditional**. Depending on whether a part of the state fulfills a condition, certain buttons are shown. If the state of the clock were to be `paused`, for example, the UI would show the buttons for `START` and `STOP`, but not the buttons for `PAUSE` and `STOP`.
 
-*Variable substitution* and *conditional* are two main patterns of templates. To give an example of the third one, **iteration**, let's revisit our todo list app.
+*Variable substitution* and *conditional* are two of the main patterns of templates. To give an example of the third one, **iteration**, let's revisit our todo list app.
 
 ```
   ┌──╌ Todo list app template ╌───────┐
@@ -1132,7 +1130,7 @@ One last point to mention before we move on to state management: while in the ex
 In the example above, `onclick` is the event registered when the user clicks on the button. The event handler is the function associated with each `onclick`, for example: `start_clock`, `pause_clock` and `stop_clock`. These will all be JS functions.
 
 An alternative way to do this is to simply add a link for each action you want to perform. In this way, each action will trigger a page refresh, and the server will be completely in charge of updating the application.
-l
+
 ```
 ┌──╌ Stopwatch app template, with links  ╌─────────────────┐
 │                                                          │
@@ -1241,10 +1239,12 @@ Whenever the elapsed time changes, `update_clock` is called. Whenever the state 
 
 Defining specific functions for specific parts of the app, and calling the right one when the state changes, can quickly become unmaintainable, for two reasons:
 
-1. Components can have sub-components, each with its own data dependencies. This means that, to redraw things efficiently, you need one function per each subcomponent in your app.
-2. A part of the state can be modified by multiple interactions. Each interaction that modifies a certain part of the state must then be responsible for updating each component that depends on the state.
+1. Each component or sub-component of the app usually depends on one or more parts of the state. This means that if there is a change in one of the parts of the state on which the component depends, the component must be updated.
+2. A user interaction can change multiple parts of the state.
 
-We'll see an extended example of this in the second part of this tutorial, when we start developing an app.
+Because of these two facts, you end up having to determine a list of components or sub-components that are modified by each user interaction, and create a custom function to update those components. If you have M components and sub-components that each rely on average on N parts of the state, you have M\*N dependencies that you need to track. If a user interaction modifies P parts of the state, then you need to go through the M\*N dependencies for each of these parts of the state, and make sure to update those components. With each extra dependency, you have to modify several parts of the code. In practice, the complexity and the length of the app increases *quadratically* rather than *linearly* as you add features.
+
+It is surprising to see how quickly this can happen in apps with relatively simple UIs. We'll see more about this *quadratic drift* in the second part of this tutorial.
 
 We're now almost done with the first part of this tutorial! The last chapter awaits. In it, we will explore the role of JavaScript in webapps.
 
@@ -1521,7 +1521,7 @@ In the example above, there are already two todos present, and we're about to en
   └───────────────────────────────────┘
 ```
 
-With its new power, Ajax also required new responsibility. Here's the things that JS must do to implement an interaction without a page refresh:
+Along with its new power, Ajax also received more responsibility. Here's the things that JS must do to implement an interaction without a page refresh:
 
 1. Send a request to the server.
 2. Receive a response from the server and process it (for example: everything went well, or was there an error?).
@@ -1545,7 +1545,7 @@ Nowadays, there are more powerful (and complex) ways of loading JS libraries. Ho
 JS, Ajax and the first generation of JS frameworks grew hand in hand in the second half of the 2000s. Some webapps already started to boast complex and high-quality UIs. For many teams, however, the complexity of the client became problematic. Most of the problems were related to two basic concerns:
 
 1. **Generating HTML to update the page**: as we said above, after an Ajax interaction, the page usually needs to be updated. This requires us to generate HTML that reflects the updated page. HTML is text, so it is possible to create HTML by putting together strings. But this is time consuming and error-prone, because it doesn't use templates or other abstractions that can better express how the HTML should be produced.
-2. **Updating certain the page**: after an Ajax interaction, some parts of the page have to be updated. To decide which parts should be updated, and based on which information, is also something that becomes complex if implemented on a case-by-case basis.
+2. **Updating certain parts of the page at the right time**: after an Ajax interaction, some parts of the page have to be updated. To decide which parts should be updated, and based on which information, is also something that becomes complex if implemented on a case-by-case basis.
 
 The two basic concerns might sound quite familiar to you. Indeed, we have covered them in chapter 7! They are **templating** and **state management**. To deal with them, web frameworks emerged in the late 2000s and early 2010s. These frameworks offered their own solution to these two concerns. Some of these frameworks were **server-side**, which means that all the templating and some of the state management happened in the server. In practice, this means that the updated parts of the page are generated in the server and then put in place by JS. These frameworks are powered by other programming languages, such as PHP, Ruby or Python.
 
@@ -1555,15 +1555,15 @@ Server-side and client-side web frameworks continue to exist and evolve to the p
 
 This chapter concludes our conceptual introduction to web applications. If you've made it this far, congratulations!
 
-In the second part of the tutorial, we switch to a hands-on approach and start building a few simple webapps. Through those examples, we'll learn common and recurring patterns of web development.
+In the second part of the tutorial, we switch to a hands-on approach and start building a few simple webapps. Through those examples, we'll come to understand better a few fundamental problems of frontend development that seem to emerge in almost all webapps, as well as some solutions to them.
 
 ## Part 2: developing webapps from scratch
 
-Originally, this part of the tutorial was going to be about how to develop a frontend with gotoв. But eventually we decided instead to start developing a frontend with no tools at all, to understand the raw problems we're facing when implementing a rontend. We then slowly introduce gotoв to solve some of these problems for us. In this way, we can illustrate how gotoв emerges as the solution to some common problems, rather than "the way" in which things should be done. We also hope this approach will make both the tutorial and gotoв itself far easier to understand and remember.
+Originally, this part of the tutorial was going to be about how to develop a frontend with gotoв. But eventually we decided instead to do something different: start developing small apps with no tools at all, and understand firsthand the raw problems we face when implementing a frontend. We then slowly introduce gotoв to solve some of these problems for us. In this way, we can illustrate how gotoв emerges as the solution to some common problems that occur when implementing frontends, rather than showing gotoв as "the way" in which things should be done. We also hope this approach will make both the tutorial and gotoв itself far easier to understand and remember.
 
-### Chapter 1: setting up the frontend
+### Chapter 1: setting up the basics
 
-Let's start by setting up the basics. You only need the following:
+Let's start by setting up the basics of an app. You only need the following:
 
 - A computer.
 - A text editor.
@@ -1573,7 +1573,7 @@ Let's start by setting up the basics. You only need the following:
 
 You can call it `app` - put this folder somewhere where you can easily find it later.
 
-#### Step 1-2: create a base HTML file ([HTML file](1-2.app.html))
+#### Step 1-2: create a base HTML file ([HTML](1-2.app.html))
 
 As we saw in chapter 6 of part 1, all webapps start with a single HTML file that is loaded by the browser. We will now write this base HTML file.
 
@@ -1609,7 +1609,7 @@ This HTML will load two files in total:
 
 Remember: all of these files are just text files, interpreted in a certain way by the browser.
 
-#### Step 1-3: create a js file to contain the code for the application ([HTML file](1-3.app.html) [JS file](1-3.app.js))
+#### Step 1-3: create a js file to contain the code for the application ([HTML](1-3.app.html) [JS](1-3.app.js))
 
 In the same folder, create an empty file named `app.js`. All our application logic will go here.
 
@@ -1617,7 +1617,7 @@ In the same folder, create an empty file named `app.js`. All our application log
 
 After this is done, open the HTML file in your browser. You can do this by right clicking the HTML file on the file manager and opening it with your browser. You should see an empty page. Keep this page open! Every time we complete a step, you can go back to the page, refresh it, and see your changes.
 
-#### Step 1-5: Hello World ([HTML file](1-5.app.html) [JS file](1-5.app.js))
+#### Step 1-5: Hello World ([HTML](1-5.app.html) [JS](1-5.app.js))
 
 If you want to add a simple greeting, the simplest way to do it is by modifying the HTML file. Open `app.html` and change the `<body>` tag to the following:
 
@@ -1634,14 +1634,14 @@ Note we still haven't done anything with our JS file. In the next chapter, we wi
 
 ### Chapter 2: the counter
 
-The counter app is perhaps the simplest application that can be conceived (our Hello World example in the previous chapter cannot really be considered an application, it's just too simple!). The counter is composed of two elements:
+The counter app is perhaps the simplest application that can be conceived (our Hello World example in the previous chapter cannot really be considered an application, since it lacks both state and logic). The counter is composed of two elements:
 
 1. A counter that shows a number.
 2. A button that, when pressed, increases the counter by one.
 
 Simple as it is, there are interesting things to be learned and noticed when we implement this app.
 
-#### Step 2-1: placing the elements in HTML ([HTML file](2-1.app.html) [JS file](2-1.app.html))
+#### Step 2-1: placing the elements in HTML ([HTML](2-1.app.html) [JS](2-1.app.js))
 
 Let's start with the HTML structure. We want three elements:
 
@@ -1661,7 +1661,7 @@ We will now open `app.html` and add those three tags to the `<body>`, before the
 
 If you refresh the page, you'll see that all three elements will be already there. However, you may quickly notice that the "Increase counter" button doesn't do anything when we click on it. We indeed to implement the logic that increases the value in the counter. For this, we will use JS.
 
-#### Step 2-2: increasing the counter, design ([HTML file](2-2.app.html) [JS file](2-2.app.js))
+#### Step 2-2: increasing the counter, design ([HTML](2-2.app.html) [JS](2-2.app.js))
 
 Increasing the counter is a three step process:
 
@@ -1686,7 +1686,7 @@ We also need to call this function when the `<button>` is clicked. We will modif
 
 Note that the only change we did was to add an `onclick` handler. The `onclick` handler contains the logic that will be executed when the button is clicked. In this case, it merely invokes the function `increaseCounter`, which we just defined as an empty function.
 
-#### Step 2-3: increasing the counter, extraction ([HTML file](2-3.app.html) [JS file](2-3.app.html))
+#### Step 2-3: increasing the counter, extraction ([HTML](2-3.app.html) [JS](2-3.app.js))
 
 JS needs first to *extract* the current value of the counter from HTML. JS can find the value inside the `<p>` element. For example, at the beginning, the `<p>` will have as text `Counter is 0`. We're only interested in the last part of this text, the `0`.
 
@@ -1720,7 +1720,7 @@ var counterValue = words [2];
 
 If you add these two lines to `app.js`, the `counterValue` variable will contain just a `'0'`. The first line splits the text into three words (`'Counter'`, `'is'` and `'0'`); the second one simply takes the third one into a new variable `counterValue`. Notice that since in JS the first element of a list has an index of `0`, the third one has an index of `2` - otherwise, we would have written `words [3]` instead of `words [2]`.
 
-#### Step 2-4: increasing the counter, sum ([HTML file](2-4.app.html) [JS file](2-4.app.js))
+#### Step 2-4: increasing the counter, sum ([HTML](2-4.app.html) [JS](2-4.app.js))
 
 Before we add one to `counterValue`, we need to transform it into a number. Right now, while it looks a lot like a number, it is still a string. For transforming it into a number, we use the `parseInt` function.
 
@@ -1734,7 +1734,7 @@ We can now add one to it.
 counterValue = counterValue + 1;
 ```
 
-#### Step 2-5: increasing the counter, updating the HTML ([HTML file](2-5.app.html) [JS file](2-5.app.js))
+#### Step 2-5: increasing the counter, updating the HTML ([HTML](2-5.app.html) [JS](2-5.app.js))
 
 Now that we have the updated value of the counter in `counterValue`, we need to update the value in the `<p>` element. We can do this by updating the `innerHTML` property of `<p>`.
 
@@ -1744,7 +1744,7 @@ p.innerHTML = 'Counter is ' + counterValue;
 
 And voilà! We have now a fully functioning counter application. Give it a try by clicking the button and seeing how the value goes up.
 
-#### Step 2-6: simplifying our logic ([HTML file](2-6.app.html) [JS file](2-6.app.js))
+#### Step 2-6: simplifying our logic ([HTML](2-6.app.html) [JS](2-6.app.js))
 
 You might have noticed that extracting the current value from the counter was the thing that required the most of the effort of the implementation. Out of the eight lines in our function, six were related to this!
 
@@ -1783,7 +1783,7 @@ In this chapter we will explore how to build a simple todo list app. This app wi
 1. Create HTML using JS.
 2. Storing and retrieving data in the browser's [local storage](https://en.wikipedia.org/wiki/Web_storage#Local_and_session_storage), so that the todos persist after refreshing the page.
 
-#### Step 3-1: placing the elements in HTML ([HTML file](3-1.app.html) [JS file](3-1.app.js))
+#### Step 3-1: placing the elements in HTML ([HTML](3-1.app.html) [JS](3-1.app.js))
 
 As with the counter, let's start by placing the HTML structure. We want three elements:
 
@@ -1807,7 +1807,7 @@ We will set up a `<div>` to contain the todos that will be created by JS. To mak
 <div id="todos"></div>
 ```
 
-#### Step 3-2: creating a todo list ([HTML file](3-2.app.html) [JS file](3-2.app.js))
+#### Step 3-2: creating a todo list ([HTML](3-2.app.html) [JS](3-2.app.js))
 
 Taking a page from the last chapter, we will directly place our list of todos in JS itself. We can conceive of each todo as a single string, containing the description of the todo itself. To store a list of todos, we can simply use an array with strings. For example:
 
@@ -1817,7 +1817,7 @@ var todoList = ['Write tutorial', 'Play civ2'];
 
 Eventually we will want to load and save this list so that it persists when the page is refreshed. But for now, we will just keep it there in JS, until we figure out how to place these items on the HTML itself.
 
-#### Step 3-3: putting the todos in the page with JS ([HTML file](3-3.app.html) [JS file](3-3.app.js))
+#### Step 3-3: putting the todos in the page with JS ([HTML](3-3.app.html) [JS](3-3.app.js))
 
 Because the list of todos will change, we need to add the todo items to the page using JS. We cannot do this in HTML because HTML doesn't have logic, and hence cannot implement the notion of "creating one element per todo in the list".
 
@@ -1851,7 +1851,7 @@ document.getElementById ('todos').innerHTML = allTodos;
 
 To find the `<div>` where we want to put the todos, we used the `getElementById` function. Then, we set the `innerHTML` property of it to `allTodos`. As a result, we now see the two todos on the screen, with their corresponding buttons.
 
-#### Step 3-4: improving HTML generation ([HTML file](3-4.app.html) [JS file](3-4.app.js))
+#### Step 3-4: improving HTML generation ([HTML](3-4.app.html) [JS](3-4.app.js))
 
 Let's suppose now that we had a different set of todos:
 
@@ -1904,7 +1904,7 @@ var makeTodo = function (task) {
 
 We use the function `lith.g` to *g*enerate the HTML string for us. Note we pass to it an array with two elements: `['p', task]`, and `['button', 'Mark as complete']`. As you might have guessed, each of these stands for an HTML tag. The first element of each is the tag itself (`'p'` and `'button'`), the second one is its contents.
 
-#### Step 3-5: adding todo items ([HTML file](3-5.app.html) [JS file](3-5.app.js))
+#### Step 3-5: adding todo items ([HTML](3-5.app.html) [JS](3-5.app.js))
 
 We're now in a position to add items to the todo list! When adding a todo, we need to be sure to update both `todoList` *and* the HTML inside the `<div>`.
 
@@ -1970,7 +1970,7 @@ This button, when clicked, will execute the `addTodo` function, which in turn wi
 
 We can now successfully add todo items! Let's implement now the logic for removing them.
 
-#### Step 3-6: deleting todo items ([HTML file](3-6.app.html) [JS file](3-6.app.js))
+#### Step 3-6: deleting todo items ([HTML](3-6.app.html) [JS](3-6.app.js))
 
 As you may have guessed, we'll define now a `removeTodo` function to remove a todo from the list.
 
@@ -2004,9 +2004,9 @@ We close the `onclickHandler` by closing the parenthesis.
 
 Let's now jump to the `<button>`. Note that in between `'button'` and `'Mark as complete'`, we've added the following object: `{onclick: onclickHandler}`. When lith receives an object in between the tag and the contents, it considers it to be a list of attributes. In this case, the `onclick` attribute of the `<button>` element will have `onclickHandler` as its value. This will make the button actually work. Give it a try!
 
-By now we have a fully functional todo app, where we can add and remove todos to our heart's content. The only problem left with this is that if we close or refresh the page, we will lose all the todos! In the next section, we'll implement functions for saving and loading todos onto the browser's local storage.
+By now we have a fully functional todo app, where we can add and remove todos to our heart's content. The only problem left is that if we close or refresh the page, we will lose all the todos! In the next section, we'll implement functions for saving and loading todos onto the browser's local storage.
 
-#### Step 3-7: loading and saving todos ([HTML file](3-7.app.html) [JS file](3-7.app.js))
+#### Step 3-7: loading and saving todos ([HTML](3-7.app.html) [JS](3-7.app.js))
 
 For loading and saving, we will create two functions, `loadTodos` and `saveTodos`.
 
@@ -2088,9 +2088,23 @@ placeTodos ();
 
 So there it is! In six functions, we have enabled an entire todo list app that will retain its information upon refreshing. While this is still yet too simple to be a real app, it's starting to get quite close to being one.
 
+We can group our functions by the type of work they do:
+
+- **HTML generation**: `makeTodo`.
+- **Update the HTML**: `placeTodos`.
+- **Modification of the state**: `addTodo`, `removeTodo`.
+- **Loading/saving the state**: `loadTodos`, `saveTodos`.
+
 You might have noticed that a lot of the functions now need to call each other. For example `addTodo` and `removeTodo` both invoke `placeTodos` and `saveTodos`. For now, this is manageable, but in a more complex app this will become harder to implement and to understand. The essential problem is that of making sure that any changes are reflected both in the page and in the storage of todos. We'll see more of this problem in the chapters that follow.
 
-For now it's time to celebrate the completion of our todo app and move to our next app, the shopping cart!
+#### Step 3-8: taking stock
+
+The todo list app exposed us to two more fundamental concepts of the frontend:
+
+- HTML generation using JS.
+- Loading and saving the state.
+
+It's time to celebrate the completion of our todo app and move to our next app, the shopping cart!
 
 ### Chapter 4: the shopping cart
 
@@ -2100,7 +2114,7 @@ In this chapter we will explore how to build a shopping cart. This app will brin
 2. Switching between two views: main view & product detail.
 3. Handling multiple user inputs.
 
-#### Step 4-1: placing the elements in HTML ([HTML file](4-1.app.html) [JS file](4-1.app.js))
+#### Step 4-1: placing the elements in HTML ([HTML](4-1.app.html) [JS](4-1.app.js))
 
 In this app we will need two views:
 
@@ -2122,7 +2136,7 @@ The HTML body will contain the following element:
 
 Notice we put an `id` of `main` to the `<div>` so that we can easily find it and change its contents when needed.
 
-#### Step 4-2: the (fake) server ([HTML file](4-2.app.html) [JS file](4-2.app.js))
+#### Step 4-2: the (fake) server ([HTML](4-2.app.html) [JS](4-2.app.js))
 
 In the interest of getting as close to reality as possible, we will write a (fake) server that will return a list of products. In addition to providing product information, this server will also store our shopping cart. In reality, the list of products will be hardcoded in a JS file, and the shopping cart will be stored in the browser's local storage.
 
@@ -2149,7 +2163,7 @@ server ('POST', '/cart', cart, function (error) {
 });
 
 // To load the cart
-server ('GET', '/cart', cart, function (error, cart) {
+server ('GET', '/cart', function (error, cart) {
    if (error) return alert ('There was an error loading your cart!');
 
    // If there's no error, `cart` will contain the latest version of the cart.
@@ -2187,9 +2201,9 @@ As you can see, all three functions invoke the `server` function - this is to be
 
 This has been a challenging part of the tutorial, so please don't be discouraged if you struggled to follow the explanation. If something is unclear, you can always [let me know](https://github.com/fpereiro/gotoB/issues) and I'll improve the explanation.
 
-**Note**: the source code for the fake server will be at the top of the JS file for each section, if you are curious and you wnat to take a look at it.
+**Note**: the source code for the fake server will be at the top of the JS file for each section, if you are curious and want to take a look at it.
 
-#### Step 4-3: showing the products ([HTML file](4-3.app.html) [JS file](4-3.app.js))
+#### Step 4-3: showing the products ([HTML](4-3.app.html) [JS](4-3.app.js))
 
 We will now use the product list brought by `loadProducts` and show the products on the page. For this, we will create a `showProducts` function.
 
@@ -2198,22 +2212,63 @@ var showProducts = function () {
    loadProducts (function (error, products) {
       if (error) return alert (error);
 
-      var html = products.map (function (product) {
-         return ['div', [
-            ['strong', product.name],
-            ['img', {src: product.image}],
-            ['p', '$' + product.price]
-         ]];
-      });
+      var style = ['div.product', {'margin-top': 5}, [
+         ['p, img', {
+            float: 'left',
+            'margin-left': 20,
+            'line-height': 3
+         }],
+         ['p', {width: 40}],
+         ['img', {width: 30}],
+      ]];
 
-      document.getElementById ('main').innerHTML = html;
+      var html = [
+         ['style', style],
+         ['h3', 'List of products'],
+         products.map (function (product) {
+            return ['div', {class: 'product'}, [
+               ['p', product.name],
+               ['img', {src: product.image}],
+               ['p', '$' + product.price],
+               ['br'], ['br'],
+            ]];
+         })
+      ];
+
+      document.getElementById ('main').innerHTML = lith.g (html);
    });
 }
 
 showProducts ();
 ```
 
-TODO explanation
+Well, this is quite the bunch of things, so let's break it down.
+
+- `style` contains some [litcs](https://github.com/fpereiro/lith#litcs), which are object literals that will be converted to CSS. This CSS will make things look nicer in the page. It is perfectly possible to add CSS directly instead of using litcs.
+- `html` contains a lith with a `<style>` tag (where we use the `style` variable we just created above), a `<h3>` heading, and then one `<div>` per product. Each product `<div>` contains the name of the product, an image, and the price.
+- We convert `html` into HTML using `lith.g` and then put all of that inside the `<div id="main">`.
+
+#### Step 4-4: adding items to the cart ([HTML](4-4.app.html) [JS](4-4.app.js))
+
+So far, our shopping cart only shows a list of products, but we're unable to add them to the cart. We will now tackle this now.
+
+This requires us to write a function that adds an item to the cart. We will define it now:
+
+```javascript
+var addProductToCart = function (id, quantity) {
+   loadCart (function (error, cart) {
+      if (error) return alert (error);
+      var productAlreadyInCart = dale.stop (cart, true, function (product) {
+         if (product.id === id) {
+            product.quantity += quantity;
+            return true;
+         }
+      });
+      if (! productAlreadyInCart) cart.push ({id: id, quantity: quantity});
+      saveCart (cart);
+   });
+}
+```
 
 ### TODO
 
@@ -2228,26 +2283,74 @@ Chapter 5: crud with auth
    - Inefficient long list updating.
 - Loose functions and loose variables.
 
-- why event? so you don't have to involve all the logic of a change into one handler. allows you 1 to n call. example: if price changes, this affects both the products list and the cart.
 
-- events
-   - two sources of events: user interactions and responders
-   - responders don't call responders; they only call events.
-- views
-   - pure functions: don't receive x and don't call events. why this? to not trigger redraws while we're in the middle of one. redrawing happens at the end of each cycle. each change is given a chance to propagate. redraws happen one at a time.
-   - if it receives an x, like responders, it can say things.
-- general patterns
-   - navigation & views
-   - inputs, dropdowns, checkboxes
-   - ajax
+### specific examples
 
-Overview:
-- Move HTML generation to JS and keep base HTML as a springboard.
-- Move state to JS and make HTML reflect it.
-- Bind DOM elements to trigger functions.
-- Divide functions by type: 1) update view; 2) update state (through user input or not); 3) communicate (load or save) state to server (or localstorage). Order of calls:
-   - update view comes always after update of state (but some state changes don't update views necessarily). But view change does imply state change.
-   - communication can come before updating of state (load) or after (save).
-- The innovation: responder/listener. Allow a function to be called by a system that detects when its inputs change. Used for views. But also for computed state (state that depends on other state). But what's an example of computed state? With logic in the vfuns, it doesn't seem to be necessary. in a spreadsheet it would! Besides computed state, a much more common thing: when one thing happens, another should happen as well. This could be considered as computed state as well. // What do you save? Express views directly as responders. Also functions for saving state. For loading state, you write a normal function.
-- Must recycle parts of the HTML/DOM.
-- Group state in one place.
+- inputs, dropdowns, checkboxes
+- ajax
+
+### parts
+
+
+chapter 2
+- The view is HTML on the page: We initialized a view in HTML: in this case, it was composed of a title, a paragraph and a button.
+- Event handlers: We bound an HTML element (the button) to a function (`increaseCounter`) through an *event handler*.
+- Functions as workhorses: We defined a function that extracted information from the HTML, processed it, and modified the HTML.
+- State in JS, make the HTML reflect it: We simplified that function by storing data on JS itself, rather than on HTML.
+chapter 3
+- Dynamic generation of HTML based on the state.
+- Loading and saving the state to somewhere else than just JS (localStorage or a server).
+chapter 4
+- async
+- switch between two views: just an instance of updating HTML with JS
+- user inputs: use the state to hold them
+- a function that is called when the state is updated: not just HTML generation, but also calculate a value
+chapter 5
+- loose variables: put it all in one place
+- components with multiple inputs, one user interaction modifying several state parts: enter gotoB views
+- why rfuns? reuse for multiple (update, ie) and have it in the event log
+
+two static things: HTML and state. One dynamic thing: logic.
+
+### Summary: constants, principles and solutions
+
+We will now summarize all the concepts we've seen in the entire tutorial, illustrating them with the app examples we saw in the last few chapters. This summary is your parting gift: if it does what you should, you should walk away from this tutorial with a mental map of webapps that will allow you to learn and expand your skills.
+
+The concepts can be grouped in three:
+
+- **Constants**: things that are *part of the terrain*, so to speak. These are basic elements of web development and, in one way or other, you must work with them.
+- **Principles**: these are [organizational principles](https://prog21.dadgum.com/177.html) that are embraced by most client-side frameworks, and to which gotoX fully subscribes.
+- **Solutions**: these are approaches that are used by gotoX to solve some specific problems. A few are original to gotoX, but most are not.
+
+Constants are as general as they can be: they are actually universal, if our universe is webapps. The principles are very general, though not universal, since there's ways of building webapps without using them. The solutions are quite specific to gotoX, but they are quite general too, in that they solve many common problems that arise when implementing webapps.
+
+**The Constants**
+
+- Constant 1: **what you see What you see is HTML on the page. If you want to update the page, you need to update that HTML.
+   - Example 1:
+- Constant 2: the state is persisted somewhere in the client. It can be on the HTML itself or it can be on JS. Even if it's brought from a server, it must be stored or reflected somewhere on the client.
+- Constant 3: if you update the state, you update the html. And conversely (two-way data binding).
+- Constant 4: Changes in state come from: event handlers bound to HTML elements that receive an user interaction; and time-based logic.
+- Constant 5: HTML *must* be generated from the state, cannot be premade and shown/hidden. The state must be read, then updated, by the logic, every time that it changes.
+- Constant 5: to survive a page refresh, state must be persisted either on a server or on localstorage.
+- Constant 7: there's two static elements: HTML and state. Only the logic can change the state and the HTML.
+
+Organizational principles that are common to most frontend frameworks and which gotoB adopts:
+- Principle 1: generate all (or most) HTML with JS based on the state (rather than on the server)
+- Principle 2: keep all the state in JS
+- Principle 3: make changes first to the state, then to the HTML. Instead of bidirectional change, operate on one way.
+- Principle 4: group logic into functions. Types of logic: update HTML, update state, communicate with server or localstorage, other computation (for example, summing a total). Functions can do one or more of these four, but at least one of these.
+
+gotoB specific solutions:
+1. Views are functions that return object literals (liths) to generate HTML.
+2. put all the state in one object
+3. Express state changes as events.
+   - example: if price changes, this affects both the products list and the cart.
+4. Views are Internally event responders! views are event responders to one or more parts of the state. This solves quadratic drift.
+5. Event handlers fire one or more events. And so do any timers that would effect changes in the app.
+
+How does it look like? vfuns and rfuns.
+- vfuns are functions that return invocations to B.view, with one or more dependencies (part of the state on which they depend). And they return lith, actually a single HTML element that can have more inside. Pure functions: they don't call events. The flow goes one way, from state to HTML (see principle 3).
+- rfuns are event responders. They are called by events. They can in turn call other events, or execute other logic.
+
+Responders are mostly useful for views. But they can also be useful for computed state, for example on a spreadsheet. A lot of rfuns in gotoB are just rfuns as an organizational principle, but it is not necessary to do this. You can still use normal functions for other logic.

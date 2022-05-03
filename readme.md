@@ -55,7 +55,7 @@ The author wishes to thank [Browserstack](https://browserstack.com) for providin
 - [Frequently Asked Questions](#faq)
 - [API reference](#api-reference)
 - [Internals](#internals)
-- [Annotated source code](#annotated-source-code)
+- [Annotated source code](#source-code)
 - [License](#license)
 - [Appendix: A brief history of the frontend](#a-brief-history-of-the-frontend)
 - [Appendix: Lessons from the quest for IE6 compatibility](#lessons-from-the-quest-for-ie6-compatibility)
@@ -1647,7 +1647,7 @@ Although it provides the same functionalities than other frontend frameworks, go
 - Use of a textual diff algorithm to update views.
 - Very see-through: the entire event system (including store, responders and events) can be inspected through the js console - all objects are exposed. They can also be directly modified.
 
-## Annotated source code
+## Source code
 
 The complete source code is contained in `gotoB.js`. gotoв itself is about 670 lines long; its dependencies are about 1380 lines; the whole thing is about 2050 lines.
 

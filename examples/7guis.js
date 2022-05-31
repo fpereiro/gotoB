@@ -310,7 +310,7 @@ B.mrespond ([
       c ('#c' + id).setAttribute ('r', radius);
    }],
    ['move', 'mouse', function (x, ev) {
-      // We slice circles to copy it, so we can sort it without affecting the original.
+      // We slice circles to make a shallow copy of them, so we can sort the copied array of circles without affecting the order of the original one.
       var circles = resolveCircles (B.get ('drawer', 'position'), B.get ('drawer', 'history')).slice ();
       if (circles.length === 1) circles [0].d = distance ({x: ev.offsetX, y: ev.offsetY}, circles [0]);
       else {
@@ -342,77 +342,6 @@ B.mrespond ([
 ]);
 
 B.mount ('body', views.drawer);
-
-// *** CELLS ***
-
-views.cells = function () {
-   return ['div', [
-      ['style', [
-         ['table.sheet', {'border-bottom': 'solid 1px black'}, [
-            ['tr.row', {clear: 'both', 'border-right': 'solid 1px black'}],
-            ['td.cell', {
-               'float': 'left',
-               padding: 4,
-               'min-width': 70,
-               'min-height': 25,
-               'border-top, border-left': 'solid 1px black'
-            }]
-         ]]
-      ]],
-      ['h2', ['Cells (Work in progress!)']],
-      B.view (['Data', 'cells', 'rows'], function (rows) {
-         return ['table', {'class': 'sheet'}, [
-            ['tr', dale.go ('_ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split (''), function (column) {
-               return ['th', column];
-            })],
-            dale.go (rows, function (row, k) {
-               return ['tr', [
-                  ['td', {'class': 'cell'}, k + 1],
-                  dale.go (row, function (value, column) {
-                     return ['td', {'class': 'cell'}, value.value];
-                  })
-               ]];
-            })
-         ]];
-      })
-   ]];
-}
-
-B.mrespond ([
-   ['initialize', 'cells', function (x) {
-      B.set (['Data', 'cells', 'rows'], dale.go (dale.times (100), function (row) {
-         return dale.obj ('ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split (''), function (column) {
-            return [column, {formula: 'a', value: ''}];
-         });
-      }));
-      B.call (x, 'change', ['Data', 'cells', 'rows']);
-   }]
-]);
-
-B.call ('initialize', 'cells');
-
-B.mount ('body', views.cells);
-
-/* Specification:
-- Fixed amount of space: rows 1-100, columns A-Z.
-- Scrollable.
-- Double clicking on a cell edits its formula.
-- Simplified grammar: numeric value, text value, formulas. Formulas start with = and are functions.
-
-https://www.artima.com/pins1ed/the-scells-spreadsheet.html
-*/
-
-
-// rows 0-99, columns A-Z
-// always visible row & column headers
-// edit area, parse formula.
-// formula & value for each cell
-// formula: = + arithmetic
-// types: coordinate (single cell), range (COORDINATE:COORDINATE), number, text, application ("sum(A1, A2)")
-// formula evaluator should have try/catch to detect errors.
-// operations: add, sub, div, mul, mod, sum (n args), prod (n args)
-// disallow self reference (direct or transitive)
-
 
 // *** EARLEY PARSER ***
 
@@ -455,11 +384,13 @@ var earleyParser = function (input, grammar, options) {
             ['grammar.rules', grammar.rules, 'array', 'each'],
             dale.go (grammar.rules, function (rule, k) {
                return [
-                  function () {return ['grammar rule [k] length', rule.length, 2, teishi.test.equal]},
+                  ['grammar rule [k] length', rule.length, 2, teishi.test.equal],
                   ['grammar rule [k]', rule, 'string', 'each'],
-                  ['grammar.rule [k] left side length', rule [0].length, 1, teishi.test.equal],
-                  ['grammar.rule [k] left side character', rule [0], grammar.nonterminals, 'oneOf', teishi.test.equal],
-                  ['grammar.rule [k] right side characters', rule [1].split (''), grammar.nonterminals.concat (grammar.terminals), 'eachOf', teishi.test.equal],
+                  function () {return [
+                     ['grammar.rule [k] left side length', rule [0].length, 1, teishi.test.equal],
+                     ['grammar.rule [k] left side character', rule [0], grammar.nonterminals, 'oneOf', teishi.test.equal],
+                     ['grammar.rule [k] right side characters', rule [1].split (''), grammar.nonterminals.concat (grammar.terminals), 'eachOf', teishi.test.equal],
+                  ]}
                ];
             })
          ];
@@ -597,6 +528,7 @@ var earleyParser = function (input, grammar, options) {
          current++;
          return next ();
       }
+
       // If we are here, we are on the Nth step, where N is the length of the input, and we also cannot add any further states. This means we're done recognizing.
       // We check whether the input conforms to the grammar.
       // We iterate the states on the current step until we find the first one that is a final state.
@@ -793,6 +725,264 @@ dale.go ([
    ['abcbcbcdddbcdbcddbcddddb', grammars.NSE],
    ['abcdbcddbcdddbcb', grammars.NSE],
 ], function (testCase) {
-   teishi.clog (earleyParser (testCase [0], testCase [1]));
-   teishi.clog (earleyParser (testCase [0], testCase [1], {skipNonterminals: true, collapseBranches: true}));
+   var result1 = earleyParser (testCase [0], testCase [1]);
+   var result2 = earleyParser (testCase [0], testCase [1], {skipNonterminals: true, collapseBranches: true});
+   //teishi.clog (result1);
+   //teishi.clog (result2);
 });
+
+// *** CELLS ***
+
+/*
+Main refererences:
+- https://www.artima.com/pins1ed/the-scells-spreadsheet.html (original specification and implementation)
+- https://andrewgreenh.github.io/7guis/#/cells (a great React implementation)
+
+What is allowed in a cell:
+- Number
+- Text
+- Formula
+
+A formula is an equals sign followed by one of the following:
+- Number
+- Coordinate (e.g.: "A1")
+- Function application
+
+A function application is one of the following functions:
+- sum: sums one or more arguments. Arguments can be numbers, the coordinate of a cell that has a number value, a range of cells that have number values, or a function application that returns a number.
+- prod: sums one or more arguments. Arguments can be numbers, the coordinate of a cell that has a number value, a range of cells that have number values, or a function application that returns a number.
+- sub: subtracts the second argument from the first. The function only takes two arguments. Arguments can be numbers, the coordinate of a cell that has a number value, or a function application that returns a number (however, it cannot be a range).
+- div: divides the second argument into the first. The function only takes two arguments. Arguments can be numbers, the coordinate of a cell that has a number value, or a function application that returns a number (however, it cannot be a range).
+- mod: takes the modulo second argument of the first. The function only takes two arguments. Arguments can be numbers, the coordinate of a cell that has a number value, or a function application that returns a number (however, it cannot be a range).
+*/
+
+/*
+TODO:
+- Evaluate cells
+- Evaluate cell with reference to other cells
+   - Set & forget references
+   - Check & disallow self reference (direct or transitive)
+- Copy/paste with shifting of references
+*/
+
+// We use Cyrillic capital letters for specifying nonterminals since we don't have a tokenizer and we want to use all ASCII letters as terminals
+var cellsGrammar = {
+   terminals: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!@#$%^&*_-()[]{}:., ='.split (''),
+   nonterminals: 'ЗЦБСКЛРЧВТФЭИПпЯ'.split (''),
+   root: 'Я',
+   rules: []
+};
+
+// Ц: non-zero digit (1-9), З: digit (0-9)
+dale.go (dale.times (10, 0), function (n) {
+   cellsGrammar.rules.push (['З', n + '']);
+   if (n !== 0) cellsGrammar.rules.push (['Ц', n + '']);
+});
+
+// Б: letters (A-Z & a-z), C: symbols (A-Z, a-z & a bunch of symbols except equals)
+dale.go ('ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split (''), function (l) {
+   cellsGrammar.rules.push (['Б', l]);
+   cellsGrammar.rules.push (['Б', l.toLowerCase ()]);
+   cellsGrammar.rules.push (['С', l]);
+   cellsGrammar.rules.push (['С', l.toLowerCase ()]);
+});
+
+dale.go ('!@#$%^&*_-()[]{}:., '.split (''), function (s) {
+   cellsGrammar.rules.push (['С', s]);
+});
+
+cellsGrammar.rules = cellsGrammar.rules.concat ([
+   // К: coordinate ($?[A-Z]$?[1-9][0-0])
+   ['К', 'ЛЦ'],
+   ['К', 'ЛЦЗ'],
+   ['К', '$ЛЦ'],
+   ['К', '$Л$Ц'],
+   ['К', 'Л$Ц'],
+   ['К', '$ЛЦЗ'],
+   ['К', 'Л$ЦЗ'],
+   ['К', 'Л$ЦЗ'],
+   // Р: range (К:К)
+   ['Р', 'К:К'],
+   // Ч: right-side number sequence ([0-9]+)
+   ['Ч', 'З'],
+   ['Ч', 'ЗЧ'],
+   // Л: left-side number sequence ([1-9][0-9]+)
+   ['Л', 'Ц'],
+   ['Л', 'ЦЧ'],
+   // В: numeric expression
+   ['В', 'Л'],
+   ['В', '-Л'],
+   ['В', 'Л.Ч'],
+   ['В', '-Л.Ч'],
+   // Т: text
+   ['Т', 'С'],
+   ['Т', 'СТ'],
+   // Ф: formula: =coordinate, =number, =function application
+   ['Ф', '=К'],
+   ['Ф', '=В'],
+   ['Ф', '=Э'],
+   // Э: function application
+   ['Э', 'И(П)'],
+   // П: parameter list
+   ['П', 'п'],
+   ['П', 'п,П'],
+   // п: parameter: number, coordinate, range, function application
+   ['п', 'В'],
+   ['п', 'К'],
+   ['п', 'Р'],
+   ['п', 'Э'],
+   // Я: cell: text, number, formula
+   ['Я', 'Т'],
+   ['Я', 'В'],
+   ['Я', 'Ф'],
+]);
+
+// И: function name
+dale.go (['add', 'sub', 'mul', 'div', 'sum', 'prod'], function (functionName) {
+   return cellsGrammar.rules.push (['И', functionName]);
+});
+
+dale.go ([
+   'some text',
+   '-1.23',
+   '=add(1,2)',
+   '=add(add(1,2),3)',
+], function (input) {
+   var result1 = earleyParser (input, cellsGrammar);
+   var result2 = earleyParser (input, cellsGrammar, {skipNonterminals: true, collapseBranches: true});
+   teishi.clog (result1);
+   teishi.clog (result2);
+});
+
+// *** CELLS ***
+views.cells = function () {
+   return ['div', [
+      // The style and markup was borrowed from Robin Rendle's amazing JS-less implementation of a scrollable spreadsheet-like table
+      // https://css-tricks.com/idea-simple-responsive-spreadsheet/
+      ['style', [
+         ['div.sheet-wrapper', {'max-height': 700, 'max-width': 900, overflow: 'scroll'}, [
+            ['table.sheet', {position: 'relative', border: '1px solid #ddd', 'border-collapse': 'collapse'}],
+            ['th, td', {'white-space': 'nowrap', border: '1px solid #ddd', 'text-align': 'center', height: 60}],
+            ['th', {
+               'background-color': '#eee',
+               position: 'sticky',
+               top: -1,
+               'z-index': '2',
+            }],
+            ['th:first-of-type', {left: 0, 'z-index': '3'}],
+            ['tbody tr td:first-of-type', {
+               'padding-left, padding-right': 20,
+               'background-color': '#eee',
+               position: 'sticky',
+               left: -1,
+               'text-align': 'left'
+            }],
+            ['td.cell', {'min-width': 120}],
+            ['td.selected', {border: 'solid 2px black'}],
+            ['td.editing', {padding: 0, border: 'none important!'}],
+            ['td.editing input', {
+               height: 60,
+               width: 1,
+               padding: 10,
+               margin: 0,
+               'box-sizing, -moz-box-sizing, -webkit-box-sizing': 'border-box'
+            }],
+         ]],
+      ]],
+      ['h2', ['Cells (Work in progress!)']],
+      B.view ([['cells', 'rows'], ['cells', 'editing'], ['cells', 'selected']], function (rows, editing, selected) {
+         return ['div', {'class': 'sheet-wrapper'}, ['table', {'class': 'sheet'}, [
+            ['tr', {'class': 'header'}, dale.go (' ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split (''), function (column) {
+               return ['th', column];
+            })],
+            dale.go (rows, function (row, k) {
+               return ['tr', [
+                  ['td', k + 1],
+                  dale.go (row, function (cell, column) {
+                     var edit   = teishi.eq (cell.coordinates, editing);
+                     var select = teishi.eq (cell.coordinates, selected);
+                     return ['td', {
+                        'class': 'cell' + (edit ? ' editing' : '') + (select ? ' selected' : ''),
+                        onclick: B.ev ('set', ['cells', 'selected'], cell.coordinates),
+                        ondblclick: B.ev ('start', 'edit', cell.coordinates),
+                     }, ! edit ? cell.value : ['input', {
+                        value: cell.formula,
+                        oninput: B.ev ('set', ['cells', 'editBuffer']),
+                        onblur: B.ev ('save', 'edit')
+                     }, cell.value]];
+                  })
+               ]];
+            })
+         ]]];
+      })
+   ]];
+}
+
+var mapColumns = function (input) {
+   if (type (input) === 'string') return 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.indexOf (input);
+   return 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' [input];
+}
+
+window.addEventListener ('keydown', function (ev) {
+   B.call ('keydown', 'cells', ev.keyCode);
+});
+
+B.mrespond ([
+   ['initialize', 'cells', function (x) {
+      B.set (['cells', 'rows'], dale.go (dale.times (100), function (row) {
+         return dale.obj ('ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split (''), function (column) {
+            return [column, {coordinates: [row, column], formula: '', value: ''}];
+         });
+      }));
+      B.call (x, 'change', ['cells', 'rows']);
+   }],
+   ['keydown', 'cells', function (x, keyCode) {
+      var editing = B.get ('cells', 'editing'), selected = B.get ('cells', 'selected');
+      if (! editing && ! selected) return;
+      // ESC
+      if (keyCode === 27) return B.call (x, 'cancel', 'edit');
+      // Enter
+      if (keyCode === 13) {
+         if (editing) return B.call (x, 'save', 'edit');
+         else         return B.call (x, 'start', 'edit', selected);
+      }
+      // Cursors
+      if (! editing && keyCode >= 37 && keyCode <= 40) {
+         if (keyCode === 37) B.call (x, 'set', ['cells', 'selected', 1], mapColumns (Math.max (0,  mapColumns (selected [1]) - 1)));
+         if (keyCode === 39) B.call (x, 'set', ['cells', 'selected', 1], mapColumns (Math.min (25, mapColumns (selected [1]) + 1)));
+         if (keyCode === 38) B.call (x, 'set', ['cells', 'selected', 0], Math.max (1,  selected [0] - 1));
+         if (keyCode === 40) B.call (x, 'set', ['cells', 'selected', 0], Math.min (26, selected [0] + 1));
+      }
+   }],
+   ['change', ['cells', 'editing'], {priority: -10000}, function (x) {
+      var editing = B.get ('cells', 'editing');
+      if (! editing) return;
+      var input = c ('td.editing input') [0];
+      // Put cursor at the end of the input
+      input.setSelectionRange (input.value.length, input.value.length);
+      input.focus ();
+   }],
+   ['start', 'edit', function (x, selected) {
+      var cell = B.get ('cells', 'rows', selected [0] - 1, selected [1]);
+      B.call (x, 'set', ['cells', 'editBuffer'], cell.value);
+      B.call (x, 'set', ['cells', 'editing'], cell.coordinates);
+   }],
+   ['save', 'edit', function (x) {
+      var editing = B.get ('cells', 'editing');
+      // It might be the case that the `save edit` event is fired multiple times (one because of an ENTER keydown, another one from the `onblur` handler), so we check whether there is still a selection
+      if (! editing) return;
+      var value = B.get ('cells', 'editBuffer');
+      // TODO: evaluate and validate value
+      B.call (x, 'set', ['cells', 'rows', editing [0] - 1, editing [1], 'formula'], value);
+      B.call (x, 'set', ['cells', 'rows', editing [0] - 1, editing [1], 'value'],   value);
+      B.call (x, 'cancel', 'edit');
+   }],
+   ['cancel', 'edit', function (x) {
+      B.call (x, 'rem', 'cells', 'editing');
+      B.call (x, 'rem', 'cells', 'editBuffer');
+   }],
+]);
+
+B.call ('initialize', 'cells');
+
+B.mount ('body', views.cells);

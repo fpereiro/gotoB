@@ -539,7 +539,7 @@ var earleyParser = function (input, grammar, options) {
       // We remove the outermost part of the tree since there will always be an extra array wrapper at the top level.
       if (tree) tree = tree [0];
 
-      var output = {valid: !! tree, input: input, length: input.length, time: Date.now () - t, tree: JSON.stringify (tree)};
+      var output = {valid: !! tree, input: input, length: input.length, time: Date.now () - t, tree: tree};
       log ('Recognizer output', output);
       return output;
    }
@@ -749,26 +749,19 @@ A formula is an equals sign followed by one of the following:
 - Function application
 
 A function application is one of the following functions:
-- sum: sums one or more arguments. Arguments can be numbers, the coordinate of a cell that has a number value, a range of cells that have number values, or a function application that returns a number.
-- prod: sums one or more arguments. Arguments can be numbers, the coordinate of a cell that has a number value, a range of cells that have number values, or a function application that returns a number.
+- add : sums one or more arguments. Arguments can be numbers, the coordinate of a cell that has a number value, a range of cells that have number values, or a function application that returns a number.
 - sub: subtracts the second argument from the first. The function only takes two arguments. Arguments can be numbers, the coordinate of a cell that has a number value, or a function application that returns a number (however, it cannot be a range).
+- mul: multiplies one or more arguments. Arguments can be numbers, the coordinate of a cell that has a number value, a range of cells that have number values, or a function application that returns a number.
 - div: divides the second argument into the first. The function only takes two arguments. Arguments can be numbers, the coordinate of a cell that has a number value, or a function application that returns a number (however, it cannot be a range).
 - mod: takes the modulo second argument of the first. The function only takes two arguments. Arguments can be numbers, the coordinate of a cell that has a number value, or a function application that returns a number (however, it cannot be a range).
-*/
 
-/*
-TODO:
-- Evaluate cells
-- Evaluate cell with reference to other cells
-   - Set & forget references
-   - Check & disallow self reference (direct or transitive)
-- Copy/paste with shifting of references
+Note: the `sum` and `prod` operations of SCells are not implemented since we have modified `add` and `mul` to take multiple arguments.
 */
 
 // We use Cyrillic capital letters for specifying nonterminals since we don't have a tokenizer and we want to use all ASCII letters as terminals
 var cellsGrammar = {
    terminals: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!@#$%^&*_-()[]{}:., ='.split (''),
-   nonterminals: 'ЗЦБСКЛРЧВТФЭИПпЯ'.split (''),
+   nonterminals: 'ЗЦБСКЛРЧВТХФЭИПпЯ'.split (''),
    root: 'Я',
    rules: []
 };
@@ -793,14 +786,10 @@ dale.go ('!@#$%^&*_-()[]{}:., '.split (''), function (s) {
 
 cellsGrammar.rules = cellsGrammar.rules.concat ([
    // К: coordinate ($?[A-Z]$?[1-9][0-0])
-   ['К', 'ЛЦ'],
-   ['К', 'ЛЦЗ'],
-   ['К', '$ЛЦ'],
-   ['К', '$Л$Ц'],
-   ['К', 'Л$Ц'],
-   ['К', '$ЛЦЗ'],
-   ['К', 'Л$ЦЗ'],
-   ['К', 'Л$ЦЗ'],
+   ['К', 'БЧ'],
+   ['К', '$БЧ'],
+   ['К', 'Б$Ч'],
+   ['К', '$Б$Ч'],
    // Р: range (К:К)
    ['Р', 'К:К'],
    // Ч: right-side number sequence ([0-9]+)
@@ -817,15 +806,19 @@ cellsGrammar.rules = cellsGrammar.rules.concat ([
    // Т: text
    ['Т', 'С'],
    ['Т', 'СТ'],
+   // Х: optional whitespace
+   ['Х', ''],
+   ['Х', ' '],
+   ['Х', ' Х'],
    // Ф: formula: =coordinate, =number, =function application
    ['Ф', '=К'],
    ['Ф', '=В'],
    ['Ф', '=Э'],
    // Э: function application
-   ['Э', 'И(П)'],
+   ['Э', 'ИХ(ХПХ)Х'],
    // П: parameter list
    ['П', 'п'],
-   ['П', 'п,П'],
+   ['П', 'пХ,ХПХ'],
    // п: parameter: number, coordinate, range, function application
    ['п', 'В'],
    ['п', 'К'],
@@ -838,23 +831,231 @@ cellsGrammar.rules = cellsGrammar.rules.concat ([
 ]);
 
 // И: function name
-dale.go (['add', 'sub', 'mul', 'div', 'sum', 'prod'], function (functionName) {
+dale.go (['add', 'sub', 'mul', 'div', 'mod'], function (functionName) {
    return cellsGrammar.rules.push (['И', functionName]);
 });
 
+// list of references per cell: ['A1', 'A2']. These are *direct references* only! And if they are already in the references object, they are valid.
+var resolveReferences = function (cell, references) {
+   var output = [];
+
+   var recurseReferences = function (cell, firstCall) {
+      if (output.indexOf (cell) > -1) return;
+      if (! firstCall) output.push (cell);
+      dale.go (references [cell], function (cell) {
+         recurseReferences (cell);
+      });
+   }
+
+   recurseReferences (cell, true);
+   return output.sort ();
+}
+
+
+var flatten = function (tree) {
+   var output = '';
+   dale.go (tree, function (v) {
+      if (teishi.simple (v)) return output += v;
+      output += flatten (v);
+   });
+   return output;
+}
+
+var parseCell = function (input) {
+   return earleyParser (input, cellsGrammar, {skipNonterminals: true, collapseBranches: true}).tree;
+}
+
+var concatenate = function (fun, input) {
+   var output = '';
+   dale.go (input, function (v) {
+      v = fun (v);
+      output += type (v) === 'string' ? v : v.value;
+   });
+   return output;
+}
+
+var mapColumns = function (input) {
+   if (type (input) === 'string') return 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.indexOf (input);
+   return 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' [input];
+}
+
+/*
+   `evaluate` takes a tree from a parsed input. The following can occur:
+   - If it's an invalid value, it returns an error.
+   - If it's text or number (or a formula that just contains a number), it returns it.
+   - If it's a coordinate, it resolves it or returns an error if there's a circular reference.
+   - If it's a function application it returns its value (resolving any references) or returns an error if there's a circular reference.
+
+   Something we haven't implemented but would be interesting to do: copy/paste with shifting of references. The basic idea would be to pass an offset to the function, so that it returns instead a shifted formula, rather than a value.
+*/
+
+var evaluate = function (tree, cell, references, rows, returnCoordinate) {
+   if (tree === undefined) return {error: 'Invalid input'};
+   // Character or digit
+   if (tree [0] === 'С' || tree [0] === 'Б' || tree [0] === 'З' || tree [0] === 'Ц') return {value: tree [1]};
+   // Left/right side of numeric sequence
+   if (tree [0] === 'Л' || tree [0] === 'Ч') return {value: concatenate (evaluate, tree.slice (1))};
+   // Text
+   if (tree [0] === 'Т') return {value: concatenate (evaluate, tree.slice (1))};
+   // Numeric expression
+   if (tree [0] === 'В') return {value: parseFloat (concatenate (function (part) {
+      if (part === '-' || part === '.') return part;
+      return evaluate (part);
+   }, tree.slice (1)))};
+   // Coordinate
+   if (tree [0] === 'К' || tree [0] === 'COORDINATE') {
+      var coordinate = tree [0] === 'COORDINATE' ? tree [1] : concatenate (function (part) {
+         if (part === '$') return '';
+         return evaluate (part);
+      }, tree.slice (1));
+      if (returnCoordinate) return coordinate;
+      var referenceList = resolveReferences (coordinate, references);
+      if (cell === coordinate || referenceList.indexOf (cell) > -1) return {error: 'Circular reference'};
+      try {
+         var value = rows [parseInt (coordinate.slice (1)) - 1] [coordinate [0].toUpperCase ()].value;
+      }
+      catch (error) {
+         var value = undefined;
+      }
+      return {value: value, refs: [coordinate]};
+   }
+   // Range
+   if (tree [0] === 'Р') {
+      var coordA = evaluate (tree [1], cell, references, rows, true);
+      var coordB = evaluate (tree [3], cell, references, rows, true);
+      var cols = [coordA [0], coordB [0]];
+      var Rows = [parseInt (coordA.slice (1)), parseInt (coordB.slice (1))];
+      if (Rows [0] > Rows [1]) return {error: 'Invalid range'};
+      if (mapColumns (cols [0]) > mapColumns (cols [1])) return {error: 'Invalid range'};
+      var error, refs = [];
+      var values = dale.go (dale.times (1 + Rows [1] - Rows [0], Rows [0]), function (row) {
+         return dale.go (dale.times (1 + mapColumns (cols [1]) - mapColumns (cols [0]), mapColumns (cols [0])), function (colIndex) {
+            refs.push (mapColumns (colIndex) + row);
+            var result = evaluate (['COORDINATE', mapColumns (colIndex) + row], cell, references, rows);
+            if (result.error) return error = result.error;
+            return result.value;
+         });
+      });
+      return error ? {error: error} : {values: values, refs: refs};
+   }
+
+   // Cell
+   if (tree [0] === 'Я') return evaluate (tree [1], cell, references, rows);
+   // Formula
+   if (tree [0] === 'Ф') return evaluate (tree [2], cell, references, rows);
+   // Function name
+   if (tree [0] === 'И') return tree.slice (1).join ('');
+
+   // Filters out elements and flattens a list of parameters
+   var processParameterList = function (list, args) {
+      args = args || [];
+      dale.go (list, function (item) {
+         // We ignore whitespace, parentheses and commas
+         if (item === 'Х' || item === '(' || item === ')' || item === ',' || item [0] === 'Х') return;
+         if (item [0] === 'П') return processParameterList (item.slice (1), args);
+         if (item [0] === 'п') return processParameterList (item.slice (1), args);
+         // We are left with function names or function arguments. We push them to the argument list.
+         args.push (item);
+      });
+      return args;
+   }
+
+   // Function application
+   if (tree [0] === 'Э') {
+      var error, args = [], refs = [];
+      dale.stopNot (processParameterList (tree.slice (1)), undefined, function (v) {
+         var result = evaluate (v, cell, references, rows);
+         if (result.error) return error = result.error;
+
+         if (result.refs) refs = refs.concat (result.refs);
+         if (result.value) args.push (result.value);
+         else dale.go (result.values, function (row) {
+            dale.go (row, function (value) {
+               args.push (value);
+            });
+         });
+      });
+      if (error) return {error: error};
+      var functionName = evaluate (tree [1]);
+      if (functionName === 'add' || functionName === 'mul') {
+         // Because the grammar requires argument lists to have at least a single argument, we don't have to check whether args.length is greater than 0
+         result = 0;
+         dale.go (args, function (arg) {
+            if (functionName === 'add') result += arg ? arg : 0;
+            if (functionName === 'mul') result *= arg ? arg : 0
+         });
+      }
+      if (functionName === 'sub') {
+         if (args.length !== 2) return {error: 'Takes exactly 2 arguments'};
+         result = (args [0] || 0) - (args [1] || 0);
+      }
+      if (functionName === 'div') {
+         if (args.length !== 2) return {error: 'Takes exactly 2 arguments'};
+         result = (args [0] || 0) / (args [1] || 0);
+      }
+      if (functionName === 'mod') {
+         if (args.length !== 2) return {error: 'Takes exactly 2 arguments'};
+         result = (args [0] || 0) % (args [1] || 0);
+      }
+      return refs.length ? {value: result, refs: refs.sort ()} : {value: result};
+   }
+}
+
 dale.go ([
-   'some text',
-   '-1.23',
-   '=add(1,2)',
-   '=add(add(1,2),3)',
+   ['=',                  {error: 'Invalid input'}],
+   ['=e',                 {error: 'Invalid input'}],
+   ['=BB3',               {error: 'Invalid input'}],
+   ['s',                  {value: 's'}],
+   ['some text',          {value: 'some text'}],
+   ['1',                  {value: 1}],
+   ['1.2',                {value: 1.2}],
+   ['-1.23',              {value: -1.23}],
+   ['=-34.5',             {value: -34.5}],
+   ['=A1',                {value: 7, refs: ['A1']},      'A2', {},                       [{A: {value: 7}}]],
+   ['=$A1',               {value: 8, refs: ['A1']},      'A2', {},                       [{A: {value: 8}}]],
+   ['=$A$1',              {value: 9, refs: ['A1']},      'A2', {},                       [{A: {value: 9}}]],
+   // Direct circular reference
+   ['=A1',                {error: 'Circular reference'}, 'A1', {},                       []],
+   // Indirect circular reference (one degree)
+   ['=A1',                {error: 'Circular reference'}, 'A2', {A1: ['A2']},             []],
+   // Indirect circular reference (two degrees)
+   ['=A1',                {error: 'Circular reference'}, 'A2', {A1: ['A3'], A3: ['A2']}, []],
+   // Function applications
+   ['=add(1)',            {value: 1}],
+   ['=add (1)',           {value: 1}],
+   ['=add  ( 1 )',        {value: 1}],
+   ['=add (1.2)',         {value: 1.2}],
+   ['=add (-1.2)',        {value: -1.2}],
+   ['=add (-1.2, 2.4)',   {value: 1.2}],
+   ['=add (A1)',          {value: 7, refs: ['A1']},      'A2', {},                       [{A: {value: 7}}]],
+   ['=add ($A1)',         {value: 7, refs: ['A1']},      'A2', {},                       [{A: {value: 7}}]],
+   ['=add (A$1)',         {value: 7, refs: ['A1']},      'A2', {},                       [{A: {value: 7}}]],
+   ['=add (A1, 2)',       {value: 9, refs: ['A1']},      'A2', {},                       [{A: {value: 7}}]],
+   ['=add (A3, 2)',       {value: 2, refs: ['A3']},      'A2', {},                       [{A: {value: 7}}]],
+   ['=add (2, A1)',       {value: 9, refs: ['A1']},      'A2', {},                       [{A: {value: 7}}]],
+   ['=add (C3:D1)',       {error: 'Invalid range'}],
+   ['=add (D1:C3)',       {error: 'Invalid range'}],
+   ['=add (C1:D3)',       {error: 'Circular reference'}, 'A2', {D3: ['A2']},             []],
+   ['=add (C1:D3)',       {value: 7, refs: ['C1', 'C2', 'C3', 'D1', 'D2', 'D3']}, 'A2', {}, [{C: {value: 1}, D: {value: 2}}, {C: {value: ''}, D: {value: 2}}, {C: {}, D: {value: 2}}]],
+   // Nested function applications
+   ['=add (add (1))',     {value: 1}],
+   ['=add (A1, add (1))', {value: 8, refs: ['A1']},       'A2', {},                       [{A: {value: 7}}]],
+   // Circular references as function arguments
+   ['=add (2, A2)',       {error: 'Circular reference'}, 'A2', {},                       []],
+   ['=add (A1)',          {error: 'Circular reference'}, 'A2', {A1: ['A3'], A3: ['A2']}, []],
+   // Other functions
+   ['=sub (2)',           {error: 'Takes exactly 2 arguments'}],
+   ['=div (2)',           {error: 'Takes exactly 2 arguments'}],
+   ['=mod (2)',           {error: 'Takes exactly 2 arguments'}],
+   ['=sub (2, 4)',        {value: -2}],
+   ['=div (2, 4)',        {value: 0.5}],
+   ['=mod (4, 3)',        {value: 1}],
 ], function (input) {
-   var result1 = earleyParser (input, cellsGrammar);
-   var result2 = earleyParser (input, cellsGrammar, {skipNonterminals: true, collapseBranches: true});
-   teishi.clog (result1);
-   teishi.clog (result2);
+   var tree = earleyParser (input [0], cellsGrammar, {collapseBranches: true}).tree;
+   var result = evaluate (tree, input [2], input [3], input [4]);
+   if (! teishi.eq (result, input [1])) return console.log ('Mismatch!', input [0], 'generated', result, 'but expected', input [1]);
 });
 
-// *** CELLS ***
 views.cells = function () {
    return ['div', [
       // The style and markup was borrowed from Robin Rendle's amazing JS-less implementation of a scrollable spreadsheet-like table
@@ -918,11 +1119,6 @@ views.cells = function () {
    ]];
 }
 
-var mapColumns = function (input) {
-   if (type (input) === 'string') return 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.indexOf (input);
-   return 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' [input];
-}
-
 window.addEventListener ('keydown', function (ev) {
    B.call ('keydown', 'cells', ev.keyCode);
 });
@@ -946,7 +1142,7 @@ B.mrespond ([
          if (editing) return B.call (x, 'save', 'edit');
          else         return B.call (x, 'start', 'edit', selected);
       }
-      // Cursors
+      // Arrow keys
       if (! editing && keyCode >= 37 && keyCode <= 40) {
          if (keyCode === 37) B.call (x, 'set', ['cells', 'selected', 1], mapColumns (Math.max (0,  mapColumns (selected [1]) - 1)));
          if (keyCode === 39) B.call (x, 'set', ['cells', 'selected', 1], mapColumns (Math.min (25, mapColumns (selected [1]) + 1)));
@@ -972,9 +1168,12 @@ B.mrespond ([
       // It might be the case that the `save edit` event is fired multiple times (one because of an ENTER keydown, another one from the `onblur` handler), so we check whether there is still a selection
       if (! editing) return;
       var value = B.get ('cells', 'editBuffer');
-      // TODO: evaluate and validate value
+      var result = earleyParser (value, cellsGrammar, {skipNonterminals: true, collapseBranches: true});
+
       B.call (x, 'set', ['cells', 'rows', editing [0] - 1, editing [1], 'formula'], value);
-      B.call (x, 'set', ['cells', 'rows', editing [0] - 1, editing [1], 'value'],   value);
+      // TODO: add resolveReferences arguments
+      // TODO: set/update cells that reference this cell
+      B.call (x, 'set', ['cells', 'rows', editing [0] - 1, editing [1], 'value'],   evaluate (value, resolveReferences ('A1', {})));
       B.call (x, 'cancel', 'edit');
    }],
    ['cancel', 'edit', function (x) {

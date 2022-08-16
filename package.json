@@ -1,14 +1,14 @@
 {
    "name": "gotob",
-   "version": "2.1.1",
+   "version": "2.2.0",
    "description": "One .min.js to rule 'em all.",
    "dependencies": {
-      "cocholate": "3.0.3",
+      "cocholate": "3.1.0",
       "dale":      "6.0.2",
-      "lith":      "6.0.6",
-      "recalc":    "5.1.1",
-      "teishi":    "5.0.3",
-      "uglify-js": "3.13.10"
+      "lith":      "6.0.7",
+      "recalc":    "5.1.2",
+      "teishi":    "5.1.0",
+      "uglify-js": "3.16.3"
    },
    "main": "gotoB.min.js",
    "author": "Federico Pereiro <fpereiro@gmail.com>",

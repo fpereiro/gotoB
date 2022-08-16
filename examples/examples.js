@@ -464,8 +464,8 @@ B.mount ('body', items);
 var updateItems = function (items) {
    items.map (function (item, index) {
       var updatedItem = item + 'foo';
-      // We modify the items on the store directly.
-      B.set (['items', index], updatedItem);
+      // We modify the items on the store without calling a `change` event
+      B.call ('mset', ['items', index], updatedItem);
    });
    // When we're done updating the store, we call a `change` event
    B.call ('change', 'items');
@@ -475,6 +475,8 @@ var updateItems = function (items) {
    items.map (function (item, index) {
       var updatedItem = item + 'foo';
       // We modify the items on the store directly.
+      B.set ([items, index], updatedItem);
+      // If you directly set the item on the store, it would be the same as calling `B.set` above (assuming that `B.store.items` already exists).
       B.store.items [index] = updatedItem;
    });
    // When we're done updating the store, we call a `change` event

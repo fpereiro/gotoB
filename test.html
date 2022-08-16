@@ -58,7 +58,7 @@
             // *** BASE RESPONDERS ***
 
             Test ('initial setup', function () {
-               if (! eq (dale.keys (B.responders).sort (), ['add', 'error', 'rem', 'set'])) return 'Initial responders mismatch.';
+               if (! eq (dale.keys (B.responders).sort (), ['add', 'error', 'madd', 'mrem', 'mset', 'rem', 'set'])) return 'Initial responders mismatch.';
                // We use a setTimeout to wait until all the event responders are set before we call the first we want to execute.
                setTimeout (function () {B.call ('test', 'log')}, 0);
             });
@@ -75,13 +75,13 @@
                   var mismatch = dale.stopNot ([
                      {from: undefined, id: 'E1', verb: 'log',   path: ['test OK'], args: ['initial setup']},
                      {from: undefined, id: 'E2', verb: 'test',  path: ['log'],     args: undefined},
-                     {from: 'E2',      id: 'R5', verb: 'test',  path: ['log'],     args: undefined},
-                     {from: 'R5/E2',   id: 'E3', verb: 'verb1', path: ['a path'],  args: ['booyah']},
-                     {from: 'R5/E2',   id: 'E4', verb: 'verb2', path: ['a path'],  args: undefined}
+                     {from: 'E2',      id: 'R8', verb: 'test',  path: ['log'],     args: undefined},
+                     {from: 'R8/E2',   id: 'E3', verb: 'verb1', path: ['a path'],  args: ['booyah']},
+                     {from: 'R8/E2',   id: 'E4', verb: 'verb2', path: ['a path'],  args: undefined}
                   ], undefined, function (v, k) {
                      var log = teishi.copy (B.log [k]);
                      delete log.t;
-                     if (! eq (v, log)) return k;
+                     if (! eq (v, log)) return k + ': ' + B.str (log);
                   });
                   if (mismatch !== undefined) return 'Invalid log entry #' + (mismatch);
                });
@@ -290,6 +290,8 @@
 
                   if (incrementOnChange !== 0) return 'change event fired with a data event performing a no-op.';
 
+                  var changeCount = 0;
+
                   var error = dale.stopNot ([
                      ['set', [], {Data: {}, Store: {}}],
                      ['add', 'Array', 'whatever'],
@@ -305,14 +307,20 @@
                      ['set', ['Data', 'obj', 'last'], 'playboy'],
                      ['set', ['Data', 'items', 0, 0], 'beep'],
                      ['set', ['Data', 'null'], null],
-                     ['rem', 'Data', 'obj', 'null']
+                     ['rem', ['Data'], 'obj', 'null']
                   ], undefined, function (test, k) {
                      var evid = B.call.apply (null, [x].concat (test)), eprefix = 'Test #' + (k + 1) + ': ', path = type (test [1]) === 'array' ? test [1] : [test [1]];
+                     changeCount += {6: 2, 7: 3, 14: 2} [k] || 1;
 
                      if (type (evid) !== 'string')      return eprefix + 'B.call didn\'t return event id.';
-                     if (incrementOnChange !== (k + 1)) return eprefix + 'no change event triggered.';
+                     if (incrementOnChange !== changeCount) return eprefix + 'incorrect amount of change events triggered, expecting ' + changeCount + ', got ' + incrementOnChange;
                      var args = type (test [2]) === 'array' ? test [2] : test.slice (2);
                      if (test [0] === 'rem') {
+                        var error;
+                        dale.go ({2: 'Array', 6: [4, 3], 7: [2, 1, 0], 10: 'Other', 14: ['null', 'obj']} [k], function (v, k) {
+                           if (! teishi.eq (test [1].concat (v), last (B.log, (k + 1) * 2).path)) error = 'Invalid path on change event triggered by rem, expecting ' + B.str (test [1].concat (v)) + ', got ' + B.str (last (B.log, (k + 1) * 2).path);
+                        });
+                        if (error) return error;
                         if (dale.stop (args, true, function (key) {
                            return dale.keys (B.get (test [1])).indexOf (key) > -1;
                         })) return eprefix + 'rem didn\'t remove key.';
@@ -332,6 +340,51 @@
                   });
 
                   if (error) return error;
+
+                  // *** MUTE DATA EVENTS ***
+
+                  var lastIncrementOnChange = incrementOnChange;
+
+                  var error = dale.stopNot ([
+                     ['mset', [], {Data: {}, Store: {}}],
+                     ['madd', 'Array', 'whatever'],
+                     ['mrem', [], 'Array'],
+                     ['madd', ['Data', 'items'], 'one'],
+                     ['madd', ['Data', 'items'], 'two', 'three'],
+                     ['madd', ['Data', 'items'], 'four', 'five'],
+                     ['mrem', ['Data', 'items'], 3, 4],
+                     ['mrem', ['Data', 'items'], [0, 1, 2]],
+                     ['madd', ['Data', 'items'], undefined, null, {three: 3}, false],
+                     ['mset', 'Other', true],
+                     ['mrem', [], 'Other'],
+                     ['mset', ['Data', 'obj', 'last'], 'playboy'],
+                     ['mset', ['Data', 'items', 0, 0], 'beep'],
+                     ['mset', ['Data', 'null'], null],
+                     ['mrem', 'Data', 'obj', 'null']
+                  ], undefined, function (test, k) {
+                     var evid = B.call.apply (null, [x].concat (test)), eprefix = 'Test #' + (k + 1) + ': ', path = type (test [1]) === 'array' ? test [1] : [test [1]];
+
+                     if (type (evid) !== 'string')      return eprefix + 'B.call didn\'t return event id.';
+                     if (incrementOnChange !== lastIncrementOnChange) return eprefix + ' change event triggered on mute event.';
+                     var args = type (test [2]) === 'array' ? test [2] : test.slice (2);
+                     if (test [0] === 'rem') {
+                        if (dale.stop (args, true, function (key) {
+                           return dale.keys (B.get (test [1])).indexOf (key) > -1;
+                        })) return eprefix + 'rem didn\'t remove key.';
+                        return;
+                     }
+                     if (dale.stop (path, true, function (pathitem, k2) {
+                        var target = B.get (path.slice (0, k2));
+                        if (type (target) !== (type (pathitem) === 'string' ? 'object' : 'array')) return true;
+                     })) return eprefix + 'add/set didn\'t set parent target with the right type.';
+
+                     if (test [0] === 'add' && type (B.get (path)) !== 'array') return eprefix + 'add didn\'t set the target type correctly.';
+                     if (test [0] === 'set' && path.length) {
+                        if (type (B.get (path.slice (0, -1))) !== (type (last (path)) === 'string' ? 'object' : 'array')) return eprefix + 'set didn\'t set the target type correctly.';
+                     }
+                     if (test [0] === 'add' && ! eq (B.get (path).slice (B.get (path).length - args.length), args)) return eprefix + 'add didn\'t add the value correctly.';
+                     if (test [0] === 'set' && ! eq (B.get (test [1]), test [2])) return eprefix + 'set didn\'t set the value correctly.';
+                  });
 
                   B.forget (responder);
 
@@ -806,7 +859,8 @@
                      if (B.log.length !== logLength + k + 1) return 'Error not reported: ' + B.str (args);
                      var lastLog = last (B.log);
                      if (lastLog.verb !== 'error' || lastLog.path [0] !== 'B.view' || ! lastLog.args.length || type (lastLog.args [0]) !== 'string') return 'Error reported incorrectly: ' + B.str (args);
-                     if (! lastLog.args [0].match (k <= 3 ? 'Invalid path' : 'fun passed to B.view')) return 'Invalid error message: ' + B.str (args);
+                     if (! lastLog.args [0].match (k <= 3 ? 'Invalid path' : 'Validation error:')) return 'Invalid error message: ' + B.str (args);
+                     if (k > 3 && ! lastLog.args [1].match ('fun passed to B.view should')) return 'Invalid error message: ' + B.str (args);
                   });
                   if (error) return error;
 
@@ -830,7 +884,8 @@
                      if (B.log.length !== logLength + k + 1) return 'Error not reported: ' + B.str (args);
                      var lastLog = last (B.log);
                      if (lastLog.verb !== 'error' || lastLog.path [0] !== 'B.view' || ! lastLog.args.length || type (lastLog.args [0]) !== 'string') return 'Error reported incorrectly: ' + B.str (args);
-                     if (! lastLog.args [0].match ('View function must return a lith element')) return 'Invalid error message: ' + B.str (args);
+                     if (! lastLog.args [0].match (/View function at path/)) return 'Invalid error message: ' + B.str (args);
+                     if (! lastLog.args [2].match (/must return a lith element/)) return 'Invalid error message: ' + B.str (args);
                      if (! B.responders [B.B + (k + 1)]) return 'Responder not set: ' + B.str (args);
                      if (B.responders [B.B + (k + 1)].path.length !== 0) return 'Responder not set with empty path.';
                      B.forget (B.B + (k + 1));
@@ -2229,7 +2284,7 @@
                B.unmount ('body');
 
                Test ('responder cleanup', function () {
-                  if (! eq (dale.keys (B.responders).sort (), ['R13', 'add', 'error', 'rem', 'set'])) return 'Some responders were not cleaned up!';
+                  if (! eq (dale.keys (B.responders).sort (), ['R16', 'add', 'error', 'madd', 'mrem', 'mset', 'rem', 'set'])) return 'Some responders were not cleaned up!';
                });
 
                B.call (x, 'test', 'done');

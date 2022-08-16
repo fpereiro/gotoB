@@ -1,6 +1,6 @@
 var dale = window.dale, teishi = window.teishi, lith = window.lith, c = window.c, B = window.B;
 
-var type = teishi.type;
+var type = teishi.type, clog = teishi.clog, inc = teishi.inc;
 
 B.mount ('body', function () {
    return [
@@ -361,9 +361,9 @@ var earleyParser = function (input, grammar, options) {
    var printRule = function (rule) {
       return rule [0] + k.a + rule [1];
    }
-   var log = options.printLogs ? teishi.clog : function () {};
+   var log = options.printLogs ? clog : function () {};
 
-   if (teishi.stop ([
+   if (teishi.stop ('earleyParser', [
       ['input', input, 'string'],
       ['grammar', grammar, 'object'],
       function () {
@@ -400,11 +400,11 @@ var earleyParser = function (input, grammar, options) {
    var rootAtLeft = dale.stop (grammar.rules, true, function (rule) {
       return rule [0] === grammar.root;
    });
-   if (! rootAtLeft) return teishi.clog ('There must be at least one rule that has the root of the grammar at its left.');
+   if (! rootAtLeft) return clog ('There must be at least one rule that has the root of the grammar at its left.');
    var forbiddenCharacter = dale.stop (grammar.nonterminals.concat (grammar.terminals), true, function (character) {
-      return dale.go (k, function (v2) {return v2}).indexOf (character) > -1;
+      return inc (dale.go (k, function (v2) {return v2}), character);
    });
-   if (forbiddenCharacter) return teishi.clog ('The characters `•`, `→` and `ə` cannot be used in the grammar');
+   if (forbiddenCharacter) return clog ('The characters `•`, `→` and `ə` cannot be used in the grammar');
 
    /*
       We initialize `states`, an array that will have N+1 state sets (where N is the length of input).
@@ -511,9 +511,9 @@ var earleyParser = function (input, grammar, options) {
          // The marked character is the character at the right of the dot.
          var marked = state [0] [state [0].indexOf (k.d) + 1];
          // If the marked character is a nonterminal, we invoke the predictor.
-         if (grammar.nonterminals.indexOf (marked) !== -1) return predictor (current, state, current + ':' + i);
+         if (inc (grammar.nonterminals, marked)) return predictor (current, state, current + ':' + i);
          // If the marked character is a terminal, we invoke the scanner.
-         if (grammar.terminals.indexOf (marked) !== -1)    return scanner (current, state, current + ':' + i);
+         if (inc (grammar.terminals, marked))    return scanner (current, state, current + ':' + i);
          // If there is no marked character, the dot is at the end of the production rule. We invoke the completer.
          // completer: dot at end of production
          if (marked === undefined) return completer (current, state, current + ':' + i);
@@ -701,7 +701,7 @@ dale.go ([
    ['xxxx', grammars.BK],
    ['x', grammars.PAL],
    // The test below is the only test that should return `false`, since grammar PAL only accepts an input made of an odd number of `x`.
-   ['xx', grammars.PAL],
+   ['xx', grammars.PAL, 'invalid'],
    ['abbb', grammars.G1],
    ['aaab', grammars.G2],
    ['aaabbb', grammars.G3],
@@ -725,10 +725,15 @@ dale.go ([
    ['abcbcbcdddbcdbcddbcddddb', grammars.NSE],
    ['abcdbcddbcdddbcb', grammars.NSE],
 ], function (testCase) {
+   // UNCOMMENT TO TEST PARSER
+   /*
    var result1 = earleyParser (testCase [0], testCase [1]);
    var result2 = earleyParser (testCase [0], testCase [1], {skipNonterminals: true, collapseBranches: true});
-   //teishi.clog (result1);
-   //teishi.clog (result2);
+   if (testCase [2]) result1.valid = ! result1.valid;
+   if (testCase [2]) result2.valid = ! result2.valid;
+   if (! result1.valid) clog ('Invalid parse', result1);
+   if (! result2.valid) clog ('Invalid parse', result2);
+   */
 });
 
 // *** CELLS ***
@@ -767,12 +772,13 @@ var cellsGrammar = {
 };
 
 // Ц: non-zero digit (1-9), З: digit (0-9)
+// Б: letters (A-Z & a-z), C: symbols (A-Z, a-z, 0-9 & a bunch of symbols except equals)
 dale.go (dale.times (10, 0), function (n) {
    cellsGrammar.rules.push (['З', n + '']);
+   cellsGrammar.rules.push (['С', n + '']);
    if (n !== 0) cellsGrammar.rules.push (['Ц', n + '']);
 });
 
-// Б: letters (A-Z & a-z), C: symbols (A-Z, a-z & a bunch of symbols except equals)
 dale.go ('ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split (''), function (l) {
    cellsGrammar.rules.push (['Б', l]);
    cellsGrammar.rules.push (['Б', l.toLowerCase ()]);
@@ -824,10 +830,11 @@ cellsGrammar.rules = cellsGrammar.rules.concat ([
    ['п', 'К'],
    ['п', 'Р'],
    ['п', 'Э'],
-   // Я: cell: text, number, formula
+   // Я: cell: text, number, formula, empty
    ['Я', 'Т'],
    ['Я', 'В'],
    ['Я', 'Ф'],
+   ['Я', '']
 ]);
 
 // И: function name
@@ -840,7 +847,7 @@ var resolveReferences = function (cell, references) {
    var output = [];
 
    var recurseReferences = function (cell, firstCall) {
-      if (output.indexOf (cell) > -1) return;
+      if (inc (output, cell)) return;
       if (! firstCall) output.push (cell);
       dale.go (references [cell], function (cell) {
          recurseReferences (cell);
@@ -861,8 +868,8 @@ var flatten = function (tree) {
    return output;
 }
 
-var parseCell = function (input) {
-   return earleyParser (input, cellsGrammar, {skipNonterminals: true, collapseBranches: true}).tree;
+var parseCellInput = function (input) {
+   return earleyParser (input, cellsGrammar, {collapseBranches: true}).tree;
 }
 
 var concatenate = function (fun, input) {
@@ -884,7 +891,7 @@ var mapColumns = function (input) {
    - If it's an invalid value, it returns an error.
    - If it's text or number (or a formula that just contains a number), it returns it.
    - If it's a coordinate, it resolves it or returns an error if there's a circular reference.
-   - If it's a function application it returns its value (resolving any references) or returns an error if there's a circular reference.
+   - If it's a function application it returns its value (resolving any references) and any possible references, or returns an error if there's a circular reference.
 
    Something we haven't implemented but would be interesting to do: copy/paste with shifting of references. The basic idea would be to pass an offset to the function, so that it returns instead a shifted formula, rather than a value.
 */
@@ -896,7 +903,12 @@ var evaluate = function (tree, cell, references, rows, returnCoordinate) {
    // Left/right side of numeric sequence
    if (tree [0] === 'Л' || tree [0] === 'Ч') return {value: concatenate (evaluate, tree.slice (1))};
    // Text
-   if (tree [0] === 'Т') return {value: concatenate (evaluate, tree.slice (1))};
+   if (tree [0] === 'Т') {
+      var value = concatenate (evaluate, tree.slice (1));
+      // If a number gets matched as text, return it as number. The cleaner alternative to this would be to prefer parse trees that return a number rather than a text, but I don't know how to go about this.
+      if (value.match (/^-?\d+(\.\d)?$/)) value = parseFloat (value);
+      return {value: value};
+   }
    // Numeric expression
    if (tree [0] === 'В') return {value: parseFloat (concatenate (function (part) {
       if (part === '-' || part === '.') return part;
@@ -908,16 +920,18 @@ var evaluate = function (tree, cell, references, rows, returnCoordinate) {
          if (part === '$') return '';
          return evaluate (part);
       }, tree.slice (1));
+      coordinate = coordinate.toUpperCase ();
       if (returnCoordinate) return coordinate;
       var referenceList = resolveReferences (coordinate, references);
-      if (cell === coordinate || referenceList.indexOf (cell) > -1) return {error: 'Circular reference'};
+      if (cell === coordinate || inc (referenceList, cell)) return {error: 'Circular reference (' + coordinate + ')'};
       try {
-         var value = rows [parseInt (coordinate.slice (1)) - 1] [coordinate [0].toUpperCase ()].value;
+         var cell = rows [parseInt (coordinate.slice (1)) - 1] [coordinate [0].toUpperCase ()];
       }
       catch (error) {
-         var value = undefined;
+         var cell = {value: ''};
       }
-      return {value: value, refs: [coordinate]};
+      if (cell.error)  return {error: cell.error};
+      else             return {value: cell.value, refs: [coordinate]};
    }
    // Range
    if (tree [0] === 'Р') {
@@ -940,7 +954,10 @@ var evaluate = function (tree, cell, references, rows, returnCoordinate) {
    }
 
    // Cell
-   if (tree [0] === 'Я') return evaluate (tree [1], cell, references, rows);
+   if (tree [0] === 'Я') {
+      if (tree.length === 1) return {value: ''};
+      return evaluate (tree [1], cell, references, rows);
+   }
    // Formula
    if (tree [0] === 'Ф') return evaluate (tree [2], cell, references, rows);
    // Function name
@@ -979,10 +996,10 @@ var evaluate = function (tree, cell, references, rows, returnCoordinate) {
       var functionName = evaluate (tree [1]);
       if (functionName === 'add' || functionName === 'mul') {
          // Because the grammar requires argument lists to have at least a single argument, we don't have to check whether args.length is greater than 0
-         result = 0;
+         result = functionName === 'add' ? 0 : 1;
          dale.go (args, function (arg) {
             if (functionName === 'add') result += arg ? arg : 0;
-            if (functionName === 'mul') result *= arg ? arg : 0
+            if (functionName === 'mul') result *= arg ? arg : 1
          });
       }
       if (functionName === 'sub') {
@@ -1005,8 +1022,11 @@ dale.go ([
    ['=',                  {error: 'Invalid input'}],
    ['=e',                 {error: 'Invalid input'}],
    ['=BB3',               {error: 'Invalid input'}],
+   ['',                   {value: ''}],
    ['s',                  {value: 's'}],
    ['some text',          {value: 'some text'}],
+   ['some text 123',      {value: 'some text 123'}],
+   ['a2',                 {value: 'a2'}],
    ['1',                  {value: 1}],
    ['1.2',                {value: 1.2}],
    ['-1.23',              {value: -1.23}],
@@ -1014,12 +1034,14 @@ dale.go ([
    ['=A1',                {value: 7, refs: ['A1']},      'A2', {},                       [{A: {value: 7}}]],
    ['=$A1',               {value: 8, refs: ['A1']},      'A2', {},                       [{A: {value: 8}}]],
    ['=$A$1',              {value: 9, refs: ['A1']},      'A2', {},                       [{A: {value: 9}}]],
+   // Only show direct references
+   ['=B1',                {value: 0, refs: ['B1']},      'C1', {B1: ['A1']},             [{A: {value: 0}, B: {value: 0}}]],
    // Direct circular reference
-   ['=A1',                {error: 'Circular reference'}, 'A1', {},                       []],
+   ['=A1',                {error: 'Circular reference (A1)'}, 'A1', {},                       []],
    // Indirect circular reference (one degree)
-   ['=A1',                {error: 'Circular reference'}, 'A2', {A1: ['A2']},             []],
+   ['=A1',                {error: 'Circular reference (A1)'}, 'A2', {A1: ['A2']},             []],
    // Indirect circular reference (two degrees)
-   ['=A1',                {error: 'Circular reference'}, 'A2', {A1: ['A3'], A3: ['A2']}, []],
+   ['=A1',                {error: 'Circular reference (A1)'}, 'A2', {A1: ['A3'], A3: ['A2']}, []],
    // Function applications
    ['=add(1)',            {value: 1}],
    ['=add (1)',           {value: 1}],
@@ -1035,25 +1057,30 @@ dale.go ([
    ['=add (2, A1)',       {value: 9, refs: ['A1']},      'A2', {},                       [{A: {value: 7}}]],
    ['=add (C3:D1)',       {error: 'Invalid range'}],
    ['=add (D1:C3)',       {error: 'Invalid range'}],
-   ['=add (C1:D3)',       {error: 'Circular reference'}, 'A2', {D3: ['A2']},             []],
+   ['=add (C1:D3)',       {error: 'Circular reference (D3)'}, 'A2', {D3: ['A2']},             []],
    ['=add (C1:D3)',       {value: 7, refs: ['C1', 'C2', 'C3', 'D1', 'D2', 'D3']}, 'A2', {}, [{C: {value: 1}, D: {value: 2}}, {C: {value: ''}, D: {value: 2}}, {C: {}, D: {value: 2}}]],
    // Nested function applications
    ['=add (add (1))',     {value: 1}],
    ['=add (A1, add (1))', {value: 8, refs: ['A1']},       'A2', {},                       [{A: {value: 7}}]],
    // Circular references as function arguments
-   ['=add (2, A2)',       {error: 'Circular reference'}, 'A2', {},                       []],
-   ['=add (A1)',          {error: 'Circular reference'}, 'A2', {A1: ['A3'], A3: ['A2']}, []],
+   ['=add (2, A2)',       {error: 'Circular reference (A2)'}, 'A2', {},                       []],
+   ['=add (A1)',          {error: 'Circular reference (A1)'}, 'A2', {A1: ['A3'], A3: ['A2']}, []],
    // Other functions
    ['=sub (2)',           {error: 'Takes exactly 2 arguments'}],
    ['=div (2)',           {error: 'Takes exactly 2 arguments'}],
    ['=mod (2)',           {error: 'Takes exactly 2 arguments'}],
    ['=sub (2, 4)',        {value: -2}],
+   ['=mul (3)',           {value: 3}],
+   ['=mul (1, 3)',        {value: 3}],
+   ['=mul (1, A1)',       {value: 1, refs: ['A1']}, 'A2', {}, [{A: {value: ''}}]],
    ['=div (2, 4)',        {value: 0.5}],
    ['=mod (4, 3)',        {value: 1}],
 ], function (input) {
-   var tree = earleyParser (input [0], cellsGrammar, {collapseBranches: true}).tree;
-   var result = evaluate (tree, input [2], input [3], input [4]);
-   if (! teishi.eq (result, input [1])) return console.log ('Mismatch!', input [0], 'generated', result, 'but expected', input [1]);
+   // UNCOMMENT TO RUN TEST CASES
+   /*
+   var result = evaluate (parseCellInput (input [0]), input [2], input [3], input [4]);
+   if (! teishi.eq (result, input [1])) return clog ('Mismatch!', input [0], 'generated', result, 'but expected', input [1]);
+   */
 });
 
 views.cells = function () {
@@ -1090,7 +1117,8 @@ views.cells = function () {
             }],
          ]],
       ]],
-      ['h2', ['Cells (Work in progress!)']],
+      ['h2', ['Cells']],
+      ['h3', ['Allowed operations: add, sub, mul, div, mod']],
       B.view ([['cells', 'rows'], ['cells', 'editing'], ['cells', 'selected']], function (rows, editing, selected) {
          return ['div', {'class': 'sheet-wrapper'}, ['table', {'class': 'sheet'}, [
             ['tr', {'class': 'header'}, dale.go (' ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split (''), function (column) {
@@ -1102,15 +1130,16 @@ views.cells = function () {
                   dale.go (row, function (cell, column) {
                      var edit   = teishi.eq (cell.coordinates, editing);
                      var select = teishi.eq (cell.coordinates, selected);
+                     var value = cell.error ? 'ERROR: ' + cell.error : cell.value;
                      return ['td', {
                         'class': 'cell' + (edit ? ' editing' : '') + (select ? ' selected' : ''),
                         onclick: B.ev ('set', ['cells', 'selected'], cell.coordinates),
                         ondblclick: B.ev ('start', 'edit', cell.coordinates),
-                     }, ! edit ? cell.value : ['input', {
+                     }, ! edit ? value : ['input', {
                         value: cell.formula,
                         oninput: B.ev ('set', ['cells', 'editBuffer']),
                         onblur: B.ev ('save', 'edit')
-                     }, cell.value]];
+                     }]];
                   })
                ]];
             })
@@ -1125,11 +1154,12 @@ window.addEventListener ('keydown', function (ev) {
 
 B.mrespond ([
    ['initialize', 'cells', function (x) {
-      B.set (['cells', 'rows'], dale.go (dale.times (100), function (row) {
+      B.call (x, 'mset', ['cells', 'rows'], dale.go (dale.times (100), function (row) {
          return dale.obj ('ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split (''), function (column) {
             return [column, {coordinates: [row, column], formula: '', value: ''}];
          });
       }));
+      B.call (x, 'mset', ['cells', 'refs'], {});
       B.call (x, 'change', ['cells', 'rows']);
    }],
    ['keydown', 'cells', function (x, keyCode) {
@@ -1137,11 +1167,11 @@ B.mrespond ([
       if (! editing && ! selected) return;
       // ESC
       if (keyCode === 27) return B.call (x, 'cancel', 'edit');
-      // Enter
-      if (keyCode === 13) {
-         if (editing) return B.call (x, 'save', 'edit');
-         else         return B.call (x, 'start', 'edit', selected);
+      // Enter & =
+      if (keyCode === 13 || keyCode === 187) {
+         if (! editing) return B.call (x, 'start', 'edit', selected);
       }
+      if (keyCode === 13 && editing) return B.call (x, 'save', 'edit');
       // Arrow keys
       if (! editing && keyCode >= 37 && keyCode <= 40) {
          if (keyCode === 37) B.call (x, 'set', ['cells', 'selected', 1], mapColumns (Math.max (0,  mapColumns (selected [1]) - 1)));
@@ -1160,21 +1190,49 @@ B.mrespond ([
    }],
    ['start', 'edit', function (x, selected) {
       var cell = B.get ('cells', 'rows', selected [0] - 1, selected [1]);
-      B.call (x, 'set', ['cells', 'editBuffer'], cell.value);
+      B.call (x, 'set', ['cells', 'editBuffer'], cell.formula);
       B.call (x, 'set', ['cells', 'editing'], cell.coordinates);
    }],
    ['save', 'edit', function (x) {
       var editing = B.get ('cells', 'editing');
-      // It might be the case that the `save edit` event is fired multiple times (one because of an ENTER keydown, another one from the `onblur` handler), so we check whether there is still a selection
+      // It might be the case that the `save edit` event is fired multiple times (one because of an ENTER keydown, another one from the `onblur` handler), so we check whether we are still in editing more.
       if (! editing) return;
-      var value = B.get ('cells', 'editBuffer');
-      var result = earleyParser (value, cellsGrammar, {skipNonterminals: true, collapseBranches: true});
 
-      B.call (x, 'set', ['cells', 'rows', editing [0] - 1, editing [1], 'formula'], value);
-      // TODO: add resolveReferences arguments
-      // TODO: set/update cells that reference this cell
-      B.call (x, 'set', ['cells', 'rows', editing [0] - 1, editing [1], 'value'],   evaluate (value, resolveReferences ('A1', {})));
+      var input = B.get ('cells', 'editBuffer');
+      if (input === undefined) input = '';
+      input += '';
+
+      var value = evaluate (parseCellInput (input), editing [1] + editing [0], B.get ('cells', 'refs'), B.get ('cells', 'rows'));
+      B.call (x, 'set', ['cells', 'rows', editing [0] - 1, editing [1], 'formula'], input);
+      if (value.error) B.call (x, 'set', ['cells', 'rows', editing [0] - 1, editing [1], 'error'],   value.error);
+      else {
+         B.call (x, 'rem', ['cells', 'rows', editing [0] - 1, editing [1]], 'error');
+         B.call (x, 'set', ['cells', 'rows', editing [0] - 1, editing [1], 'value'],   value.value);
+      }
       B.call (x, 'cancel', 'edit');
+
+      // *** UPDATE REFERENCE RESPONDERS ***
+
+      var oldRefs = B.get ('cells', 'refs', editing [1] + editing [0]);
+      B.call (x, 'set', ['cells', 'refs', editing [1] + editing [0]], value.refs);
+      dale.go (oldRefs, function (oldRef) {
+         if (inc (value.refs || [], oldRef)) return;
+         B.forget ('CellsReference ' + editing [1] + editing [0] + ': ' + oldRef);
+      });
+      dale.go (value.refs, function (newRef) {
+         if (inc (oldRefs || [], newRef)) return;
+         var newRefRow = parseInt (newRef.slice (1)) - 1;
+         B.respond ('change', ['cells', 'rows', newRefRow, newRef [0]], {id: 'CellsReference ' + editing [1] + editing [0] + ': ' + newRef, match: B.changeResponder}, function (x) {
+            var coordinate = x.responder.id.replace ('CellsReference ', '').replace (/:.+$/, '');
+            var editing = [parseInt (coordinate.slice (1)) - 1, coordinate [0]];
+            var value = evaluate (parseCellInput (input), coordinate, B.get ('cells', 'refs'), B.get ('cells', 'rows'));
+            if (value.error) B.call (x, 'set', ['cells', 'rows', editing [0], editing [1], 'error'],   value.error);
+            else {
+               B.call (x, 'rem', ['cells', 'rows', editing [0], editing [1]], 'error');
+               B.call (x, 'set', ['cells', 'rows', editing [0], editing [1], 'value'],   value.value);
+            }
+         });
+      });
    }],
    ['cancel', 'edit', function (x) {
       B.call (x, 'rem', 'cells', 'editing');

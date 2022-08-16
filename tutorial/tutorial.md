@@ -1869,7 +1869,7 @@ To actually display `<button>` as text, rather than an HTML element, the opening
 
 To escape special characters (such as angle brackets) properly, we need to create a function to do that. However, here we will use one of gotoв's dependencies, lith, to create the HTML for us. Besides escaping special characters, lith does two more things for us:
 
-- Closes only those HTML tags that need closing. So far, all the tags we've seen require a closing tag (for example, `<button>` is closed with `</button>`). However, tags that are often used, such as `<img>` or `<input>`, should not be closed.
+- Closes only those HTML tags that need closing. So far, all the tags we've seen require a closing tag (for example, `<button>` is closed with `</button>`). However, some tags that are often used, such as `<img>` or `<input>`, should not be closed.
 - It prevents string concatenation from getting too hairy. lith allows us to express HTML using arrays (which are lists of elements). This allows for both cleaner and less error-prone code.
 
 To add lith, we need first to require gotoв. To do this, we can simply add the following line to the HTML:
@@ -2339,7 +2339,7 @@ Organizational principles that are common to most frontend frameworks and which 
 - Principle 1: generate all (or most) HTML with JS based on the state (rather than on the server)
 - Principle 2: keep all the state in JS
 - Principle 3: make changes first to the state, then to the HTML. Instead of bidirectional change, operate on one way.
-- Principle 4: group logic into functions. Types of logic: update HTML, update state, communicate with server or localstorage, other computation (for example, summing a total). Functions can do one or more of these four, but at least one of these.
+- Principle 4: group logic into functions. Types of logic: update HTML, update state, communicate with server or localstorage, other computation (for example, summing a total), DOM side-effects. Functions can do one or more of these five, but at least one of these.
 
 gotoB specific solutions:
 1. Views are functions that return object literals (liths) to generate HTML.

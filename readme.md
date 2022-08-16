@@ -6,7 +6,7 @@ gotoв is a framework for making the frontend of a web application (henceforth *
 
 ## Current status of the project
 
-The current version of gotoв, v2.1.1, is considered to be *mostly stable* and *complete*. [Suggestions](https://github.com/fpereiro/gotoB/issues) and [patches](https://github.com/fpereiro/gotoB/pulls) are welcome. Besides bug fixes, and the completion of the tutorial in one of the appendixes, there are no changes planned.
+The current version of gotoв, v2.2.0, is considered to be *stable* and *complete*. [Suggestions](https://github.com/fpereiro/gotoB/issues) and [patches](https://github.com/fpereiro/gotoB/pulls) are welcome. Besides bug fixes, and the completion of the tutorial in one of the appendixes, there are no changes planned.
 
 gotoв is part of the [ustack](https://github.com/fpereiro/ustack), a set of libraries to build webapps which aims to be fully understandable by those who use it.
 
@@ -29,7 +29,7 @@ gotoв is written in Javascript. You can use it in the browser by loading the pr
 Or you can use this link to use the latest version - courtesy of [jsDelivr](https://jsdelivr.com).
 
 ```html
-<script src="https://cdn.jsdelivr.net/gh/fpereiro/gotob@530051f9911df8db4635e6898d51e8a426fb9a5b/gotoB.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/fpereiro/gotob@/gotoB.min.js"></script>
 ```
 
 gotoв uses non-ASCII symbols, so you also must specify an [encoding](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/meta) for your document (for example [UTF-8](https://en.wikipedia.org/wiki/UTF-8)) by placing a `<meta>` tag in the `<head>` of the document: `<meta charset="utf-8">`.
@@ -393,9 +393,9 @@ And, of course, gotoв must be very useful for building a real webapp.
 - **Fast reload**: the edit-reload cycle should take under two seconds. No need to wait until no bundle is completed.
 - **Smallness**: gotoв and its dependencies are < 2048 lines of consistent, annotated javascript. In other words, it is less than 2048 lines on top of [vanilla.js](http://vanilla-js.com/).
 - **Batteries included**: the core functionality for building a webapp is all provided. Whatever libraries you add on top will probably be for specific things (nice CSS, a calendar widget, etc.)
-- **Trivial to set up**: add `<script src="https://cdn.jsdelivr.net/gh/fpereiro/gotob@530051f9911df8db4635e6898d51e8a426fb9a5b/gotoB.min.js"></script>` at the top of the `<body>`.
+- **Trivial to set up**: add `<script src="https://cdn.jsdelivr.net/gh/fpereiro/gotob@/gotoB.min.js"></script>` at the top of the `<body>`.
 - **Everything in plain sight**: all properties and state are directly accessible from the javascript console of the browser. DOM elements have stringified event handlers that can be inspected with any modern browser.
-- **Performance**: gotoв itself is small (~14kB when minified and gzipped, including all dependencies) so it is loaded and parsed quickly. Its view redrawing mechanism is reasonably fast.
+- **Performance**: gotoв itself is small (~15kB when minified and gzipped, including all dependencies) so it is loaded and parsed quickly. Its view redrawing mechanism is reasonably fast.
 - **Cross-browser compatibility**: gotoв is intended to work on virtually all the browsers you may encounter. See browser current compatibility above in the *Installation* section.
 
 ### What does gotoв *not* care about?
@@ -1242,7 +1242,7 @@ This is the reason for which you need to use events to modify the store. If you 
 
 The three data events internally call three respective data functions: `B.set`, `B.add` and `B.rem`. These functions receive a `path` as its first argument and then further arguments.
 
-If you want to modify the store but avoid redrawing the views that depend on that part of the store, you can invoke these functions directly. This might be useful when you have multiple updates on a very short amount of time. Once the updates happen, you can then trigger the view redraw by firing a `change` event on the desired `path`. Let's see an example:
+If you want to modify the store but avoid redrawing the views that depend on that part of the store, you can do two things: 1) invoke these functions directly; or 2) use the *mute* counterparts of the standard events: `madd`, `mrem` and `mset`. The advantage of using the mute data events is that they will still create entries in `B.log` and as such they improve the debugging experience. Using mute data events will be useful when you have multiple updates on a very short amount of time. Once the updates happen, you can then trigger the view redraw by firing a `change` event on the desired `path`. Let's see an example:
 
 ```javascript
 var items = function () {
@@ -1258,23 +1258,25 @@ B.mount ('body', items);
 var updateItems = function (items) {
    items.map (function (item, index) {
       var updatedItem = item + 'foo';
-      // We modify the items on the store directly.
-      B.set (['items', index], updatedItem);
+      // We modify the items on the store without calling a `change` event
+      B.call ('mset', ['items', index], updatedItem);
    });
    // When we're done updating the store, we call a `change` event
    B.call ('change', 'items');
 }
 ```
 
-Most of the time, this will not be necessary (the example above, in fact, is a bit artificial: you could perfectly create a new `items` array and then `set` it as one operation). A good approach is to not update the store directly unless a particular situation calls for it on the grounds of performance.
+Most of the time, this will not be necessary (the example above, in fact, is a bit artificial: you could perfectly create a new `items` array and then `set` it as one operation).
 
-In the example above, you could also modify the elements without invoking `B.set`; the result will be the same.
+In the example above, you could also modify the elements invoking `B.set` directly - however this will not generate entries in `B.log`.
 
 ```javascript
 var updateItems = function (items) {
    items.map (function (item, index) {
       var updatedItem = item + 'foo';
       // We modify the items on the store directly.
+      B.set ([items, index], updatedItem);
+      // If you directly set the item on the store, it would be the same as calling `B.set` above (assuming that `B.store.items` already exists).
       B.store.items [index] = updatedItem;
    });
    // When we're done updating the store, we call a `change` event
@@ -1312,15 +1314,17 @@ B.call ('set', ['todos', 0], 'Write readme and add examples.');
 // We completely remove the `todos` from the store.
 B.call ('rem', [], 'todos');
 
-// The event above will trigger another event with verb `change` and path `[]`. This will *also* redraw the view, because it affects the path `todos`.
+// The event above will trigger another event with verb `change` and path `['todos']`. This will *also* redraw the view, because it affects the path `todos`.
 ```
+
+You might have noticed: why does the last `rem` event fires a `change` event on `['todos']`, rather than on `[]`? The reason is that `rem` determines the affected path by adding each of the arguments to the received path. In general, if you pass a path `X` to `rem`, and then you want to remove a key `Y` from it, the `change` event will be fired on path `X.Y`. Interestingly enough, if you want to remove both `Y` and `Z` with the same event, you will trigger `change` events on both `X.Y` and `X.Z`.
 
 In general, if a view has a path with n elements, it will be redrawn by any event with verb `change` that either:
 1. Has the same path.
 2. Has a longer path of which the first n elements match those of the view's path.
 3. Has a shorter path of length m, and each of these elements match the corresponding elements of the view's path.
 
-Tricky? Quite. It took me a couple of years to get this right. This logic is necessary because operations that are either more nested (longer paths) or less nested (shorter paths) can still modify data on a given path. In the examples above, you can see how an operation on a longer path `['todos', 0]` or a shorter one `[]` had an impact on `'todos'`. However, an operation on a path that didn't share elements with `'todos'` would not be relevant.
+Tricky? Quite. It took me a couple of years to get this right. This logic is necessary because operations that are either more nested (longer paths) or less nested (shorter paths) can still modify data on a given path. In the examples above, you can see how an operation on a longer path `['todos', 0]` had an impact on `'todos'`. This would also be the case for an operation that modifies `[]`. However, an operation on a path that didn't share elements with `'todos'` would not be relevant (for example, if there was a change event on `['whatever']`).
 
 If you want to create a responder with verb `change` that behaves exactly like those set up by `B.view`, you can do so by using `B.changeResponder` as the `match` function:
 
@@ -1389,7 +1393,7 @@ Every gotoв redraw calls an event with verb `redraw` and a `path` that is the s
 
 Most gotoв errors are quite straightforward: an invalid input is passed to one of the functions. The trickiest errors to understand are those related to the drawing (or redrawing) of views. Here's a list of common errors and what can be done about it:
 
-- `View function must return a lith element but instead returned...`: this error is thrown by `B.view`; the error message will contain the `path` to help you locate the offending invocation to `B.view`. Make sure that your `vfun` returns a lith, instead of a lithbag or `undefined`. A typical problem is that you might have forgotten to add a comma between two arrays and so a part of the lith is considered as `undefined` - unfortunately, this is a javascript syntax issue that gotoв can do nothing about.
+- `View function at path ... must return a lith element but instead returned...`: this error is thrown by `B.view`; the error message will contain the `path` to help you locate the offending invocation to `B.view`. Make sure that your `vfun` returns a lith, instead of a lithbag or `undefined`. A typical problem is that you might have forgotten to add a comma between two arrays and so a part of the lith is considered as `undefined` - unfortunately, this is a javascript syntax issue that gotoв can do nothing about.
 - `Attempt to redraw dangling element`: this error is thrown by a view that is redrawn before being placed in the DOM. gotoв expects the outermost element of each invocation to `B.view` to be already placed in the DOM (usually through `B.mount`). Make sure that the outputs of `B.view` are not "floating around", but rather contained in an element that has been mounted.
 - `Redraw error: DOM element missing.`: this error means that, during a redraw, gotoв was expecting to find a certain DOM element somewhere and couldn't find it. This could happen for a number of reasons:
    - Your code (or another library) have performed DOM manipulations on the DOM element of a reactive view. The solution is to use an `opaque` attribute (see the next section for the details).
@@ -1433,7 +1437,7 @@ B.respond ('change', 'date', {priority: -1000}, function (x) {
 });
 ```
 
-Why the `priority: -1000` option? The details are explained in the [internals](#internals) section. But, in a word, the reason is that you want the initialization to happen *after* the DOM of the view is redrawn, not *before*. The lower the priority of a responder, the later it gets executed. By using a priority with a very low number, you make sure that the responder gets matched after all DOM changes are performed by gotoв.
+Why the `priority: -1000` option? The details are explained in the [internals](#internals) section. But, in short, the reason is that you want the initialization to happen *after* the DOM of the view is redrawn, not *before*. The lower the priority of a responder, the later it gets executed. By using a priority with a very low number, you make sure that the responder gets matched after all DOM changes are performed by gotoв.
 
 `vfuns` (through lith) support a `LITERAL` pseudo-tag, which lets you insert raw HTML into a view. If you use an HTML string to create DOM elements, you need to do it within an `opaque` element, otherwise you'd be changing the DOM tree of the view without gotoв knowing about it.
 
@@ -1655,7 +1659,7 @@ Below is the annotated source.
 
 ```javascript
 /*
-gotoB - v2.1.1
+gotoB - v2.2.0
 
 Written by Federico Pereiro (fpereiro@gmail.com) and released into the public domain.
 
@@ -1690,10 +1694,10 @@ In the case of recalc, we initialize a recalc object and store it in the variabl
    var dale = window.dale, teishi = window.teishi, lith = window.lith, r = window.R (), c = window.c;
 ```
 
-We create an alias to `teishi.type`, the function for finding out the type of an element. We also create a function `time` to return the current time in milliseconds; if `Date.now` is not supported by the browser, we resort to `new Date ().getTime`.
+We create an alias to `teishi.type`, the function for finding out the type of an element. We also create an alias to `teishi.inc`, a function to determinen whether an element is contained in an array. We also create a function `time` to return the current time in milliseconds; if `Date.now` is not supported by the browser, we resort to `new Date ().getTime`.
 
 ```javascript
-   var type = teishi.type, time = Date.now ? function () {return Date.now ()} : function () {return new Date ().getTime ()};
+   var type = teishi.type, inc = teishi.inc, time = Date.now ? function () {return Date.now ()} : function () {return new Date ().getTime ()};
 ```
 
 We define `B`, the main object of the library. Note we also attach it to `window.B`, so that it is globally available to other scripts.
@@ -1714,7 +1718,7 @@ The remaining seven keys of the main object map to recalc entities. The first on
 - `r.forget`, the function for deleting an event responder.
 
 ```javascript
-   var B = window.B = {v: '2.1.1', B: 'в', t: time (), r: r, responders: r.responders, store: r.store, log: r.log, call: r.call, respond: r.respond, forget: r.forget};
+   var B = window.B = {v: '2.2.0', B: 'в', t: time (), r: r, responders: r.responders, store: r.store, log: r.log, call: r.call, respond: r.respond, forget: r.forget};
 ```
 
 gotoв is essentially a set of functions built on top of recalc. The last six keys are meant as shorthands to the corresponding recalc objects for quicker debugging from the browser console. If it wasn't for these shorthands, instead of writing `B.call`, for example, we'd have to write `B.r.call`, which is longer and doesn't look as nice.
@@ -1799,11 +1803,13 @@ We define four variables for drawing the table of events:
 - `index`, which will store the ordinal position of each event or responder.
 - `colors`, a list of colors to assign to event & responder ids.
 - `columns`, the columns for the table.
-- `shorten`, a function that takes a string and returns a shortened version if the string is over 600 characters, also adding the number of characters omitted. If the string is more than 600 characters, it takes the extra characters from the middle of the string, rather than the end.
 - `counter`, a variable that keeps track of how many rows we have added so far.
+- `shorten`, a function that takes a string and returns a shortened version if the string is over `n` characters, also adding the number of characters omitted. If the string is more than `n` characters, it takes the extra characters from the middle of the string, rather than the end.
 
 ```javascript
-      var index = {}, colors = ['#fe6f6c', '#465775', '#e086c3', '#8332ac', '#462749', '#044389', '#59c9a6', '#ffad05', '#7cafc4', '#5b6c5d'], columns = ['#', 'ms', 'type', 'id', 'from', 'verb', 'path', 'args'], shorten = function (s) {return s.length > 600 ? s.slice (0, 300) + '... [' + (s.length - 600) + ' more characters] ...' + s.slice (-300) : s}, counter = 0;
+      var index = {}, colors = ['#fe6f6c', '#465775', '#e086c3', '#8332ac', '#462749', '#044389', '#59c9a6', '#ffad05', '#7cafc4', '#5b6c5d'], columns = ['#', 'ms', 'type', 'id', 'from', 'verb', 'path', 'args'], counter = 0, shorten = function (s, n) {
+         return s.length < n + 10 ? s : s.slice (0, Math.ceil (n * 2 / 3)) + ' [[[' + (s.length - n) + ' CHARACTERS OMITTED]]] ' + s.slice (- Math.floor (n / 3));
+      }
 ```
 
 We will add to the body a `<table>` element with `id` `eventlog`.
@@ -1816,7 +1822,7 @@ We will add to the body a `<table>` element with `id` `eventlog`.
 We add a `<style>` tag to add format to the `eventlog` table and some of its components.
 
 ```javascript
-         ['style', ['#eventlog', {'border-collapse': 'collapse', 'font-family': 'monospace', 'font-size': 18, position: 'absolute', 'right, top': 4, width: Math.min (window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth, 800), 'z-index': '10000', border: 'solid 4px #4488DD'}, ['th, td', {'padding-left, padding-right': 10, 'border-bottom, border-right': 'solid 1px black'}]]],
+         ['style', ['#eventlog', {'display': 'block', 'table-layout': 'fixed', 'border-collapse': 'collapse', 'font-family': 'monospace', 'font-size': 18, position: 'absolute', 'top, left': 4, width: (window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth) - 22, 'z-index': '10000', border: 'solid 4px #4488DD'}, ['th, td', {'padding-left, padding-right': 10, 'border-bottom, border-right': 'solid 1px black', 'word-wrap': 'break-word', 'max-width': (window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth) / 4}]]],
 ```
 
 We iterate the `columns` and generate a row with all the headers for the table.
@@ -1855,7 +1861,7 @@ Note we use `counter` rather than the position of the entry on `B.log` in case w
             index [responderIndex || entry.id] = counter++;
 ```
 
-We prepare the row on which we'll print the details of either the event or responder. We alternate a background color (with two types of grays). We also set two different classes for event vs. responder rows (`evlog-ev` and `evlog-resp`).
+We prepare the row on which we'll print the details of either the event or responder. We alternate a background color (with two types of grays). We also set two different classes for event vs. responder rows (`evlog-ev` and `evlog-resp`). For the `args` column, we make use of `shorten` (which we defined above) and `B.str` (which we'll define below). `B.str` is a function that will stringify each of the `args` so they can be printed properly.
 
 ```javascript
             return ['tr', {style: lith.css.style ({'background-color': {0: '#fcfcfc', 1: '#efefef'} [(counter - 1) % 2]}), 'class': entry.id [0] === 'E' ? 'evlog-ev' : 'evlog-resp'}, dale.go (['#' + counter, entry.t - B.t, entry.id.match (/^E\d+$/) ? 'event' : 'responder', entry.id, entry.from, entry.verb, entry.path.join (':'), shorten (dale.go (entry.args, B.str).join (', '))], function (value, k2) {
@@ -1994,7 +2000,7 @@ If `path` has length 0, we will overwrite `B.store`:
 If we're not in production mode, we check that `value` is either an array or an object. If it's neither, we report an error and return `false`.
 
 ```javascript
-         if (! B.prod && teishi.simple (value)) return B.error (x || {}, 'B.set', 'Cannot set B.store to something that is not an array or object.');
+         if (! B.prod && teishi.simple (value)) return B.error (x || {}, 'B.set', 'Cannot set B.store to something that is not an array or object:', value);
 ```
 
 We set `B.store` to `value` and return `true`. There's nothing to do for this case, so we close the block.
@@ -2173,10 +2179,12 @@ If `target` is an array, we check that each of `keys` are integers; and if `targ
 
 If any of these validations is not passed, we report the error through `B.error` and return `false`.
 
+Note that we pass `true` as the last argument to `teishi.v`, to avoid validating the rules that we pass to the function and hence improve performance. We will do this with all forthcoming invocations to `teishi.v` and `teishi.stop`.
+
 ```javascript
       ], function (error) {
          B.error (x || {}, 'B.rem', error, 'Path:', path);
-      })) return false;
+      }, false)) return false;
 ```
 
 If `targetType` is an object, we merely iterate `keys` and [`delete`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/delete) them from the `target`.
@@ -2237,10 +2245,12 @@ We're now ready to define the three data responders. These functions are wrapper
 
 These responders do the following: 1) invoke the underlying data function; 2) if the data function executed correctly (because its arguments were valid) *and* the store was modified, a `change` event will be triggered.
 
-We iterate the three verbs.
+We will also add three *mute* data responders, which will do the same as their talkative counterparts, except for calling `change` events. In other words, mute data responders will invoke the underlying data function but will **not** trigger `change` events.
+
+We iterate the six verbs.
 
 ```javascript
-   dale.go (['add', 'rem', 'set'], function (verb) {
+   dale.go (['add', 'rem', 'set', 'madd', 'mrem', 'mset'], function (verb, k) {
 ```
 
 For each of these verbs, we invoke `B.respond` to create an event responder. We set both its `id` and `verb` to the verb itself, and we set its path to an empty array. By setting the path to an empty array, this event will be triggered by any event that has the same verb, regardless of its path.
@@ -2258,25 +2268,41 @@ The `match` function will return `true` if the verb of the event matches that of
       }}, function (x) {
 ```
 
+For the mute responders, we will invoke the corresponding data function with the context as the first argument, the `path` as its second argument and passing along further arguments (if they're there). That will be the only action performed by the mute responders, so we can `return`.
+
+```javascript
+         if (k > 2) return B [verb.replace (/^m/, '')].apply (null, [x, x.path].concat (x.args || []));
+```
+
 We create a reference to the existing value of `x.path` and store it on a local variable `previousValue`. If the operation is `add` or `rem`, we copy the value, because if the target is an array or object and we modify it through this operation, we will lose its original value and hence cannot know whether it will have changed. If the operation is `set`, we don't need to copy it since it will either be overwritten with a new object/array, or with the already existing one.
 
 ```javascript
          var previousValue = verb === 'set' ? B.get (x.path) : teishi.copy (B.get (x.path));
 ```
 
-We invoke the corresponding data function with the context as the first argument, the `path` as its second argument and passing along further arguments (if they're there). If this function invocation returns `false`, the handler will stop executing.
+If we're here, the responder is a non-mute one. We invoke the corresponding data function with the context as the first argument, the `path` as its second argument and passing along further arguments (if they're there). If this function invocation returns `false`, there was an error in the arguments passed to the function, so the handler will stop executing. If this function invocation didn't return `false`, but the part of the store at `path` did not change, the handler will also stop executing, since all remaining actions are concerned with firing `change` events.
 
 ```javascript
-         if (B [x.verb].apply (null, [x, x.path].concat (dale.go (arguments, function (v) {return v}).slice (1))) === false) return;
+         if (B [verb].apply (null, [x, x.path].concat (x.args || [])) === false || teishi.eq (previousValue, B.get (x.path))) return;
 ```
 
-If we're here, the corresponding data function was executed successfully. If the relevant part of the store changed, we trigger a `change` event on the path. We also pass `previousValue` as an extra argument since it will be useful for `change` responders to detect whether there was a change in the value of their path.
+If we're here, we are dealing with the cases of `add` and `set` after a successful execution of a data function that modified the store. We trigger a `change` event on the path. We also pass `previousValue` as an extra argument since it will be useful for `change` responders to detect whether there was a change in the value of their path.
 
 ```javascript
-         if (! teishi.eq (previousValue, B.get (x.path))) B.call (x, 'change', x.path, previousValue);
+         if (verb !== 'rem') return B.call (x, 'change', x.path, B.get (x.path), previousValue);
 ```
 
-There's nothing else to do, so we close the responder and the iterating function.
+For the case of `rem`, we might have to fire multiple `change` events. This is because multiple elements can be removed with a single call - more precisely, one per each of the `args`. To give an example: if `path` is `X`, and we pass `[Y, Z]` as `args`, then `change` events should be fired on `X.Y` and `X.Z`.
+
+To do this, we will iterate `x.args` and fire `change` events on each of these paths that are built by concatenating each `arg` to the `path`.
+
+```javascript
+         dale.go (x.args, function (arg) {dale.go (arg, function (arg) {
+            B.call (x, 'change', x.path.concat (arg), undefined, previousValue [arg]);
+         })});
+```
+
+There's nothing else to do, so we close both the handler for the responder and the iterating function.
 
 ```javascript
       });
@@ -2321,10 +2347,12 @@ We close the function.
 
 ### `B.ev`
 
-We start this section by defining `B.str`, a helper function only used by `B.ev`. This function has the purpose of stringifying its input so that it can be placed within a DOM event handler. This function takes a single argument of any type.
+We start this section by defining `B.str`, a helper function only used by `B.ev`. This function has the purpose of stringifying its input so that it can be placed within a DOM event handler. This function takes an `input` of any type.
+
+Additionally, it takes an optional `noQuotesOnString` flag that, if `input` is a string, will prevent `B.str` from putting quotes around it. Only `B.eventlog` will invoke `B.str` using this flag.
 
 ```javascript
-   B.str = function (input) {
+   B.str = function (input, noQuotesOnString) {
 ```
 
 We note the type of `input`.
@@ -2333,16 +2361,16 @@ We note the type of `input`.
       var inputType = type (input);
 ```
 
-If `input` is neither an array nor an object, we're dealing with a single value. If it is a string, we stringify it and return it. Otherwise, we coerce it into a string and return it. By coercing non-strings into strings, we can obtain strings that represent javascript values that cannot be stringified, like `NaN`, `Infinity`, `undefined` or regular expressions.
+If `input` is neither an array nor an object, we're dealing with a single value. If it is a string, we stringify it (but only if `noQuotesOnString` is disabled) and return it. Otherwise, we coerce it into a string and return it. By coercing non-strings into strings, we can obtain strings that represent javascript values that cannot be stringified, like `NaN`, `Infinity`, `undefined` or regular expressions.
 
 ```javascript
-      if (inputType !== 'array' && inputType !== 'object') return inputType === 'string' ? teishi.str (input) : (input + '');
+      if (inputType !== 'array' && inputType !== 'object') return inputType === 'string' ? (noQuotesOnString ? input : teishi.str (input)) : (input + '');
 ```
 
 If `input` is an array, we recursively invoke `B.str` on all its elements, join the results by a comma and a space; we finally wrap the output with square brackets and return the resulting string.
 
 ```javascript
-      if (inputType === 'array') return '[' + dale.go (input, B.str).join (', ') + ']';
+      if (inputType === 'array') return '[' + dale.go (input, function (v) {return B.str (v)}).join (', ') + ']';
 ```
 
 If we're here, `input` is an object. We iterate the object; for each of its items, we stringify the key and append a colon, a space and the value of recursively invoking `B.str` on the value itself. We join these results by a comma and a space, and finally wrap the whole thing with curly brackets. We return the resulting string and close the function.
@@ -2397,7 +2425,7 @@ If we're not in production mode, we make sure that each of the elements of `evs`
          ];
       }), function (error) {
          B.error ('B.ev', error, 'Events:', evs);
-      })) return false;
+      }, false)) return false;
 ```
 
 We create `output`, a string that will contain the output of a function.
@@ -2478,7 +2506,7 @@ We now define `B.mount`, a function that will place liths onto a target element.
 If we're not in production mode, we check that `target` is a string that identifies either the `body` or an `id` selector - otherwise, we report an error and return `false`.
 
 ```javascript
-      if (! B.prod && type (target) !== 'string' || ! target.match (/^(body|[a-z0-9]*#[^\s\[>,:]+)$/)) return B.error ('B.mount', 'Target must be either \'body\' or an id selector, but instead is ' + target);
+      if (! B.prod && type (target) !== 'string' || ! target.match (/^(body|[a-z0-9]*#[^\s\[>,:]+)$/)) return B.error ('B.mount', 'Target must be either \'body\' or an id selector, but instead is:', target);
 ```
 
 We find the `element` and store it in a local variable.
@@ -2492,7 +2520,7 @@ If `B.prod` is falsy, we make sure that `element` exists and that `fun` is a fun
 ```javascript
       if (! B.prod) {
          if (! element)                 return B.error ('B.mount', 'Target not found:', target);
-         if (type (fun) !== 'function') return B.error ('B.mount', 'fun must be a function but instead is', fun);
+         if (type (fun) !== 'function') return B.error ('B.mount', 'fun must be a function but instead is', fun, 'with type', type (fun));
       }
 ```
 
@@ -2507,7 +2535,7 @@ If we're not in production mode, we validate `result` through `B.validateLith`. 
 ```javascript
       if (! B.prod) {
          var result = B.validateLith (elem);
-         if (result !== 'Lith' && result !== 'Lithbag') return B.error ('B.mount', 'function returned invalid lith or lithbag', result);
+         if (result !== 'Lith' && result !== 'Lithbag') return B.error ('B.mount', 'function returned invalid lith or lithbag', result.error);
       }
 ```
 
@@ -2612,8 +2640,8 @@ If any of these conditions is not met, an error will be notified through `B.erro
 
 ```javascript
       }), function (error) {
-         B.error ('B.view', error, {path: path});
-      })) return false;
+         B.error ('B.view', 'Validation error:', error, 'Path:', path);
+      }, false)) return false;
 ```
 
 We define `id`, a variable that will hold the id for the element that will contain the produced view. The id will start with `B.B` (`в`) and will be appended with a counter (that is stored on `B.internal.count`). gotoв expects the container elements of its reactive views to have ids comprised of `в` followed by digits.
@@ -2634,22 +2662,22 @@ We copy the current value of `B.internal.count` and define an empty array `child
          var count = B.internal.count, children = [];
 ```
 
-We invoke `fun`, passing the current values of each of `paths` as an argument (we fetch the values through `B.get`. We store the result in a variable `elem`.
+We invoke `fun`, passing the current values of each of `paths` as an argument (we fetch the values through `B.get`. We store the result in a variable `elem`. We also create a variable `validation`, which if we're in production mode will merely be `Lith`; if we're not in production mode, we will invoke `B.validateLith` (which is defined below) and place its result there.
 
 ```javascript
-         var elem = fun.apply (null, dale.go (paths, B.get));
+         var elem = fun.apply (null, dale.go (paths, B.get)), validation = B.prod ? 'Lith' : B.validateLith (elem);
 ```
 
-If we're not in production mode, we validate `elem` with `B.validateLith` (which is defined below). If `elem` is not a lith, we report an error through `B.error` and return `false`.
+If `elem` is not a lith, we report an error through `B.error` and return `false`.
 
 ```javascript
-         if (! B.prod && B.validateLith (elem) !== 'Lith') return B.error ('B.view', 'View function must return a lith element but instead returned:', elem, 'Error:', B.validateLith (elem), 'Path:', path);
+         if (validation !== 'Lith') return B.error ('B.view', 'View function at path', path, 'must return a lith element but instead returned' + (validation.error ? ' an invalid lith: ' : ' a lithbag') + (validation.error || ''));
 ```
 
 If we're not in production mode, we check that `elem` doesn't contain an `id` attribute, since that attribute must be set by `B.view`. This also prevents a `vfun` returning the direct output of another `vfun`, which would break the 1:1 correspondence between a responder and a reactive DOM element.
 
 ```javascript
-         if (! B.prod && type (elem [1]) === 'object' && elem [1].id !== undefined) return B.error ('B.view', 'View function must return a lith element without an id attribute but instead returned:', elem, 'Path:', path);
+         if (! B.prod && type (elem [1]) === 'object' && elem [1].id !== undefined) return B.error ('B.view', 'View function at path', path, 'must return a lith element without an id attribute but instead returned an element with id ' + elem [1].id);
 ```
 
 We now find the reactive views that are children of the current one (if any). To do this, we make use of the fact that all reactive views have as id `в` followed by a number. Nested calls to `B.view` will by now have been executed, so `B.internal.count` will be updated.
@@ -2711,7 +2739,7 @@ We set the attributes from the original attributes (if any), ignoring `id` and `
 
 ```javascript
          }, function (v, k) {
-            if (['id', 'path'].indexOf (k.toLowerCase ()) === -1) return [k, v]
+            if (! inc (['id', 'path'], k.toLowerCase ())) return [k, v]
          });
 ```
 
@@ -3000,7 +3028,7 @@ If this is the case, an error is reported through `B.error`. No further action w
 Note that we check whether the element is attached to the body of the document through the [contains method](https://developer.mozilla.org/en-US/docs/Web/API/Node/contains), which performs a recursive search.
 
 ```javascript
-      if (! B.prod && (! element || ! document.body.contains (element))) return B.error (x, 'B.redraw', 'Attempt to redraw dangling element.', {responder: responder});
+      if (! B.prod && (! element || ! document.body.contains (element))) return B.error (x, 'B.redraw', 'Attempt to redraw dangling element.', 'Responder:', responder);
 ```
 
 We invoke `B.prediff` on both the old lith and the new lith. This will yield two arrays with which we'll compute the actual diff in a minute. The old lith has been passed to `B.redraw` as `oldElement`, whereas the new is already stored at `responder.elem` - when the responder was matched, it already executed `makeElement` and placed its result inside `responder.elem`. This, by the way, is the reason we pass `oldElement` as an argument, since if we don't, the old `responder.elem` will be overwritten by the new one.
@@ -3174,7 +3202,7 @@ If we're in the first (non-recursive) call to `B.prediff`, we initialize `output
 If `input` is a lithbag, we iterate its element and invoke `B.prediff` recursively on them. Note we pass `output` as the second parameter to each call, which will enable the recursive calls to append their outputs to `output`. There's nothing else in this case but to return. The return value is irrelevant, since the outermost call to `B.prediff` is on a lith, not a lithbag, and it's only on the outermost case that the return value of the function is useful.
 
 ```javascript
-      if (lith.k.tags.indexOf (input [0]) === -1) return dale.go (input, function (v) {B.prediff (v, output)});
+      if (! inc (lith.k.tags, input [0])) return dale.go (input, function (v) {B.prediff (v, output)});
 ```
 
 If we're here, we're dealing with a tag. The rest of the function will be dedicated to this case.
@@ -3199,7 +3227,7 @@ Note that in case this is the lith of a reactive view, we do this *after* refere
 
 ```javascript
       var attributes = type (input [1]) !== 'object' ? undefined : dale.obj (input [1], function (v, k) {
-         if (['', null, false, undefined].indexOf (v) === -1) return [k, v];
+         if (! inc (['', null, false, undefined], v)) return [k, v];
       });
 ```
 
@@ -3706,7 +3734,7 @@ We extract the `attributes` using `extract` and iterate them:
 If `v` is neither an empty string nor `false` nor `null`, we set the attribute on `element` using `setAttribute`. If we're in Internet Explorer 7 and below, we set `className` instead of `class`.
 
 ```javascript
-            if (['', null, false].indexOf (v) === -1) element.setAttribute (B.internal.olderIE && k === 'class' ? 'className' : k, v);
+            if (! inc (['', null, false], v)) element.setAttribute (B.internal.olderIE && k === 'class' ? 'className' : k, v);
          });
 ```
 
@@ -3747,7 +3775,7 @@ We iterate `newAttributes` and ignore those attributes that are neither an empty
 
 ```javascript
          dale.go (newAttributes, function (v, k) {
-            if (v === oldAttributes [k] || ['', null, false].indexOf (v) !== -1) return;
+            if (v === oldAttributes [k] || inc (['', null, false], v)) return;
 ```
 
 We set the attribute on `element` using `setAttribute`. If we're in Internet Explorer 7 and below, we set `className` instead of `class`.
@@ -3778,8 +3806,8 @@ In the case where we're removing the `value` from an element, we also have to se
 
 ```javascript
          dale.go (oldAttributes, function (v, k) {
-            if (v === newAttributes [k] || ['', null, false].indexOf (v) !== -1) return;
-            if (['', null, false, undefined].indexOf (newAttributes [k]) !== -1) {
+            if (v === newAttributes [k] || inc (['', null, false], v)) return;
+            if (inc (['', null, false, undefined], newAttributes [k])) {
                element.removeAttribute (B.internal.olderIE && k === 'class' ? 'className' : k, v);
                if (k === 'value')   element.value = '';
                if (k === 'checked') element.checked = false;

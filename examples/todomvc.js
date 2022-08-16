@@ -393,7 +393,7 @@ var todoMVC = function () {
                      }, filter]];
                   })];
                }),
-               // We need to add type: button, otherwise IE10 will consider an enter keydown to be a click
+               // We need to add `type: 'button'`, otherwise IE10 will consider an enter keydown to be a click
                all === incomplete ? [] : ['button', {type: 'button', 'class': 'clear-completed', onclick: B.ev ('clear', 'completed')}, 'Clear completed']
             ]];
          })

@@ -1,5 +1,5 @@
 /*
-gotoB - v2.1.1
+gotoB - v2.2.0
 
 Written by Federico Pereiro (fpereiro@gmail.com) and released into the public domain.
 
@@ -14,9 +14,9 @@ Please refer to readme.md to read the annotated source.
 
    var dale = window.dale, teishi = window.teishi, lith = window.lith, r = window.R (), c = window.c;
 
-   var type = teishi.type, time = Date.now ? function () {return Date.now ()} : function () {return new Date ().getTime ()};
+   var type = teishi.type, inc = teishi.inc, time = Date.now ? function () {return Date.now ()} : function () {return new Date ().getTime ()};
 
-   var B = window.B = {v: '2.1.1', B: 'в', t: time (), r: r, responders: r.responders, store: r.store, log: r.log, call: r.call, respond: r.respond, forget: r.forget};
+   var B = window.B = {v: '2.2.0', B: 'в', t: time (), r: r, responders: r.responders, store: r.store, log: r.log, call: r.call, respond: r.respond, forget: r.forget};
 
    // *** ERROR REPORTING ***
 
@@ -42,10 +42,12 @@ Please refer to readme.md to read the annotated source.
    B.eventlog = function (search) {
       if (c ('#eventlog')) document.body.removeChild (c ('#eventlog'));
 
-      var index = {}, colors = ['#fe6f6c', '#465775', '#e086c3', '#8332ac', '#462749', '#044389', '#59c9a6', '#ffad05', '#7cafc4', '#5b6c5d'], columns = ['#', 'ms', 'type', 'id', 'from', 'verb', 'path', 'args'], shorten = function (s) {return s.length > 600 ? s.slice (0, 300) + '... [' + (s.length - 600) + ' more characters] ...' + s.slice (-300) : s}, counter = 0;
+      var index = {}, colors = ['#fe6f6c', '#465775', '#e086c3', '#8332ac', '#462749', '#044389', '#59c9a6', '#ffad05', '#7cafc4', '#5b6c5d'], columns = ['#', 'ms', 'type', 'id', 'from', 'verb', 'path', 'args'], counter = 0, shorten = function (s, n) {
+         return s.length < n + 10 ? s : s.slice (0, Math.ceil (n * 2 / 3)) + ' [[[' + (s.length - n) + ' CHARACTERS OMITTED]]] ' + s.slice (- Math.floor (n / 3));
+      }
 
       document.body.innerHTML += lith.g (['table', {id: 'eventlog'}, [
-         ['style', ['#eventlog', {'border-collapse': 'collapse', 'font-family': 'monospace', 'font-size': 18, position: 'absolute', 'right, top': 4, width: Math.min (window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth, 800), 'z-index': '10000', border: 'solid 4px #4488DD'}, ['th, td', {'padding-left, padding-right': 10, 'border-bottom, border-right': 'solid 1px black'}]]],
+         ['style', ['#eventlog', {'display': 'block', 'table-layout': 'fixed', 'border-collapse': 'collapse', 'font-family': 'monospace', 'font-size': 18, position: 'absolute', 'top, left': 4, width: (window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth) - 22, 'z-index': '10000', border: 'solid 4px #4488DD'}, ['th, td', {'padding-left, padding-right': 10, 'border-bottom, border-right': 'solid 1px black', 'word-wrap': 'break-word', 'max-width': (window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth) / 4}]]],
          ['tr', dale.go (columns, function (header) {
             return ['th', {style: lith.css.style ({'background-color': '#efefef'})}, header];
          })],
@@ -53,7 +55,7 @@ Please refer to readme.md to read the annotated source.
             if (search !== undefined && ! JSON.stringify (entry).match (new RegExp (search, 'i'))) return;
             var responderIndex = entry.id [0] !== 'E' && entry.from && entry.from.match (/^E\d+$/) ? (entry.id + '/' + entry.from) : undefined;
             index [responderIndex || entry.id] = counter++;
-            return ['tr', {style: lith.css.style ({'background-color': {0: '#fcfcfc', 1: '#efefef'} [(counter - 1) % 2]}), 'class': entry.id [0] === 'E' ? 'evlog-ev' : 'evlog-resp'}, dale.go (['#' + counter, entry.t - B.t, entry.id.match (/^E\d+$/) ? 'event' : 'responder', entry.id, entry.from, entry.verb, entry.path.join (':'), shorten (dale.go (entry.args, B.str).join (', '))], function (value, k2) {
+            return ['tr', {style: lith.css.style ({'background-color': {0: '#fcfcfc', 1: '#efefef'} [(counter - 1) % 2]}), 'class': entry.id [0] === 'E' ? 'evlog-ev' : 'evlog-resp'}, dale.go (['#' + counter, entry.t - B.t, entry.id.match (/^E\d+$/) ? 'event' : 'responder', entry.id, entry.from, entry.verb, entry.path.join (':'), dale.go (entry.args, function (v) {return shorten (B.str (v, true), 300)}).join (' ')], function (value, k2) {
                if (k2 === 1) return ['td', (value / 1000) + (! (value % 1000) ? '.0' : '') + (! (value % 100) ? '0' : '') + (! (value % 10) ? '0' : '') + 's'];
                if (k2 !== 3 && k2 !== 4) return ['td', value];
                var onclick = value === undefined ? '' : ('var row = c ({from: c ("#eventlog"), selector: "tr"}) [' + ((index [value] === undefined ? index [responderIndex] : index [value]) + 1) + ']; if (row) row.scrollIntoView (); if (row) row.style.background = "#8e8e8e"; if (row) setTimeout (function () {row.style.background = "#bebebe"}, 500); if (row) setTimeout (function () {row.style.background = "white"}, 1000);');
@@ -89,7 +91,7 @@ Please refer to readme.md to read the annotated source.
       if (type (path) !== 'array') path = [path];
 
       if (path.length === 0) {
-         if (! B.prod && teishi.simple (value)) return B.error (x || {}, 'B.set', 'Cannot set B.store to something that is not an array or object.');
+         if (! B.prod && teishi.simple (value)) return B.error (x || {}, 'B.set', 'Cannot set B.store to something that is not an array or object:', value);
          B.store = value;
          return true;
       }
@@ -147,7 +149,7 @@ Please refer to readme.md to read the annotated source.
          targetType === 'object' ? ['keys of object target', keys, 'string',  'each'] : []
       ], function (error) {
          B.error (x || {}, 'B.rem', error, 'Path:', path);
-      })) return false;
+      }, false)) return false;
 
       if (targetType === 'object') dale.go (keys, function (v) {delete target [v]});
 
@@ -169,13 +171,17 @@ Please refer to readme.md to read the annotated source.
 
    // *** CHANGE RESPONDERS ***
 
-   dale.go (['add', 'rem', 'set'], function (verb) {
+   dale.go (['add', 'rem', 'set', 'madd', 'mrem', 'mset'], function (verb, k) {
       B.respond ({id: verb, verb: verb, path: [], match: function (ev, responder) {
          return r.compare (ev.verb, responder.verb);
       }}, function (x) {
+         if (k > 2) return B [verb.replace (/^m/, '')].apply (null, [x, x.path].concat (x.args || []));
          var previousValue = verb === 'set' ? B.get (x.path) : teishi.copy (B.get (x.path));
-         if (B [x.verb].apply (null, [x, x.path].concat (dale.go (arguments, function (v) {return v}).slice (1))) === false) return;
-         if (! teishi.eq (previousValue, B.get (x.path))) B.call (x, 'change', x.path, B.get (x.path), previousValue);
+         if (B [verb].apply (null, [x, x.path].concat (x.args || [])) === false || teishi.eq (previousValue, B.get (x.path))) return;
+         if (verb !== 'rem') return B.call (x, 'change', x.path, B.get (x.path), previousValue);
+         dale.go (x.args, function (arg) {dale.go (arg, function (arg) {
+            B.call (x, 'change', x.path.concat (arg), undefined, previousValue [arg]);
+         })});
       });
    });
 
@@ -189,11 +195,11 @@ Please refer to readme.md to read the annotated source.
 
    // *** B.EV ***
 
-   B.str = function (input) {
+   B.str = function (input, noQuotesOnString) {
       var inputType = type (input);
-      if (inputType !== 'array' && inputType !== 'object') return inputType === 'string' ? teishi.str (input) : (input + '');
+      if (inputType !== 'array' && inputType !== 'object') return inputType === 'string' ? (noQuotesOnString ? input : teishi.str (input)) : (input + '');
 
-      if (inputType === 'array') return '[' + dale.go (input, B.str).join (', ') + ']';
+      if (inputType === 'array') return '[' + dale.go (input, function (v) {return B.str (v)}).join (', ') + ']';
 
       return '{' + dale.go (input, function (v, k) {
          return teishi.str (k) + ': ' + B.str (v);
@@ -223,7 +229,7 @@ Please refer to readme.md to read the annotated source.
          ];
       }), function (error) {
          B.error ('B.ev', error, 'Events:', evs);
-      })) return false;
+      }, false)) return false;
 
       var output = 'var id = B.call ("ev", event ? event.type : "undefined event", B.evh (this));';
 
@@ -241,20 +247,20 @@ Please refer to readme.md to read the annotated source.
    // *** B.MOUNT & B.UNMOUNT ***
 
    B.mount = function (target, fun) {
-      if (! B.prod && type (target) !== 'string' || ! target.match (/^(body|[a-z0-9]*#[^\s\[>,:]+)$/)) return B.error ('B.mount', 'Target must be either \'body\' or an id selector, but instead is ' + target);
+      if (! B.prod && type (target) !== 'string' || ! target.match (/^(body|[a-z0-9]*#[^\s\[>,:]+)$/)) return B.error ('B.mount', 'Target must be either \'body\' or an id selector, but instead is:', target);
 
       var element = target === 'body' ? document.body : document.getElementById (target.replace (/.*#/g, ''));
 
       if (! B.prod) {
          if (! element)                 return B.error ('B.mount', 'Target not found:', target);
-         if (type (fun) !== 'function') return B.error ('B.mount', 'fun must be a function but instead is', fun);
+         if (type (fun) !== 'function') return B.error ('B.mount', 'fun must be a function but instead is', fun, 'with type', type (fun));
       }
 
       var elem = fun ();
 
       if (! B.prod) {
          var result = B.validateLith (elem);
-         if (result !== 'Lith' && result !== 'Lithbag') return B.error ('B.mount', 'function returned invalid lith or lithbag', result);
+         if (result !== 'Lith' && result !== 'Lithbag') return B.error ('B.mount', 'fun returned invalid lith or lithbag', result.error);
       }
 
       c.place (target, 'beforeEnd', lith.g (elem, true));
@@ -289,16 +295,16 @@ Please refer to readme.md to read the annotated source.
          }),
          function () {return ['fun', fun, 'function']}
       ], function (error) {
-         B.error ('B.view', error, {path: path});
-      })) return false;
+         B.error ('B.view', 'Validation error:', error, 'Path:', path);
+      }, false)) return false;
 
       var id = B.B + B.internal.count++;
 
       var makeElement = function () {
          var count = B.internal.count, children = [];
-         var elem = fun.apply (null, dale.go (paths, B.get));
-         if (! B.prod && B.validateLith (elem) !== 'Lith') return B.error ('B.view', 'View function must return a lith element but instead returned:', elem, 'Error:', B.validateLith (elem), 'Path:', path);
-         if (! B.prod && type (elem [1]) === 'object' && elem [1].id !== undefined) return B.error ('B.view', 'View function must return a lith element without an id attribute but instead returned:', elem, 'Path:', path);
+         var elem = fun.apply (null, dale.go (paths, B.get)), validation = B.prod ? 'Lith' : B.validateLith (elem);
+         if (validation !== 'Lith') return B.error ('B.view', 'View function at path', path, 'must return a lith element but instead returned' + (validation.error ? ' an invalid lith: ' : ' a lithbag') + (validation.error || ''));
+         if (! B.prod && type (elem [1]) === 'object' && elem [1].id !== undefined) return B.error ('B.view', 'View function at path', path, 'must return a lith element without an id attribute but instead returned an element with id ' + elem [1].id);
 
          dale.go (dale.times (B.internal.count - count, count), function (k) {
             var responder = B.responders [B.B + k];
@@ -313,7 +319,7 @@ Please refer to readme.md to read the annotated source.
             id: id,
             path: dale.go (paths, function (path) {return path.join (':') || ':'}).join (', ')
          }, function (v, k) {
-            if (['id', 'path'].indexOf (k.toLowerCase ()) === -1) return [k, v]
+            if (! inc (['id', 'path'], k.toLowerCase ())) return [k, v]
          });
          elem = elem.slice ();
 
@@ -383,7 +389,7 @@ Please refer to readme.md to read the annotated source.
 
       var responder = B.responders [id], element = document.getElementById (id), t0 = time ();
 
-      if (! B.prod && (! element || ! document.body.contains (element))) return B.error (x, 'B.redraw', 'Attempt to redraw dangling element.', {responder: responder});
+      if (! B.prod && (! element || ! document.body.contains (element))) return B.error (x, 'B.redraw', 'Attempt to redraw dangling element.', 'Responder:', responder);
 
       var prediffs = [B.prediff (oldElement), B.prediff (responder.elem)], t1 = time ();
       var diff = B.diff (prediffs [0], prediffs [1]), t2 = time ();
@@ -423,12 +429,12 @@ Please refer to readme.md to read the annotated source.
 
       output = output || [];
 
-      if (lith.k.tags.indexOf (input [0]) === -1) return dale.go (input, function (v) {B.prediff (v, output)});
+      if (! inc (lith.k.tags, input [0])) return dale.go (input, function (v) {B.prediff (v, output)});
 
       if (input [1] && input [1].id && (input [1].id + '').match (/^в[0-9a-f]+$/g) && output.length) input = B.responders [input [1].id].elem;
 
       var attributes = type (input [1]) !== 'object' ? undefined : dale.obj (input [1], function (v, k) {
-         if (['', null, false, undefined].indexOf (v) === -1) return [k, v];
+         if (! inc (['', null, false, undefined], v)) return [k, v];
       });
       var contents = input [attributes ? 2 : 1];
 
@@ -541,7 +547,7 @@ Please refer to readme.md to read the annotated source.
 
          var element = document.createElement (extract (elementString, 'tag'));
          dale.go (extract (elementString, 'attributes'), function (v, k) {
-            if (['', null, false].indexOf (v) === -1) element.setAttribute (B.internal.olderIE && k === 'class' ? 'className' : k, v);
+            if (! inc (['', null, false], v)) element.setAttribute (B.internal.olderIE && k === 'class' ? 'className' : k, v);
          });
          if (elementString.substr (0, 1) === 'P') element.innerHTML = processedOpaque.contents;
          return element;
@@ -551,15 +557,15 @@ Please refer to readme.md to read the annotated source.
          var oldAttributes = extract (old, 'attributes'), newAttributes = extract (New, 'attributes');
          if (B.internal.oldIE && oldAttributes.type !== newAttributes.type) return;
          dale.go (newAttributes, function (v, k) {
-            if (v === oldAttributes [k] || ['', null, false].indexOf (v) !== -1) return;
+            if (v === oldAttributes [k] || inc (['', null, false], v)) return;
             element.setAttribute (B.internal.olderIE && k === 'class' ? 'className' : k, v);
             if (k === 'value')   element.value = v;
             if (k === 'checked') element.checked = true;
             if (B.internal.oldOpera && k === 'selected') element.selected = v;
          });
          dale.go (oldAttributes, function (v, k) {
-            if (v === newAttributes [k] || ['', null, false].indexOf (v) !== -1) return;
-            if (['', null, false, undefined].indexOf (newAttributes [k]) !== -1) {
+            if (v === newAttributes [k] || inc (['', null, false], v)) return;
+            if (inc (['', null, false, undefined], newAttributes [k])) {
                element.removeAttribute (B.internal.olderIE && k === 'class' ? 'className' : k, v);
                if (k === 'value')   element.value = '';
                if (k === 'checked') element.checked = false;

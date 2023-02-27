@@ -1,5 +1,5 @@
 /*
-gotoB - v2.2.0
+gotoB - v2.3.0
 
 Written by Federico Pereiro (fpereiro@gmail.com) and released into the public domain.
 
@@ -16,7 +16,7 @@ Please refer to readme.md to read the annotated source.
 
    var type = teishi.type, inc = teishi.inc, time = Date.now ? function () {return Date.now ()} : function () {return new Date ().getTime ()};
 
-   var B = window.B = {v: '2.2.0', B: 'в', t: time (), r: r, responders: r.responders, store: r.store, log: r.log, call: r.call, respond: r.respond, forget: r.forget};
+   var B = window.B = {v: '2.3.0', B: 'в', t: time (), r: r, responders: r.responders, store: r.store, log: r.log, call: r.call, respond: r.respond, forget: r.forget};
 
    // *** ERROR REPORTING ***
 
@@ -220,12 +220,12 @@ Please refer to readme.md to read the annotated source.
       if (! B.prod && teishi.stop ('B.ev', dale.go (evs, function (ev) {
          return [
             ['ev', ev, 'array'],
-            function () {return [
+            ev.length ? function () {return [
                ['ev.verb', ev [0], 'string'],
                function () {
                   return r.isPath (ev [1]) ? true : B.error ('B.ev', 'Invalid path:', ev [1], 'Events:', evs);
                }
-            ]}
+            ]} : []
          ];
       }), function (error) {
          B.error ('B.ev', error, 'Events:', evs);
@@ -235,7 +235,7 @@ Please refer to readme.md to read the annotated source.
 
       dale.go (evs, function (ev) {
          var defaultValue = ! B.internal.oldFF ? 'this.value' : 'this.value || (this.attributes.value ? this.attributes.value.nodeValue : "")';
-         output += ' B.call ({"from": id}, ' + dale.go (ev.length === 2 ? ev.concat ({raw: defaultValue}) : ev, function (v, k) {
+         if (ev.length) output += ' B.call ({"from": id}, ' + dale.go (ev.length === 2 ? ev.concat ({raw: defaultValue}) : ev, function (v, k) {
             if (k > 1 && type (v) === 'object' && type (v.raw) === 'string') return v.raw;
             return B.str (v);
          }).join (', ') + ');';
@@ -556,6 +556,7 @@ Please refer to readme.md to read the annotated source.
       var recycle = function (element, old, New) {
          var oldAttributes = extract (old, 'attributes'), newAttributes = extract (New, 'attributes');
          if (B.internal.oldIE && oldAttributes.type !== newAttributes.type) return;
+         if (oldAttributes.onclick !== undefined && newAttributes.href !== undefined) return;
          dale.go (newAttributes, function (v, k) {
             if (v === oldAttributes [k] || inc (['', null, false], v)) return;
             element.setAttribute (B.internal.olderIE && k === 'class' ? 'className' : k, v);

@@ -496,6 +496,9 @@
 
                   var error = dale.stopNot ([
                      [[], ''],
+                     [[[]], ''],
+                     [[['a', 'b'], []], ' B.call ({"from": id}, "a", "b", ' + defaultValue + ');'],
+                     [[[], ['a', 'b']], ' B.call ({"from": id}, "a", "b", ' + defaultValue + ');'],
                      [['a', 'b'], ' B.call ({"from": id}, "a", "b", ' + defaultValue + ');'],
                      [['a', ['b']], ' B.call ({"from": id}, "a", ["b"], ' + defaultValue + ');'],
                      [['a', 'b', 'c'], ' B.call ({"from": id}, "a", "b", "c");'],
@@ -512,6 +515,7 @@
                      [['a', 'b', 'c', {raw: 'event', ignored: 'field'}], ' B.call ({"from": id}, "a", "b", "c", event);'],
                      [['a', 'b', '"two', {raw: 'event'}, {raw: 'this'}], ' B.call ({"from": id}, "a", "b", "\\"two", event, this);'],
                      [[['a', 'b'], ['c', 'd']], ' B.call ({"from": id}, "a", "b", ' + defaultValue + '); B.call ({"from": id}, "c", "d", ' + defaultValue + ');', true],
+                     [[['a', 'b'], [], ['c', 'd']], ' B.call ({"from": id}, "a", "b", ' + defaultValue + '); B.call ({"from": id}, "c", "d", ' + defaultValue + ');', true],
                      [[['a', 'b'], ['c', 'd', {raw: 'event.preventDefault'}]], ' B.call ({"from": id}, "a", "b", ' + defaultValue + '); B.call ({"from": id}, "c", "d", event.preventDefault);', true]
                   ], undefined, function (v, k) {
                      var result = 'var id = B.call ("ev", event ? event.type : "undefined event", B.evh (this));' + v [1];
@@ -1256,6 +1260,27 @@
                      '<DIV><B></B>\r\n<P id=в1 path="Data:view"></P><EM></EM></DIV>'
                   ].indexOf (document.body.innerHTML) === -1) return 'Invalid HTML mounted #24: ' + document.body.innerHTML;
 
+                  // *** AVOID ONCLICK TRIGGERING LINK CLICK ON RECYCLED ELEMENT ***
+
+                  B.internal.count = 1;
+
+                  B.unmount ('body');
+                  B.call (x, 'set', ['Data', 'view'], ['div']);
+                  B.mount ('body', function () {
+                     return B.view (['State', 'link'], function (link) {
+                        if (! link) return ['a', {onclick: B.ev ('set', ['State', 'link'], true)}, 'Not so fast!'];
+                        else        return ['a', {href: '#foo'}, 'Not so fast!'];
+                     });
+                  });
+                  try {
+                     c ('a') [0].click ();
+                  }
+                  // https://caniuse.com/mdn-api_htmlelement_click
+                  // This test won't be executed on Chrome < 19 and Firefox < 5 because there's no support for `click`ing an anchor programatically.
+                  catch (error) {
+                  }
+                  if (window.location.hash === '#foo') return 'href was followed because of recycled element.';
+                  B.call (x, 'rem', 'State', 'link');
                });
 
                Test ('B.view valid inputs, paths', function () {

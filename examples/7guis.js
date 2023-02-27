@@ -7,7 +7,7 @@ B.mount ('body', function () {
       ['style', [
          ['body', {padding: 10}]
       ]],
-      ['h1', ['7GUIs tasks, as described ', ['a', {href: 'https://eugenkiss.github.io/7guis/tasks'}, 'here']]],
+      ['h1', ['7GUIs tasks, as described ', ['a', {href: 'https://7guis.github.io/7guis/tasks'}, 'here']]],
       ['br']
    ];
 });

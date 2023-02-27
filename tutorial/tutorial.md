@@ -2,7 +2,7 @@
 
 If you are here, you may want to develop your first webapp, or perhaps you already are a webapp developer and want to get better at it. In this tutorial we will offer you as much *understanding* as we possibly can. In our experience, the most daunting part about achieving mastery with webapps is understanding how it all fits together, and why things are done in a certain way.
 
-This tutorial replaces a more conventional tutorial format that merely shows how to develop webapps with gotoв. Instead of this, we first offer **a conceptual introduction** to webapps (*web applications*, in case you're not familiar with the abbreviation). After the main conceptual pieces are in place, we then cover **the basics of developing** the frontend of a webapp; gotoв appears on the scene only as the solution to certain problems that occur over and over when implementing a webapp.
+This tutorial replaces a more conventional tutorial format that merely shows how to develop webapps with [gotoв](https://github.com/fpereiro/gotob). Instead of this, we first offer **a conceptual introduction** to webapps (*web applications*, in case you're not familiar with the abbreviation). After the main conceptual pieces are in place, we then cover **the basics of developing** the frontend of a webapp; gotoв appears on the scene only as the solution to certain problems that occur over and over when implementing a webapp.
 
 The purpose of this tutorial is to give you as much conceptual and practical understanding as possible, so that you can become a better web developer.
 
@@ -1559,7 +1559,7 @@ In the second part of the tutorial, we switch to a hands-on approach and start b
 
 ## Part 2: developing webapps from scratch
 
-Originally, this part of the tutorial was going to be about how to develop a frontend with gotoв. But eventually we decided instead to do something different: start developing small apps with no tools at all, and understand firsthand the raw problems we face when implementing a frontend. We then slowly introduce gotoв to solve some of these problems for us. In this way, we can illustrate how gotoв emerges as the solution to some common problems that occur when implementing frontends, rather than showing gotoв as "the way" in which things should be done. We also hope this approach will make both the tutorial and gotoв itself far easier to understand and remember.
+Originally, this part of the tutorial was going to be about how to develop a frontend with gotoв. But eventually we decided instead to do something different: start developing small apps with no tools at all, and **understand firsthand the raw problems we face when implementing a frontend**. We then slowly introduce gotoв to solve some of these problems for us. In this way, we can illustrate how gotoв emerges as the solution to some common problems that occur when implementing frontends, rather than showing gotoв as "the way" in which things should be done. We also hope this approach will make both the tutorial and gotoв itself far easier to understand and remember.
 
 ### Chapter 1: setting up the basics
 
@@ -1819,7 +1819,7 @@ Eventually we will want to load and save this list so that it persists when the 
 
 #### Step 3-3: putting the todos in the page with JS ([HTML](3-3.app.html) [JS](3-3.app.js))
 
-Because the list of todos will change, we need to add the todo items to the page using JS. We cannot do this in HTML because HTML doesn't have logic, and hence cannot implement the notion of "creating one element per todo in the list".
+Because the list of todos will change, we need to add the todo items to the page using JS. We cannot do this in HTML because HTML doesn't have logic, and hence cannot implement the notion of "creating one element per todo in the list" - that is, it cannot create a loop that iterates through a list of elements.
 
 To place the todos in the page, we first need to decide what the HTML for a given todo element should be. Earlier on step 3-1, we decided to show each todo as a combination of a `<p>` and a `<button>`. We can place this logic into a function that will return the HTML for a given todo.
 
@@ -2329,28 +2329,31 @@ Constants are as general as they can be: they are actually universal, if our uni
 - Constant 1: **what you see What you see is HTML on the page. If you want to update the page, you need to update that HTML.
    - Example 1:
 - Constant 2: the state is persisted somewhere in the client. It can be on the HTML itself or it can be on JS. Even if it's brought from a server, it must be stored or reflected somewhere on the client.
-- Constant 3: if you update the state, you update the html. And conversely (two-way data binding).
-- Constant 4: Changes in state come from: event handlers bound to HTML elements that receive an user interaction; and time-based logic.
+- Constant 3: if you update the state, you must update the html too. And conversely (two-way data binding).
+- Constant 4: Changes in state come from: 1) event handlers bound to HTML elements that are executed on an user interaction; 2) time-based logic (setTimeout, setInterval).
 - Constant 5: HTML *must* be generated from the state, cannot be premade and shown/hidden. The state must be read, then updated, by the logic, every time that it changes.
-- Constant 5: to survive a page refresh, state must be persisted either on a server or on localstorage.
+- Constant 6: to survive a page refresh, state must be persisted either on a server or on localstorage.
 - Constant 7: there's two static elements: HTML and state. Only the logic can change the state and the HTML.
 
 Organizational principles that are common to most frontend frameworks and which gotoB adopts:
-- Principle 1: generate all (or most) HTML with JS based on the state (rather than on the server)
+- Principle 1: generate almost all HTML with JS based on the state (rather than on the server)
 - Principle 2: keep all the state in JS
 - Principle 3: make changes first to the state, then to the HTML. Instead of bidirectional change, operate on one way.
 - Principle 4: group logic into functions. Types of logic: update HTML, update state, communicate with server or localstorage, other computation (for example, summing a total), DOM side-effects. Functions can do one or more of these five, but at least one of these.
 
 gotoB specific solutions:
-1. Views are functions that return object literals (liths) to generate HTML.
+1. Use object literals to represent HTML.
 2. put all the state in one object
-3. Express state changes as events.
+3. Views are functions that take parts of the state as inputs and return object literals to generate HTML.
+4. Express state changes as events.
    - example: if price changes, this affects both the products list and the cart.
-4. Views are Internally event responders! views are event responders to one or more parts of the state. This solves quadratic drift.
-5. Event handlers fire one or more events. And so do any timers that would effect changes in the app.
+5. Views are Internally event responders! views are event responders to one or more parts of the state. This solves quadratic drift.
+6. Event handlers fire one or more events. And so do any timers that would effect changes in the app.
 
 How does it look like? vfuns and rfuns.
 - vfuns are functions that return invocations to B.view, with one or more dependencies (part of the state on which they depend). And they return lith, actually a single HTML element that can have more inside. Pure functions: they don't call events. The flow goes one way, from state to HTML (see principle 3).
 - rfuns are event responders. They are called by events. They can in turn call other events, or execute other logic.
 
 Responders are mostly useful for views. But they can also be useful for computed state, for example on a spreadsheet. A lot of rfuns in gotoB are just rfuns as an organizational principle, but it is not necessary to do this. You can still use normal functions for other logic.
+
+TODO: The principle of holding the data in one place is the static version of doing one way data flow (or rather, actions) that you have in frontend libraries; the idea is that if there can be multiple triggers for an action, direct them all on the same way. this is the general principle!

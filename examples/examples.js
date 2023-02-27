@@ -53,6 +53,142 @@ var todoList = function () {
 
 B.mount ('body', todoList);
 
+// *** INPUT ***
+
+var input = function () {
+   return B.view ('input', function (input) {
+      return ['div', [
+         ['input', {value: input, oninput: B.ev ('set', 'input')}],
+         ['p', ['Value of input is ', ['strong', input]]]
+      ]];
+   });
+}
+
+B.mount ('body', input);
+
+// *** TEXTAREA ***
+
+var textarea = function () {
+   return B.view ('textarea', function (textarea) {
+      return ['div', [
+         ['textarea', {value: textarea, oninput: B.ev ('set', 'textarea')}],
+         ['p', ['Value of textarea is ', ['strong', textarea]]]
+      ]];
+   });
+}
+
+B.mount ('body', textarea);
+
+// *** SELECT ***
+
+var select = function () {
+   var options = ['Select one', 'Elephant Island', 'South Georgia'];
+   return B.view ('select', function (select) {
+      return ['div', [
+         ['select', {onchange: B.ev ('set', 'select')}, dale.go (options, function (option) {
+            return ['option', {value: option !== 'Select one' ? option : ''}, option];
+         })],
+         ['p', ['Value of select is ', ['strong', select]]]
+      ]];
+   });
+}
+
+B.mount ('body', select);
+
+// *** RADIO ***
+
+var radio = function () {
+   var options = ['Clics', 'Peperina', 'Bicicleta'];
+   return B.view ('radio', function (radio) {
+      return ['div', [
+         dale.go (options, function (option) {
+            return [
+               ['input', {type: 'radio', name: 'radio', checked: radio === option, onchange: B.ev ('set', 'radio'), value: option}],
+               ['label', ' ' + option],
+               ['br'],
+            ];
+         }),
+         ['p', ['Value of radio is ', ['strong', radio]]]
+      ]];
+   });
+}
+
+B.mount ('body', radio);
+
+// *** CHECKBOXES ***
+
+B.respond ('toggle', 'checkboxes', function (x, option) {
+   var index = (B.get ('checkboxes') || []).indexOf (option);
+   if (index === -1) B.call (x, 'add', 'checkboxes', option);
+   else              B.call (x, 'rem', 'checkboxes', index);
+});
+
+var checkboxes = function () {
+   var options = ['O\'ahu', 'Maui', 'Kauai'];
+   return B.view ('checkboxes', function (checkboxes) {
+      checkboxes = checkboxes || [];
+      return ['div', [
+         dale.go (options, function (option) {
+            return [
+               ['input', {type: 'checkbox', checked: teishi.inc (checkboxes, option), onclick: B.ev ('toggle', 'checkboxes', option)}],
+               ['label', ' ' + option],
+               ['br'],
+            ];
+         }),
+         ['p', ['Selected islands: ', ['strong', checkboxes.sort ().join (', ')]]]
+      ]];
+   });
+}
+
+B.mount ('body', checkboxes);
+
+// *** COUNTER & MULTIPLIER ***
+
+var counterMultiplier = function () {
+   return B.view ([['counter'], ['multiplier']], function (counter, multiplier) {
+      return ['div', [
+         ['h1', [counter, ' * ', multiplier, ' = ', (counter * multiplier) || 0]],
+         ['button', {onclick: B.ev ('set', 'counter',    counter    + 1)}, 'Counter'],
+         ['button', {onclick: B.ev ('set', 'multiplier', multiplier + 1)}, 'Multiplier'],
+      ]];
+   });
+}
+
+setTimeout (function () {
+   B.call ('set', 'counter', 2);
+   B.call ('set', 'multiplier', 2);
+}, 0);
+
+B.mount ('body', counterMultiplier);
+
+// *** TABLE ***
+
+setTimeout (function () {
+   B.call ('set', 'table', [
+      {id: 1, name: 'Top of line',     price: 100},
+      {id: 2, name: 'Value for money', price: 65},
+      {id: 3, name: 'Last resort',     price: 24}
+   ]);
+}, 0);
+
+var table = function () {
+   return B.view ('table', function (table) {
+      table = table || [];
+      return ['table', [
+         ['tr', dale.go (table [0], function (v, k) {
+            return ['th', k];
+         })],
+         dale.go (table, function (v) {
+            return ['tr', dale.go (v, function (v2) {
+               return ['td', v2];
+            })];
+         })
+      ]];
+   });
+}
+
+B.mount ('body', table);
+
 // *** DATA EVENTS ***
 
 B.call ('set', 'username', 'mono');
@@ -232,22 +368,32 @@ if (! teishi.eq (B.store, {Data: {items: ['a', 'b', 'c']}})) alert ('Data event 
 B.call ('rem', ['Data', 'items']);
 if (! teishi.eq (B.store, {Data: {items: ['a', 'b', 'c']}})) alert ('Data event error #32.');
 
+B.call ('set', ['Data', 'items'], ['a', 'b', 'c']);
+B.call ('rem', ['Data', 'items'], 0, 1);
+
+if (! teishi.eq (B.store, {Data: {items: ['c']}})) alert ('Data event error #33.');
+
+B.call ('set', ['Data', 'items'], ['a', 'b', 'c']);
+B.call ('rem', ['Data', 'items'], [0, 1]);
+
+if (! teishi.eq (B.store, {Data: {items: ['c']}})) alert ('Data event error #34.');
+
 B.call ('set', ['Data', 'items'], {a: 1});
 B.call ('rem', ['Data', 'items'], 'a');
-if (! teishi.eq (B.store, {Data: {items: {}}})) alert ('Data event error #33.');
+if (! teishi.eq (B.store, {Data: {items: {}}})) alert ('Data event error #35.');
 
 B.call ('set', ['Data', 'items'], {a: 1});
 B.call ('rem', ['Data', 'items'], ['a']);
-if (! teishi.eq (B.store, {Data: {items: {}}})) alert ('Data event error #34.');
+if (! teishi.eq (B.store, {Data: {items: {}}})) alert ('Data event error #36.');
 B.call ('set', [], {});
 
 B.call ('set', [], {Data: {}, State: {}});
 B.call ('rem', [], 'Data', 'State');
-if (! teishi.eq (B.store, {})) alert ('Data event error #35.');
+if (! teishi.eq (B.store, {})) alert ('Data event error #37.');
 
 B.call ('set', [], {Data: {}, State: {}});
 B.call ('rem', [], ['Data', 'State']);
-if (! teishi.eq (B.store, {})) alert ('Data event error #36.');
+if (! teishi.eq (B.store, {})) alert ('Data event error #38.');
 
 // *** B.EV ***
 
@@ -404,6 +550,8 @@ B.mount ('body', app);
 // *** RESPONDERS ***
 
 B.respond ('create', 'todo', function (x, important) {
+   // We add a `return` here to avoid two responders for the same purpose coexisting in the same page.
+   return;
    var todo = prompt ('What\'s one to do?');
    if (todo) B.call (x, 'add', 'todos', todo);
    if (important) alert ('Important todo added.');

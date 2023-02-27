@@ -6,7 +6,7 @@ gotoв is a framework for making the frontend of a web application (henceforth *
 
 ## Current status of the project
 
-The current version of gotoв, v2.2.0, is considered to be *stable* and *complete*. [Suggestions](https://github.com/fpereiro/gotoB/issues) and [patches](https://github.com/fpereiro/gotoB/pulls) are welcome. Besides bug fixes, and the completion of the tutorial in one of the appendixes, there are no changes planned.
+The current version of gotoв, v2.3.0, is considered to be *stable* and *complete*. [Suggestions](https://github.com/fpereiro/gotoB/issues) and [patches](https://github.com/fpereiro/gotoB/pulls) are welcome. Besides bug fixes, and the completion of the tutorial in one of the appendixes, there are no changes planned.
 
 gotoв is part of the [ustack](https://github.com/fpereiro/ustack), a set of libraries to build webapps which aims to be fully understandable by those who use it.
 
@@ -29,7 +29,7 @@ gotoв is written in Javascript. You can use it in the browser by loading the pr
 Or you can use this link to use the latest version - courtesy of [jsDelivr](https://jsdelivr.com).
 
 ```html
-<script src="https://cdn.jsdelivr.net/gh/fpereiro/gotob@b8694b1afd1483d4408ddabe600213634ce32d24/gotoB.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/fpereiro/gotob@??/gotoB.min.js"></script>
 ```
 
 gotoв uses non-ASCII symbols, so you also must specify an [encoding](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/meta) for your document (for example [UTF-8](https://en.wikipedia.org/wiki/UTF-8)) by placing a `<meta>` tag in the `<head>` of the document: `<meta charset="utf-8">`.
@@ -116,6 +116,132 @@ var todoList = function () {
 }
 
 B.mount ('body', todoList);
+```
+
+### Input
+
+```javascript
+var input = function () {
+   return B.view ('input', function (input) {
+      return ['div', [
+         ['input', {value: input, oninput: B.ev ('set', 'input'), onchange: B.ev ('set', 'input')}],
+         ['p', ['Value of input is ', ['strong', input]]]
+      ]];
+   });
+}
+
+B.mount ('body', input);
+```
+
+### Textarea
+
+```javascript
+var textarea = function () {
+   return B.view ('textarea', function (textarea) {
+      return ['div', [
+         ['textarea', {value: textarea, oninput: B.ev ('set', 'textarea')}],
+         ['p', ['Value of textarea is ', ['strong', textarea]]]
+      ]];
+   });
+}
+
+B.mount ('body', textarea);
+```
+
+### Select
+
+```javascript
+var select = function () {
+   var options = ['Select one', 'Elephant Island', 'South Georgia'];
+   return B.view ('select', function (select) {
+      return ['div', [
+         ['select', {onchange: B.set ('set', 'select')}, dale.go (options, function (option) {
+            return ['option', {value: option !== 'Select one' ? option : ''}, option];
+         })]
+      ]];
+   });
+}
+
+B.mount ('body', select);
+```
+
+### Radio
+
+```javascript
+var radio = function () {
+   var options = ['Clics', 'Peperina', 'Bicicleta'];
+   return B.view ('radio', function (radio) {
+      return ['div', [
+         dale.go (options, function (option) {
+            return [
+               ['input', {type: 'radio', name: 'radio', checked: radio === option, onchange: B.ev ('set', 'radio'), value: option}],
+               ['label', ' ' + option],
+               ['br'],
+            ];
+         }),
+         ['p', ['Value of radio is ', ['strong', radio]]]
+      ]];
+   });
+}
+
+B.mount ('body', radio);
+```
+
+### Checkboxes
+
+```javascript
+B.respond ('toggle', 'checkboxes', function (x, option) {
+   var index = (B.get ('checkboxes') || []).indexOf (option);
+   if (index === -1) B.call (x, 'add', 'checkboxes', option);
+   else              B.call (x, 'rem', 'checkboxes', index);
+});
+
+var checkboxes = function () {
+   var options = ['O\'ahu', 'Maui', 'Kauai'];
+   return B.view ('checkboxes', function (checkboxes) {
+      checkboxes = checkboxes || [];
+      return ['div', [
+         dale.go (options, function (option) {
+            return [
+               ['input', {type: 'checkbox', checked: teishi.inc (checkboxes, option), onclick: B.ev ('toggle', 'checkboxes', option)}],
+               ['label', ' ' + option],
+               ['br'],
+            ];
+         }),
+         ['p', ['Selected islands: ', ['strong', checkboxes.sort ().join (', ')]]]
+      ]];
+   });
+}
+
+B.mount ('body', checkboxes);
+```
+
+### Table
+
+```javascript
+B.call ('set', 'table', [
+   {id: 1, name: 'Top of line',     price: 100},
+   {id: 2, name: 'Value for money', price: 65},
+   {id: 3, name: 'Last resort',     price: 24}
+]);
+
+var table = function () {
+   return B.view ('table', function (table) {
+      table = table || [];
+      return ['table', [
+         ['tr', dale.go (table [0], function (v, k) {
+            return ['th', k];
+         })],
+         dale.go (table, function (v) {
+            return ['tr', dale.go (v, function (v2) {
+               return ['td', v2];
+            })];
+         })
+      ]];
+   });
+}
+
+B.mount ('body', table);
 ```
 
 You can find more examples [here](examples).
@@ -393,7 +519,7 @@ And, of course, gotoв must be very useful for building a real webapp.
 - **Fast reload**: the edit-reload cycle should take under two seconds. No need to wait until no bundle is completed.
 - **Smallness**: gotoв and its dependencies are < 2048 lines of consistent, annotated javascript. In other words, it is less than 2048 lines on top of [vanilla.js](http://vanilla-js.com/).
 - **Batteries included**: the core functionality for building a webapp is all provided. Whatever libraries you add on top will probably be for specific things (nice CSS, a calendar widget, etc.)
-- **Trivial to set up**: add `<script src="https://cdn.jsdelivr.net/gh/fpereiro/gotob@b8694b1afd1483d4408ddabe600213634ce32d24/gotoB.min.js"></script>` at the top of the `<body>`.
+- **Trivial to set up**: add `<script src="https://cdn.jsdelivr.net/gh/fpereiro/gotob@??/gotoB.min.js"></script>` at the top of the `<body>`.
 - **Everything in plain sight**: all properties and state are directly accessible from the javascript console of the browser. DOM elements have stringified event handlers that can be inspected with any modern browser.
 - **Performance**: gotoв itself is small (~15kB when minified and gzipped, including all dependencies) so it is loaded and parsed quickly. Its view redrawing mechanism is reasonably fast.
 - **Cross-browser compatibility**: gotoв is intended to work on virtually all the browsers you may encounter. See browser current compatibility above in the *Installation* section.
@@ -764,12 +890,22 @@ B.call ('rem', ['Data', 'items']);
 // Nothing will happen.
 ```
 
+You can pass multiple keys to remove in one call.
+
+```javascript
+B.call ('set', ['Data', 'items'], ['a', 'b', 'c']);
+
+B.call ('rem', ['Data', 'items'], 0, 1);
+
+// B.store is now {Data: {items: ['c']}}
+```
+
 Instead of passing the keys as arguments, you can also pass them all together as an array of keys.
 
 ```javascript
 // These two invocations are equivalent:
-B.call ('rem', ['Data', 'items'], 'a');
-B.call ('rem', ['Data', 'items'], ['a']);
+B.call ('rem', ['Data', 'items'], 0, 1);
+B.call ('rem', ['Data', 'items'], [0, 1]);
 
 // These two invocations are equivalent:
 B.call ('rem', [], 'Data', 'State');
@@ -812,12 +948,6 @@ You can pass all sorts of things as arguments:
 ['button', {onclick: B.ev ('submit', 'data', null, NaN, Infinity, undefined, /a regular expression/)}]
 ```
 
-If you want to call more than one event within the same user interaction, you can do it by wrapping the event arguments into an array, and then wrapping them into another array:
-
-```javascript
-['button', {onclick: B.ev (['submit', 'data'], ['clear', 'data'])}]
-```
-
 If you need to access properties that are within the event handler (like `event` or `this`), you can do so as follows:
 
 ```javascript
@@ -852,13 +982,25 @@ If you pass an object with a `raw` key that contains a string, other keys within
 ['button', {onclick: B.ev ('submit', 'data', {raw: 'this.value', ignored: 'key'})}]
 ```
 
-You can pass multiple events to `B.ev` as multiple arguments wrapped in arrays.
+If you want to call more than one event within the same user interaction, you can do it by wrapping the event arguments into an array, and passing each array as an argument to `B.ev`.
 
 ```javascript
 ['button', {onclick: B.ev (['submit', 'data'], ['do', ['something', 'else']])}]
 ```
 
 If the `onclick` handler for the button above is called, `B.call` will be called twice, first with `'submit', 'data'` as arguments and then with `'do', ['something', 'else']` as arguments.
+
+If you need to submit an event only if a condition is met, you can use an empty array to signal a no-op.
+
+```javascript
+['button', {onclick: B.ev (cond ? ['submit', 'data'], [])}]
+```
+
+The same goes in the context of multiple events, out of which a single one should happen conditionally.
+
+```javascript
+['button', {onclick: B.ev (['submit', 'data'], cond ? ['do', 'something'], [])}]
+```
 
 If invalid inputs are passed to `B.ev`, the function will report an error and return `false`.
 
@@ -1653,13 +1795,13 @@ Although it provides the same functionalities than other frontend frameworks, go
 
 ## Source code
 
-The complete source code is contained in `gotoB.js`. gotoв itself is about 670 lines long; its dependencies are about 1380 lines; the whole thing is about 2050 lines.
+The complete source code is contained in `gotoB.js`. gotoв itself is about 680 lines long; its dependencies are about 1390 lines; the whole thing is about 2070 lines.
 
 Below is the annotated source.
 
 ```javascript
 /*
-gotoB - v2.2.0
+gotoB - v2.3.0
 
 Written by Federico Pereiro (fpereiro@gmail.com) and released into the public domain.
 
@@ -1718,7 +1860,7 @@ The remaining seven keys of the main object map to recalc entities. The first on
 - `r.forget`, the function for deleting an event responder.
 
 ```javascript
-   var B = window.B = {v: '2.2.0', B: 'в', t: time (), r: r, responders: r.responders, store: r.store, log: r.log, call: r.call, respond: r.respond, forget: r.forget};
+   var B = window.B = {v: '2.3.0', B: 'в', t: time (), r: r, responders: r.responders, store: r.store, log: r.log, call: r.call, respond: r.respond, forget: r.forget};
 ```
 
 gotoв is essentially a set of functions built on top of recalc. The last six keys are meant as shorthands to the corresponding recalc objects for quicker debugging from the browser console. If it wasn't for these shorthands, instead of writing `B.call`, for example, we'd have to write `B.r.call`, which is longer and doesn't look as nice.
@@ -2410,18 +2552,18 @@ If `B.ev` receives an array as its first argument, we expect each of the events 
       else                                  var evs = arguments.length === 0 ? [] : [dale.go (arguments, function (v) {return v})];
 ```
 
-If we're not in production mode, we make sure that each of the elements of `evs` is 1) an array, where 2) the first element is a string and 3) the second element is a valid path. If any of these conditions is not met, an error will be notified through `B.error` and `B.ev` will return `false`.
+If we're not in production mode, we make sure that each of the elements of `evs` is 1) an array, where 2) the first element is a string and 3) the second element is a valid path. If any of these conditions is not met, an error will be notified through `B.error` and `B.ev` will return `false`. An exception to 2) and 3) is when the array itself is empty, which means this is a no-op.
 
 ```javascript
       if (! B.prod && teishi.stop ('B.ev', dale.go (evs, function (ev) {
          return [
             ['ev', ev, 'array'],
-            function () {return [
+            ev.length ? function () {return [
                ['ev.verb', ev [0], 'string'],
                function () {
                   return r.isPath (ev [1]) ? true : B.error ('B.ev', 'Invalid path:', ev [1], 'Events:', evs);
                }
-            ]}
+            ]} : []
          ];
       }), function (error) {
          B.error ('B.ev', error, 'Events:', evs);
@@ -2456,8 +2598,10 @@ We invoke `B.call` passing as its first argument a context object with the `from
 
 After this, we iterate the elements of `ev` - notice that if this `ev` has only a verb and a path, we add a third argument `{raw: defaultValue}`, which we'll review in a minute.
 
+Notice also we concatenate items to the `output` only if the event itself is not an empty array - that is, if it doesn't represent a no-op.
+
 ```javascript
-         output += ' B.call ({"from": id}, ' + dale.go (ev.length === 2 ? ev.concat ({raw: defaultValue}) : ev, function (v, k) {
+         if (ev.length) output += ' B.call ({"from": id}, ' + dale.go (ev.length === 2 ? ev.concat ({raw: defaultValue}) : ev, function (v, k) {
 ```
 
 `B.ev` has a mechanism to allow you to pass raw arguments to `B.call`. A raw event is a string that is not stringified, and thus can be used to access the event properties directly. For example, if you want to access the value of an `input` field, you would need the raw argument `this.value`. To represent raw elements, `B.ev` expects an object with a key `raw` and a value that is a string.
@@ -3771,6 +3915,12 @@ If we're in Internet Explorer 8 and below and either the old or new version of t
          if (B.internal.oldIE && oldAttributes.type !== newAttributes.type) return;
 ```
 
+In rare cases, if the current redraw is triggered by a click on the element being recycled, placing the `href` attribute on it immediately will make the browser follow the link on the `href` attribute after the view is redrawn. For this reason, if the element being recycled had an `onclick` property and it is being repurposed to have a `href` attribute, we won't recycle it. Ideally, this should be done only in the case that the element being recycled is the one that when clicked triggered the redraw, but since it would be cumbersome to pass enough state to figure this out, we instead avoid recycling all elements that had an `onclick` and will have an `href` property. As on the line above, we return `undefined` to signify that the recycling couldn't be done.
+
+```javascript
+         if (oldAttributes.onclick !== undefined && newAttributes.href !== undefined) return;
+```
+
 We iterate `newAttributes` and ignore those attributes that are neither an empty string nor `false` nor `null`. We also ignore attributes for which their values are the same in `oldAttributes` and `newAttributes`.
 
 ```javascript
@@ -4585,7 +4735,7 @@ With that said, the leap from [ES5 js](https://en.wikipedia.org/wiki/ECMAScript#
 - Trailing commas are not allowed in object literals. Something like `[1, 2, 3,]` or `{a: 1,}` will throw an error.
 - No `querySelectorAll`.
 
-Before ES3, however, there be dragons: no AJAX support, and not even regular expressions! I haven't even dared to try to make gotoв work there.
+Before ES3, however, [here be dragons](https://en.wikipedia.org/wiki/Here_be_dragons): no AJAX support, not even regular expressions! I haven't even dared to try to make gotoв work there.
 
 Some particular quirks of ES3 browsers:
 - To access the `n`th character of a string `s`, don't use `s [n]` because that won't work - rather, use `s.substr (n, n + 1)`. (IE6/IE7)
@@ -4594,9 +4744,9 @@ Some particular quirks of ES3 browsers:
 - The developer console was something that emerged over time. Old browsers didn't have it, or had a very limited version of it! This was an inspiration for `B.eventlog`, which turns out to be useful even in modern browsers.
 
 gotoв and its dependencies implement the following three [polyfills](https://en.wikipedia.org/wiki/Polyfill_(programming)):
-- `indexOf` for arrays.
-- `insertAdjacentHTML`.
-- `contains`.
+- [`indexOf`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/indexOf) for arrays.
+- [`insertAdjacentHTML`](https://developer.mozilla.org/en-US/docs/Web/API/Element/insertAdjacentHTML)
+- [`contains`](https://developer.mozilla.org/en-US/docs/Web/API/Node/contains)
 
 No other polyfills were required. The rest of the functionality needed to make gotoв work has been provided by helper functions that sometimes extensively check for browser quirks, such as [teishi.type](https://github.com/fpereiro/teishi#teishitype).
 

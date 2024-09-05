@@ -519,7 +519,7 @@ And, of course, gotoв must be very useful for building a real webapp.
 - **Fast reload**: the edit-reload cycle should take under two seconds. No need to wait until no bundle is completed.
 - **Smallness**: gotoв and its dependencies are < 2048 lines of consistent, annotated javascript. In other words, it is less than 2048 lines on top of [vanilla.js](http://vanilla-js.com/).
 - **Batteries included**: the core functionality for building a webapp is all provided. Whatever libraries you add on top will probably be for specific things (nice CSS, a calendar widget, etc.)
-- **Trivial to set up**: add `<script src="https://cdn.jsdelivr.net/gh/fpereiro/gotob@??/gotoB.min.js"></script>` at the top of the `<body>`.
+- **Trivial to set up**: add `<script src="https://cdn.jsdelivr.net/gh/fpereiro/gotob@27c65b4484500ec70f175dfff998cdd7d1b0208e/gotoB.min.js"></script>` at the top of the `<body>`.
 - **Everything in plain sight**: all properties and state are directly accessible from the javascript console of the browser. DOM elements have stringified event handlers that can be inspected with any modern browser.
 - **Performance**: gotoв itself is small (~15kB when minified and gzipped, including all dependencies) so it is loaded and parsed quickly. Its view redrawing mechanism is reasonably fast.
 - **Cross-browser compatibility**: gotoв is intended to work on virtually all the browsers you may encounter. See browser current compatibility above in the *Installation* section.

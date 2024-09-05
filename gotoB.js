@@ -1,5 +1,5 @@
 /*
-gotoB - v2.3.0
+gotoB - v2.3.1
 
 Written by Federico Pereiro (fpereiro@gmail.com) and released into the public domain.
 
@@ -16,7 +16,7 @@ Please refer to readme.md to read the annotated source.
 
    var type = teishi.type, inc = teishi.inc, time = Date.now ? function () {return Date.now ()} : function () {return new Date ().getTime ()};
 
-   var B = window.B = {v: '2.3.0', B: 'в', t: time (), r: r, responders: r.responders, store: r.store, log: r.log, call: r.call, respond: r.respond, forget: r.forget};
+   var B = window.B = {v: '2.3.1', B: 'в', t: time (), r: r, responders: r.responders, store: r.store, log: r.log, call: r.call, respond: r.respond, forget: r.forget};
 
    // *** ERROR REPORTING ***
 

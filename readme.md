@@ -6,7 +6,7 @@ gotoв is a framework for making the frontend of a web application (henceforth *
 
 ## Current status of the project
 
-The current version of gotoв, v2.3.0, is considered to be *stable* and *complete*. [Suggestions](https://github.com/fpereiro/gotoB/issues) and [patches](https://github.com/fpereiro/gotoB/pulls) are welcome. Besides bug fixes, and the completion of the tutorial in one of the appendixes, there are no changes planned.
+The current version of gotoв, v2.3.1, is considered to be *stable* and *complete*. [Suggestions](https://github.com/fpereiro/gotoB/issues) and [patches](https://github.com/fpereiro/gotoB/pulls) are welcome. Besides bug fixes, and the completion of the tutorial in one of the appendixes, there are no changes planned.
 
 gotoв is part of the [ustack](https://github.com/fpereiro/ustack), a set of libraries to build webapps which aims to be fully understandable by those who use it.
 
@@ -519,7 +519,7 @@ And, of course, gotoв must be very useful for building a real webapp.
 - **Fast reload**: the edit-reload cycle should take under two seconds. No need to wait until no bundle is completed.
 - **Smallness**: gotoв and its dependencies are < 2048 lines of consistent, annotated javascript. In other words, it is less than 2048 lines on top of [vanilla.js](http://vanilla-js.com/).
 - **Batteries included**: the core functionality for building a webapp is all provided. Whatever libraries you add on top will probably be for specific things (nice CSS, a calendar widget, etc.)
-- **Trivial to set up**: add `<script src="https://cdn.jsdelivr.net/gh/fpereiro/gotob@d599867a327a74d3c53aa518f507820161bb4ac8/gotoB.min.js"></script>` at the top of the `<body>`.
+- **Trivial to set up**: add `<script src="https://cdn.jsdelivr.net/gh/fpereiro/gotob@??/gotoB.min.js"></script>` at the top of the `<body>`.
 - **Everything in plain sight**: all properties and state are directly accessible from the javascript console of the browser. DOM elements have stringified event handlers that can be inspected with any modern browser.
 - **Performance**: gotoв itself is small (~15kB when minified and gzipped, including all dependencies) so it is loaded and parsed quickly. Its view redrawing mechanism is reasonably fast.
 - **Cross-browser compatibility**: gotoв is intended to work on virtually all the browsers you may encounter. See browser current compatibility above in the *Installation* section.
@@ -640,6 +640,8 @@ event call -> this responder is matched
 ```
 
 This generality of events is extremely useful to model and write the code of interfaces, which is highly interconnected, asynchronous and triggered by user interactions. When a responder is matched by an event, its associated function (which we call `rfun` or *responder function*) is executed. The ultimate purpose of events and responders is to execute the `rfuns` (responder functions) at the right time; rfuns, together with their responders and with matching events, can replace direct function calls in most of the logic of the frontend.
+
+In particular, if a certain event modifies a part of the data, multiple responders can be matched in response to that change, without the event having to bear the burden of knowing which responders to call. This makes all the difference in a frontend.
 
 Events are called with the function `B.call`, which takes the following parameters:
 
@@ -1786,7 +1788,7 @@ B.redraw -> B.diff
 Although it provides the same functionalities than other frontend frameworks, gotoв's design is quite different to that of many frontend frameworks. Here's some things that are unusual (but not unique) about it:
 
 - No compilation: gotoв expresses HTML & CSS with js object literals, so there's no need to take non-js markup and convert it into either HTML or js.
-- A global event system: the store, the events and the responders all live in the same global space. Any scoping must be done through using a specific part of the store or by passing a specific prefix to event and responder paths.
+- A global event system: the store, the events and the responders all live in the same global space. Any scoping must be done through using a specific part of the store or by passing a specific prefix to event and responder paths. Because the state is global, there is no difficulty for any view to access any part of the view -- this means that there's no implicit lumping together of the organization of the state and the organization of the view.
 - Redraws are synchronous and block the rest of the js.
 - No lifecycle hooks for views: everything is expressed as either an event or a responder (including the redraw of views themselves). Everything is in [userland](https://en.wikipedia.org/wiki/User_space).
 - No components: every view, responder and event lives in the same global space.
@@ -1801,7 +1803,7 @@ Below is the annotated source.
 
 ```javascript
 /*
-gotoB - v2.3.0
+gotoB - v2.3.1
 
 Written by Federico Pereiro (fpereiro@gmail.com) and released into the public domain.
 
@@ -1860,7 +1862,7 @@ The remaining seven keys of the main object map to recalc entities. The first on
 - `r.forget`, the function for deleting an event responder.
 
 ```javascript
-   var B = window.B = {v: '2.3.0', B: 'в', t: time (), r: r, responders: r.responders, store: r.store, log: r.log, call: r.call, respond: r.respond, forget: r.forget};
+   var B = window.B = {v: '2.3.1', B: 'в', t: time (), r: r, responders: r.responders, store: r.store, log: r.log, call: r.call, respond: r.respond, forget: r.forget};
 ```
 
 gotoв is essentially a set of functions built on top of recalc. The last six keys are meant as shorthands to the corresponding recalc objects for quicker debugging from the browser console. If it wasn't for these shorthands, instead of writing `B.call`, for example, we'd have to write `B.r.call`, which is longer and doesn't look as nice.

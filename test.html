@@ -829,7 +829,7 @@
                   var noElement = B.redraw ({}, 'nosuch');
                   var lastLog = last (B.log);
                   if (noElement !== false || ! eq ({verb: 'error', path: ['B.redraw'], error: 'Attempt to redraw dangling element.'}, {verb: lastLog.verb, path: lastLog.path, error: lastLog.args [0]})) return 'No such element error wasn\'t reported properly.';
-                  if (B.internal.redrawing !== true) return 'B.redraw didn\'t set redrawinf flag #1.';
+                  if (B.internal.redrawing !== true) return 'B.redraw didn\'t set redrawing flag #1.';
                   B.internal.redrawing = false;
 
                   var el = document.createElement ('div');
@@ -839,7 +839,7 @@
                   lastLog = last (B.log);
                   if (noElement !== false || ! eq ({verb: 'error', path: ['B.redraw'], error: 'Attempt to redraw dangling element.'}, {verb: lastLog.verb, path: lastLog.path, error: lastLog.args [0]})) return 'Dangling element error wasn\'t reported properly.';
 
-                  if (B.internal.redrawing !== true) return 'B.redraw didn\'t set redrawinf flag #2.';
+                  if (B.internal.redrawing !== true) return 'B.redraw didn\'t set redrawing flag #2.';
                   B.internal.redrawing = false;
 
                   // Error reporting of B.applyDiff errors is not tested here.
@@ -2209,6 +2209,33 @@
                   // I haven't yet found a way to trigger a queued redraw. gotoB's redraw mechanism is synchronous. Setting timeouts just before triggering a long redraw only pushes the execution of the timeout further.
                   // I have however seen a trigger for a redraw happening *before* the end of another redraw in applications where a DOM element (usually an input) has more than one event handler (for example, both "oninput" and "onchange"). In that case, the queuing mechanism of B.redraw kicks in to perform redraws on a first come, first serve basis. I haven't yet found a way to trigger such a situation programatically. Until I do, I leave this stub as a placeholder for a future test.
 
+               });
+
+               Test ('B.view, trample when there is a loose text element below the reactive view', function () {
+                  B.unmount ('body');
+                  B.mount ('body', function () {
+                     return B.view (['State', 'foo'], function (foo) {
+                        return ['p', foo];
+                     });
+                  });
+
+                  var freeText = document.createTextNode ('Free bird!');
+
+                  c ('body').appendChild (freeText);
+
+                  B.internal.timeout = -1;
+
+                  B.call (x, 'set', ['State', 'foo'], 1);
+
+                  B.internal.timeout = 200;
+
+                  if ([
+                     '<p id="в27" path="State:foo">1</p>Free bird!',
+                     // Compatibility: IE<=8 removes the quotes of id and uppercases the tags
+                     '<P id=в27 path="State:foo">1</P>Free bird!',
+                  ].indexOf (document.body.innerHTML) === -1) return 'Redraw with loose text at the bottom of the container did not work';
+
+                  B.unmount ('body');
                });
 
                B.call (x, 'test', 'performance');

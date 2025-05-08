@@ -6,7 +6,7 @@ gotoв is a framework for making the frontend of a web application (henceforth *
 
 ## Current status of the project
 
-The current version of gotoв, v2.3.1, is considered to be *stable* and *complete*. [Suggestions](https://github.com/fpereiro/gotoB/issues) and [patches](https://github.com/fpereiro/gotoB/pulls) are welcome. Besides bug fixes, and the completion of the tutorial in one of the appendixes, there are no changes planned.
+The current version of gotoв, v2.3.2, is considered to be *stable* and *complete*. [Suggestions](https://github.com/fpereiro/gotoB/issues) and [patches](https://github.com/fpereiro/gotoB/pulls) are welcome. Besides bug fixes, and the completion of the tutorial in one of the appendixes, there are no changes planned.
 
 gotoв is part of the [ustack](https://github.com/fpereiro/ustack), a set of libraries to build webapps which aims to be fully understandable by those who use it.
 
@@ -29,7 +29,7 @@ gotoв is written in Javascript. You can use it in the browser by loading the pr
 Or you can use this link to use the latest version - courtesy of [jsDelivr](https://jsdelivr.com).
 
 ```html
-<script src="https://cdn.jsdelivr.net/gh/fpereiro/gotob@d599867a327a74d3c53aa518f507820161bb4ac8/gotoB.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/fpereiro/gotob@??/gotoB.min.js"></script>
 ```
 
 gotoв uses non-ASCII symbols, so you also must specify an [encoding](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/meta) for your document (for example [UTF-8](https://en.wikipedia.org/wiki/UTF-8)) by placing a `<meta>` tag in the `<head>` of the document: `<meta charset="utf-8">`.
@@ -155,7 +155,7 @@ var select = function () {
    var options = ['Select one', 'Elephant Island', 'South Georgia'];
    return B.view ('select', function (select) {
       return ['div', [
-         ['select', {onchange: B.set ('set', 'select')}, dale.go (options, function (option) {
+         ['select', {onchange: B.ev ('set', 'select')}, dale.go (options, function (option) {
             return ['option', {value: option !== 'Select one' ? option : ''}, option];
          })]
       ]];
@@ -519,7 +519,7 @@ And, of course, gotoв must be very useful for building a real webapp.
 - **Fast reload**: the edit-reload cycle should take under two seconds. No need to wait until no bundle is completed.
 - **Smallness**: gotoв and its dependencies are < 2048 lines of consistent, annotated javascript. In other words, it is less than 2048 lines on top of [vanilla.js](http://vanilla-js.com/).
 - **Batteries included**: the core functionality for building a webapp is all provided. Whatever libraries you add on top will probably be for specific things (nice CSS, a calendar widget, etc.)
-- **Trivial to set up**: add `<script src="https://cdn.jsdelivr.net/gh/fpereiro/gotob@27c65b4484500ec70f175dfff998cdd7d1b0208e/gotoB.min.js"></script>` at the top of the `<body>`.
+- **Trivial to set up**: add `<script src="https://cdn.jsdelivr.net/gh/fpereiro/gotob@??/gotoB.min.js"></script>` at the top of the `<body>`.
 - **Everything in plain sight**: all properties and state are directly accessible from the javascript console of the browser. DOM elements have stringified event handlers that can be inspected with any modern browser.
 - **Performance**: gotoв itself is small (~15kB when minified and gzipped, including all dependencies) so it is loaded and parsed quickly. Its view redrawing mechanism is reasonably fast.
 - **Cross-browser compatibility**: gotoв is intended to work on virtually all the browsers you may encounter. See browser current compatibility above in the *Installation* section.
@@ -1803,7 +1803,7 @@ Below is the annotated source.
 
 ```javascript
 /*
-gotoB - v2.3.1
+gotoB - v2.3.2
 
 Written by Federico Pereiro (fpereiro@gmail.com) and released into the public domain.
 
@@ -1862,7 +1862,7 @@ The remaining seven keys of the main object map to recalc entities. The first on
 - `r.forget`, the function for deleting an event responder.
 
 ```javascript
-   var B = window.B = {v: '2.3.1', B: 'в', t: time (), r: r, responders: r.responders, store: r.store, log: r.log, call: r.call, respond: r.respond, forget: r.forget};
+   var B = window.B = {v: '2.3.2', B: 'в', t: time (), r: r, responders: r.responders, store: r.store, log: r.log, call: r.call, respond: r.respond, forget: r.forget};
 ```
 
 gotoв is essentially a set of functions built on top of recalc. The last six keys are meant as shorthands to the corresponding recalc objects for quicker debugging from the browser console. If it wasn't for these shorthands, instead of writing `B.call`, for example, we'd have to write `B.r.call`, which is longer and doesn't look as nice.
@@ -2954,7 +2954,7 @@ The responder function itself performs three actions:
 - Save a copy of the `elem` and the `children` stored inside the responder.
 - Note the current time (`t`).
 - Invoke `makeElement`.
-- If `makeElement` is successful (which means that its output is a valid lith), the responder will invoke `B.redraw` with four arguments:
+- If `makeElement` is successful (which means that its output is a valid lith), the responder will invoke `B.redraw` with five arguments:
    - The context (`x`).
    - The id of the view.
    - The old version of the element.
@@ -3227,11 +3227,20 @@ We remove the old `element` before inserting the new HTML. It is for this reason
          parentNode.removeChild (element);
 ```
 
-If there's a sibling element after `element`, we insert the HTML before it. Otherwise, this means that `element` was the last child of `parentNode`, in which case we append the HTML to `parentNode`. For both operations, we use `insertAdjacentHTML`, which is polyfilled by cocholate.
+If there's a sibling element after `element`, and that sibling element an actual DOM element (not a text node), we insert the HTML before it.
+
+If the sibling element after `element` is not a DOM element (usually a text element), we do an on-the-spot polyfill to insert all the HTML inside `html` after it. This is a very, very rare case and was only discovered through a bug.
+
+If there is no subling element after `element`, this means that `element` was the last child of `parentNode`, in which case we append the HTML to `parentNode`. For the first and the third case, we use `insertAdjacentHTML`, which is polyfilled by cocholate.
 
 ```javascript
-         if (nextSibling) nextSibling.insertAdjacentHTML ('beforeBegin', html);
-         else             parentNode.insertAdjacentHTML  ('beforeEnd',   html);
+         if      (nextSibling && nextSibling.insertAdjacentHTML) nextSibling.insertAdjacentHTML ('beforeBegin', html);
+         else if (nextSibling && ! nextSibling.insertAdjacentHTML) {
+            var container = document.createElement ('div');
+            container.innerHTML = html;
+            while (container.firstChild) parentNode.insertBefore (container.firstChild, nextSibling);
+         }
+         else parentNode.insertAdjacentHTML ('beforeEnd', html);
 ```
 
 This concludes the case where we trample the existing `element`.

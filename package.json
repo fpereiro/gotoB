@@ -1,6 +1,6 @@
 {
    "name": "gotob",
-   "version": "2.3.1",
+   "version": "2.3.2",
    "description": "One .min.js to rule 'em all.",
    "dependencies": {
       "cocholate": "4.0.0",

@@ -1,5 +1,5 @@
 /*
-gotoB - v2.3.1
+gotoB - v2.3.2
 
 Written by Federico Pereiro (fpereiro@gmail.com) and released into the public domain.
 
@@ -16,7 +16,7 @@ Please refer to readme.md to read the annotated source.
 
    var type = teishi.type, inc = teishi.inc, time = Date.now ? function () {return Date.now ()} : function () {return new Date ().getTime ()};
 
-   var B = window.B = {v: '2.3.1', B: 'в', t: time (), r: r, responders: r.responders, store: r.store, log: r.log, call: r.call, respond: r.respond, forget: r.forget};
+   var B = window.B = {v: '2.3.2', B: 'в', t: time (), r: r, responders: r.responders, store: r.store, log: r.log, call: r.call, respond: r.respond, forget: r.forget};
 
    // *** ERROR REPORTING ***
 
@@ -400,8 +400,13 @@ Please refer to readme.md to read the annotated source.
          var element = document.getElementById (id), parentNode = element.parentNode, nextSibling = element.nextSibling;
          var html = lith.g (responder.elem, true);
          parentNode.removeChild (element);
-         if (nextSibling) nextSibling.insertAdjacentHTML ('beforeBegin', html);
-         else             parentNode.insertAdjacentHTML  ('beforeEnd',   html);
+         if      (nextSibling && nextSibling.insertAdjacentHTML) nextSibling.insertAdjacentHTML ('beforeBegin', html);
+         else if (nextSibling && ! nextSibling.insertAdjacentHTML) {
+            var container = document.createElement ('div');
+            container.innerHTML = html;
+            while (container.firstChild) parentNode.insertBefore (container.firstChild, nextSibling);
+         }
+         else parentNode.insertAdjacentHTML ('beforeEnd', html);
       }
       else {
          var errorIndex = B.applyDiff (element, diff);

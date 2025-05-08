@@ -95,6 +95,7 @@ var addProductToCart = function (id, quantity) {
          }
       });
       if (! productAlreadyInCart) cart.push ({id: id, quantity: quantity});
+      showProducts ();
       saveCart (cart);
    });
 }
